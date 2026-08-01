@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-crimson:       #7B1515;
+    --color-red-dark:      #8B2010;
+    --color-red-warm:      #A52F05;
+    --color-orange-mid:    #C44010;
+    --color-orange:        #D45510;
+    --color-orange-bright: #E06510;
+    --color-orange-light:  #F07820;
+    --color-orange-warm:   #FF8C00;
+    --color-bg-dark:       #0D0505;
+    --color-bg-card:       #150D0D;
+  }
+
+  html,
+  body {
+    background-color: var(--color-bg-dark);
+    color: var(--color-orange-light);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  body {
+    min-height: 100%;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-orange);
+    outline-offset: 2px;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 85, 16, 0.25);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 85, 16, 0.5);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(212, 85, 16, 0.25) transparent;
+}
