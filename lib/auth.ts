@@ -4,7 +4,7 @@ import type { FluxerGuild, Session } from './types';
 
 const SESSION_COOKIE = 'functious_session';
 const secret = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? 'CHANGE_ME_IN_PRODUCTION_32_CHARS_MIN'
+  process.env.SESSION_SECRET
 );
 
 export const FLUXER_API = 'https://api.fluxer.app/v1';
