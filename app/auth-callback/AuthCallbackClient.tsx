@@ -20,7 +20,7 @@ export default function AuthCallbackClient({ code }: { code: string | null }) {
           window.location.href = '/dashboard';
         } else {
           const data = await res.json().catch(() => ({}));
-          window.location.href = `/auth-error?reason=${data.reason ?? 'unknown'}`;
+          //window.location.href = `/auth-error?reason=${data.reason ?? 'unknown'}`;
         }
       })
       .catch(() => {
