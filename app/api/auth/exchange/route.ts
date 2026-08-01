@@ -4,7 +4,7 @@ import type { FluxerUser, FluxerGuild, Session } from '@/lib/types';
 
 const SESSION_COOKIE = 'functious_session';
 const secret = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? 'CHANGE_ME_IN_PRODUCTION_32_CHARS_MIN'
+  process.env.SESSION_SECRET
 );
 
 const BOT_API_URL = process.env.BOT_API_URL ?? 'http://localhost:4000';
