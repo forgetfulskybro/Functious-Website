@@ -4,6 +4,8 @@ import { filterBotGuilds } from '@/lib/api';
 import { redirect } from 'next/navigation';
 import DashboardHome from './DashboardHome';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Dashboard',
   description: 'Pick a server to configure Functious.',

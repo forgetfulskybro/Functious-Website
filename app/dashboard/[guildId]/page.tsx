@@ -4,6 +4,8 @@ import { getBotGuild, filterBotGuilds } from '@/lib/api';
 import { redirect, notFound } from 'next/navigation';
 import GuildDashboard from './GuildDashboard';
 
+export const dynamic = 'force-dynamic';
+
 type Props = { params: Promise<{ guildId: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

@@ -4,6 +4,8 @@ import { redirect, notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import PollsClient from './PollsClient';
 
+export const dynamic = 'force-dynamic';
+
 type Props = { params: Promise<{ guildId: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

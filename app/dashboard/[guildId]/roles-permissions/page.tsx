@@ -4,6 +4,8 @@ import { redirect, notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import RolesClient from './RolesClient';
 
+export const dynamic = 'force-dynamic';
+
 type Props = { params: Promise<{ guildId: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { guildId } = await params;

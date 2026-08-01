@@ -4,6 +4,8 @@ import { filterBotGuilds } from '@/lib/api';
 import { redirect } from 'next/navigation';
 import ProfilePage from './ProfilePage';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Profile',
   description: 'Manage your Functious profile settings.',
