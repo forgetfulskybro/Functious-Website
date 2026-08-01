@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: 'Sign In Error' };
 
 const MESSAGES: Record<string, string> = {
   denied:  "You cancelled the authorisation. You can try again any time.",
-  token:   "Something went wrong exchanging the auth code. Make sure FLUXER_CLIENT_SECRET is set correctly in your environment.",
+  token:   "Something went wrong exchanging the auth code.",
   user:    "Couldn't fetch your Fluxer profile. The access token may have been invalid.",
   unknown: "An unexpected error occurred during sign in.",
 };
