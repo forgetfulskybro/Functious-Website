@@ -1,5 +1,5 @@
 import { getSession, getSessionGuilds } from '@/lib/auth';
-import { getBotGuild, filterBotGuilds } from '@/lib/api';
+import { filterBotGuilds, emptyGuildData } from '@/lib/api';
 import { redirect, notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import GiveawaysClient from './GiveawaysClient';
@@ -8,10 +8,8 @@ export const dynamic = 'force-dynamic';
 
 type Props = { params: Promise<{ guildId: string }> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { guildId } = await params;
-  const guild = await getBotGuild(guildId).catch(() => null);
-  return { title: guild?.name ? `${guild.name} — Giveaways` : 'Giveaways' };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: 'Giveaways' };
 }
 
 export default async function GiveawaysPage({ params }: Props) {
@@ -33,8 +31,7 @@ export default async function GiveawaysPage({ params }: Props) {
   const userGuild = dashboardGuilds.find(g => g.id === guildId);
   if (!userGuild) notFound();
 
-  const guildData = await getBotGuild(guildId).catch(() => null);
-  if (!guildData) notFound();
+  const empty = emptyGuildData(guildId);
 
   return (
     <GiveawaysClient
@@ -42,8 +39,9 @@ export default async function GiveawaysPage({ params }: Props) {
       guilds={dashboardGuilds}
       activeGuildId={guildId}
       userGuild={userGuild}
-      initialData={guildData}
-      guildChannels={guildData?.guildChannels ?? []}
+      initialData={empty as any}
+      guildRoles={[]}
+      guildChannels={[]}
     />
   );
 }

@@ -1,12 +1,56 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useBotPresence } from '@/hooks/useBotPresence';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
 import Sidebar from '@/components/layout/Sidebar';
-import { showErrorToast } from '@/components/ui/Toast';
+import { showErrorToast, showToast } from '@/components/ui/Toast';
+
+const syncCooldowns = new Map<string, { channels: number; roles: number }>();
+const SYNC_COOLDOWN_MS = 30_000;
+
+function getSyncCooldowns(guildId: string) {
+  if (!syncCooldowns.has(guildId)) syncCooldowns.set(guildId, { channels: 0, roles: 0 });
+  return syncCooldowns.get(guildId)!;
+}
+
+function SyncButton({
+  label,
+  icon,
+  cooldownUntil,
+  onSync,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  cooldownUntil: number;
+  onSync: () => void;
+}) {
+  const [, rerender] = useState(0);
+
+  const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+  const disabled = remaining > 0;
+
+  useEffect(() => {
+    if (!disabled) return;
+    const id = setInterval(() => rerender(n => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [disabled]);
+
+  return (
+    <button
+      type="button"
+      onClick={onSync}
+      disabled={disabled}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/50"
+    >
+      <span className={disabled ? 'opacity-60' : ''}>{icon}</span>
+      {disabled ? `${label} (${remaining}s)` : label}
+    </button>
+  );
+}
 
 function Sk({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse rounded-lg bg-white/[0.06] ${className}`} />;
@@ -94,8 +138,29 @@ export default function GuildDashboard({
   userGuild: FluxerGuild & { botPresent: boolean };
   initialData: GuildData;
 }) {
-  const { guild, loading, error } = useGuildData(initialData.id);
+  const { guild, loading, error, refresh } = useGuildData(initialData.id);
+  const liveGuilds = useBotPresence(guilds);
   const data = guild ?? initialData;
+
+  const [, rerender] = useState(0);
+
+  const handleSyncChannels = useCallback(() => {
+    const cd = getSyncCooldowns(activeGuildId);
+    if (Date.now() < cd.channels) return;
+    cd.channels = Date.now() + SYNC_COOLDOWN_MS;
+    rerender(n => n + 1);
+    refresh();
+    showToast('Channels synced', { description: 'Channel list has been refreshed.' });
+  }, [activeGuildId, refresh]);
+
+  const handleSyncRoles = useCallback(() => {
+    const cd = getSyncCooldowns(activeGuildId);
+    if (Date.now() < cd.roles) return;
+    cd.roles = Date.now() + SYNC_COOLDOWN_MS;
+    rerender(n => n + 1);
+    refresh();
+    showToast('Roles synced', { description: 'Role list has been refreshed.' });
+  }, [activeGuildId, refresh]);
 
   const iconUrl = userGuild.icon
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
@@ -119,7 +184,7 @@ export default function GuildDashboard({
 
   return (
     <div className="min-h-screen bg-bg-dark flex">
-      <Sidebar user={user} guilds={guilds} activeGuildId={activeGuildId} currentPage="dashboard" />
+      <Sidebar user={user} guilds={liveGuilds} activeGuildId={activeGuildId} currentPage="dashboard" />
 
       <main className="flex-1 px-6 py-10 w-full max-w-3xl mx-auto">
         <div className="flex items-center gap-5 mb-10 pb-7 border-b border-white/5">
@@ -130,9 +195,31 @@ export default function GuildDashboard({
               {(userGuild.name ?? 'S')[0]}
             </div>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-extrabold text-white leading-tight truncate">{userGuild.name}</h1>
             <p className="text-white/30 text-xs font-mono mt-0.5">{userGuild.id}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <SyncButton
+              label="Sync Channels"
+              cooldownUntil={getSyncCooldowns(activeGuildId).channels}
+              onSync={handleSyncChannels}
+              icon={
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              }
+            />
+            <SyncButton
+              label="Sync Roles"
+              cooldownUntil={getSyncCooldowns(activeGuildId).roles}
+              onSync={handleSyncRoles}
+              icon={
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              }
+            />
           </div>
         </div>
 

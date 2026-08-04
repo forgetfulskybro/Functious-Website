@@ -51,6 +51,43 @@ export async function getBotGuild(guildId: string) {
   return res.json();
 }
 
+export function emptyGuildData(guildId: string) {
+  return {
+    id: guildId,
+    name: null,
+    icon: null,
+    owner_id: null,
+    prefix: '!',
+    language: 'en_EN',
+    dm: false,
+    timezoneConvert: false,
+    stickyRolesEnabled: false,
+    roles: [],
+    joinRoles: [],
+    stickyRoles: [],
+    bypassRoles: [],
+    timedRoles: [],
+    tags: [],
+    scheduledMessages: [],
+    userTimezones: [],
+    parentChannel: null,
+    childChannel: null,
+    tempChannels: [],
+    config: {
+      channelName: null,
+      channelLimit: null,
+      counting: false,
+      customParent: null,
+      manage: null,
+      manageMessage: null,
+    },
+    guildChannels: [],
+    guildRoles: [],
+    activePolls: [],
+    activeGiveaways: [],
+  };
+}
+
 export async function updateBotGuild(
   guildId: string,
   updates: Record<string, unknown>,

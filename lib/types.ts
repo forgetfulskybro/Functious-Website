@@ -55,6 +55,19 @@ export interface GuildData {
   config: GuildConfig;
 }
 
+export interface Roles {
+  name: string;
+  id: string;
+  color: string | null;
+}
+
+export interface Channels {
+  name: string;
+  id: string;
+  type: number;
+  parent: string | null;
+}
+
 export interface BotStatus {
   ok: boolean;
   online: boolean;

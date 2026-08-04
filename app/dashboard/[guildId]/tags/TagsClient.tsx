@@ -569,11 +569,13 @@ function TagViewModal({ tag, onClose }: { tag: TagEntry; onClose: () => void }) 
                 <p className="text-white/30 text-[10px] uppercase tracking-widest">Created by</p>
                 <p className="text-white/60 text-xs font-mono mt-0.5">{tag.createdBy}</p>
               </div>
-              {tag.createdAt && (
+          {tag.createdAt && (
                 <div>
                   <p className="text-white/30 text-[10px] uppercase tracking-widest">Created</p>
                   <p className="text-white/60 text-xs mt-0.5">
-                    {new Date(tag.createdAt * 1000).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                    {new Date(
+                      tag.createdAt > 1e12 ? tag.createdAt : tag.createdAt * 1000
+                    ).toLocaleDateString(undefined, { dateStyle: 'medium' })}
                   </p>
                 </div>
               )}

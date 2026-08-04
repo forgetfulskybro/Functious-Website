@@ -178,7 +178,7 @@ export default function Sidebar({ user, guilds, activeGuildId, currentPage }: Si
             {dropdownOpen && (
               <div className="absolute left-0 right-0 top-full mt-1 rounded-lg bg-[#1a0e0e]/95 backdrop-blur-md shadow-xl py-1.5 z-20">
                 <p className="text-white/30 text-[10px] px-3 mb-1 uppercase tracking-widest font-semibold">Communities</p>
-                {guilds.map(guild => (
+                {guilds.filter(g => g.botPresent).map(guild => (
                   <Link
                     key={guild.id}
                     href={`/dashboard/${guild.id}`}

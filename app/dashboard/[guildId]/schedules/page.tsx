@@ -1,5 +1,5 @@
 import { getSession, getSessionGuilds } from '@/lib/auth';
-import { getBotGuild, filterBotGuilds } from '@/lib/api';
+import { filterBotGuilds, emptyGuildData } from '@/lib/api';
 import { redirect, notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import ScheduledClient from './ScheduledClient';
@@ -8,10 +8,8 @@ export const dynamic = 'force-dynamic';
 
 type Props = { params: Promise<{ guildId: string }> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { guildId } = await params;
-  const guild = await getBotGuild(guildId).catch(() => null);
-  return { title: guild?.name ? `${guild.name} — Scheduled Messages` : 'Scheduled Messages' };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: 'Scheduled Messages' };
 }
 
 export default async function ScheduledPage({ params }: Props) {
@@ -33,17 +31,14 @@ export default async function ScheduledPage({ params }: Props) {
   const userGuild = dashboardGuilds.find(g => g.id === guildId);
   if (!userGuild) notFound();
 
-  const guildData = await getBotGuild(guildId).catch(() => null);
-  if (!guildData) notFound();
-  
   return (
     <ScheduledClient
       user={session.user}
       guilds={dashboardGuilds}
       activeGuildId={guildId}
       userGuild={userGuild}
-      initialData={guildData}
-      guildChannels={guildData?.guildChannels ?? []}
+      initialData={emptyGuildData(guildId) as any}
+      guildChannels={[]}
     />
   );
 }

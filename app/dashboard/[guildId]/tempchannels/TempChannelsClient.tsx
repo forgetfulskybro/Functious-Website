@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Sidebar from '@/components/layout/Sidebar';
 import { useGuildData } from '@/hooks/useGuildData';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
 
 interface TempConfig {
@@ -23,7 +23,7 @@ interface Props {
   activeGuildId: string;
   userGuild: FluxerGuild & { botPresent: boolean };
   initialData: GuildData;
-  guildChannels?: { id: string; name: string; type?: number }[];
+  guildChannels?: { id: string; name: string; type: number, parentId: string }[];
 }
 
 type ConfirmAction = 'setup' | 'reset' | 'manage' | null;
@@ -118,10 +118,10 @@ export default function TempChannelsClient({
   activeGuildId,
   userGuild,
   initialData,
-  guildChannels = [],
 }: Props) {
   const { guild, loading, error, save, saving, refresh } = useGuildData(initialData.id);
   const data = guild ?? initialData;
+  const guildChannels = (data as any).guildChannels ?? [];
 
   const [config, setConfig] = useState<TempConfig>(() => ({
     channelName: data.config?.channelName || '',
@@ -145,7 +145,7 @@ export default function TempChannelsClient({
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
     : null;
 
-  const channelName = (id: string) => guildChannels.find(c => c.id === id)?.name ?? id;
+  const channelName = (id: string) => guildChannels.find((c: Channels) => c.id === id)?.name ?? id;
 
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -237,7 +237,7 @@ export default function TempChannelsClient({
         throw new Error((data as { error?: string }).error || `${path} failed`);
       }
 
-      await refresh();
+      refresh();
       showToast('Success', {
         description:
           path === 'setup'
@@ -515,7 +515,7 @@ export default function TempChannelsClient({
                   <ChannelDropdown
                     channels={guildChannels}
                     value={config.customParent || ''}
-                    onChange={id => { setConfig(c => ({ ...c, customParent: id || null })); setDirty(true); }}
+                    onChangeAction={id => { setConfig(c => ({ ...c, customParent: id || null })); setDirty(true); }}
                     placeholder="Use bot-created category…"
                     types={[4]}
                   />

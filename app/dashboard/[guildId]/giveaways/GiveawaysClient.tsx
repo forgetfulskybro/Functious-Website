@@ -5,8 +5,10 @@ import Image from 'next/image';
 import Sidebar from '@/components/layout/Sidebar';
 import { useGuildData } from '@/hooks/useGuildData';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
+import RolesDropdown from '@/components/ui/RolesDropdown';
+import NumberInput from '@/components/ui/NumberInput';
 import { DateTimePicker, formatDt } from '@/components/ui/DateTimerPicker';
 
 interface GiveawayEntry {
@@ -24,6 +26,11 @@ interface GiveawayEntry {
   requirement?: string | null;
   lang?: string;
   ended?: boolean;
+  dmWinners?: boolean;
+  pingWinners?: boolean;
+  allowMultipleWins?: boolean;
+  imageUrl?: string | null;
+  bonusEntries?: { roleId: string; entries: number }[];
 }
 
 interface Props {
@@ -32,7 +39,8 @@ interface Props {
   activeGuildId: string;
   userGuild: FluxerGuild & { botPresent: boolean };
   initialData: GuildData;
-  guildChannels?: { id: string; name: string; type?: number }[];
+  guildChannels?: { id: string; name: string; type: number, parentId: string }[];
+  guildRoles?: { id: string; name: string }[];
 }
 
 function endTimeToDuration(timestampStr: string): string | null {
@@ -78,6 +86,11 @@ function mapGiveaways(raw: any[]): GiveawayEntry[] {
     requirement: g.requirement,
     lang: g.lang,
     ended: Boolean(g.ended),
+    dmWinners: Boolean(g.dmWinners),
+    pingWinners: g.pingWinners !== false,
+    allowMultipleWins: Boolean(g.allowMultipleWins),
+    imageUrl: g.imageUrl ?? null,
+    bonusEntries: Array.isArray(g.bonusEntries) ? g.bonusEntries : [],
   }));
 }
 
@@ -103,10 +116,13 @@ export default function GiveawaysClient({
   activeGuildId,
   userGuild,
   initialData,
-  guildChannels = [],
+  guildChannels: guildChannelsProp = [],
+  guildRoles: guildRolesProp = [],
 }: Props) {
   const { guild, loading, error } = useGuildData(initialData.id);
   const data = guild ?? initialData;
+  const guildChannels = (data as any).guildChannels ?? guildChannelsProp;
+  const guildRoles = (data as any).guildRoles ?? guildRolesProp;
 
   const [giveaways, setGiveaways] = useState<GiveawayEntry[]>(() =>
     mapGiveaways((data as any).activeGiveaways || [])
@@ -126,7 +142,7 @@ export default function GiveawaysClient({
     : null;
 
   const channelName = (id: string) =>
-    guildChannels.find((c) => c.id === id)?.name ?? id;
+    guildChannels.find((c: Channels) => c.id === id)?.name ?? id;
 
   const createGiveaway = useCallback(
     async (payload: {
@@ -135,6 +151,11 @@ export default function GiveawaysClient({
       winners: number;
       duration: string;
       requirement?: string;
+      dmWinners?: boolean;
+      pingWinners?: boolean;
+      allowMultipleWins?: boolean;
+      imageUrl?: string;
+      bonusEntries?: { roleId: string; entries: number }[];
     }) => {
       setBusy(true);
       try {
@@ -329,7 +350,8 @@ export default function GiveawaysClient({
 
       {modal === 'create' && (
         <CreateGiveawayModal
-          channels={guildChannels.filter((c) => c.type === 0 || c.type == null)}
+          channels={guildChannels.filter((c: Channels) => c.type === 0 || c.type === 4)}
+          guildRoles={guildRoles}
           busy={busy}
           onSave={async (payload) => {
             const ok = await createGiveaway(payload);
@@ -371,11 +393,13 @@ export default function GiveawaysClient({
 
 function CreateGiveawayModal({
   channels,
+  guildRoles,
   busy,
   onSave,
   onClose,
 }: {
-  channels: { id: string; name: string; type?: number }[];
+  channels: { id: string; name: string; type: number, parentId: string }[];
+  guildRoles: { id: string; name: string }[];
   busy?: boolean;
   onSave: (payload: {
     channelId: string;
@@ -383,6 +407,11 @@ function CreateGiveawayModal({
     winners: number;
     duration: string;
     requirement?: string;
+    dmWinners?: boolean;
+    pingWinners?: boolean;
+    allowMultipleWins?: boolean;
+    imageUrl?: string;
+    bonusEntries?: { roleId: string; entries: number }[];
   }) => void | Promise<void>;
   onClose: () => void;
 }) {
@@ -391,7 +420,27 @@ function CreateGiveawayModal({
   const [winners, setWinners] = useState(1);
   const [endTime, setEndTime] = useState(defaultEndTime);
   const [requirement, setRequirement] = useState('');
+  const [dmWinners, setDmWinners] = useState(false);
+  const [pingWinners, setPingWinners] = useState(true);
+  const [allowMultipleWins, setAllowMultipleWins] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [bonusEntries, setBonusEntries] = useState<{ roleId: string; entries: number }[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const addBonusEntry = () => {
+    if (bonusEntries.length >= 20) return;
+    setBonusEntries((prev) => [...prev, { roleId: '', entries: 2 }]);
+  };
+
+  const updateBonusEntry = (index: number, field: 'roleId' | 'entries', value: string | number) => {
+    setBonusEntries((prev) =>
+      prev.map((b, i) => (i === index ? { ...b, [field]: value } : b))
+    );
+  };
+
+  const removeBonusEntry = (index: number) => {
+    setBonusEntries((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -406,6 +455,10 @@ function CreateGiveawayModal({
       return;
     }
 
+    const validBonusEntries = bonusEntries.filter(
+      (b) => b.roleId.trim() && b.entries >= 1
+    );
+
     try {
       setSubmitting(true);
       await onSave({
@@ -414,6 +467,11 @@ function CreateGiveawayModal({
         winners: Math.min(50, Math.max(1, winners)),
         duration,
         requirement: requirement.trim() || undefined,
+        dmWinners,
+        pingWinners,
+        allowMultipleWins,
+        imageUrl: imageUrl.trim() || undefined,
+        bonusEntries: validBonusEntries.length ? validBonusEntries : undefined,
       });
     } finally {
       setSubmitting(false);
@@ -453,24 +511,31 @@ function CreateGiveawayModal({
 
         <form
           onSubmit={handleSubmit}
-          className="p-6 space-y-5 max-h-[80vh] overflow-y-auto"
+          className="p-6 space-y-4 max-h-[80vh] overflow-y-auto"
         >
-          <div>
-            <label className="block text-white/50 text-xs font-medium mb-1.5">
-              Channel
-            </label>
-            <ChannelDropdown
-              channels={channels}
-              value={channelId}
-              onChange={setChannelId}
-              types={[0]}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-white/50 text-xs font-medium mb-1.5">Channel</label>
+              <ChannelDropdown
+                channels={channels}
+                value={channelId}
+                onChangeAction={setChannelId}
+                types={[0]}
+              />
+            </div>
+            <div>
+              <label className="block text-white/50 text-xs font-medium mb-1.5">Winners</label>
+              <NumberInput
+                value={winners}
+                onChange={setWinners}
+                min={1}
+                max={50}
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-white/50 text-xs font-medium mb-1.5">
-              Prize
-            </label>
+            <label className="block text-white/50 text-xs font-medium mb-1.5">Prize</label>
             <input
               type="text"
               value={prize}
@@ -483,47 +548,118 @@ function CreateGiveawayModal({
           </div>
 
           <div>
-            <label className="block text-white/50 text-xs font-medium mb-1.5">
-              Number of Winners
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={winners}
-              onChange={(e) =>
-                setWinners(Math.max(1, Math.min(50, Number(e.target.value) || 1)))
-              }
-              className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-orange"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-white/50 text-xs font-medium mb-1.5">
-              Ends at
-            </label>
+            <label className="block text-white/50 text-xs font-medium mb-1.5">Ends at</label>
             <DateTimePicker value={endTime} onChangeAction={setEndTime} />
-            <p className="text-white/25 text-[10px] mt-1.5">
-              Must be at least 2 minutes from now
-            </p>
+            <p className="text-white/25 text-[10px] mt-1">Must be at least 2 minutes from now</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-white/50 text-xs font-medium mb-1.5">
+                Requirement <span className="text-white/25">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={requirement}
+                onChange={(e) => setRequirement(e.target.value)}
+                placeholder="Must boost the server"
+                maxLength={500}
+                className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+              />
+            </div>
+            <div>
+              <label className="block text-white/50 text-xs font-medium mb-1.5">
+                Banner Image <span className="text-white/25">(optional)</span>
+              </label>
+              <input
+                type="url"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="https://example.com/banner.png"
+                className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-white/50 text-xs font-medium mb-1.5">
-              Requirement (optional)
-            </label>
-            <input
-              type="text"
-              value={requirement}
-              onChange={(e) => setRequirement(e.target.value)}
-              placeholder="Must boost the server"
-              maxLength={500}
-              className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-white/50 text-xs font-medium">Bonus Entries by Role</p>
+                <p className="text-white/25 text-[10px]">Users with these roles get extra entries</p>
+              </div>
+              {bonusEntries.length < 20 && (
+                <button
+                  type="button"
+                  onClick={addBonusEntry}
+                  className="text-xs text-orange-warm hover:text-orange px-2 py-1 rounded-md bg-orange/10 hover:bg-orange/20 transition-colors"
+                >
+                  + Add
+                </button>
+              )}
+            </div>
+
+            {bonusEntries.length === 0 ? (
+              <p className="text-white/20 text-xs py-1">No bonus entries configured.</p>
+            ) : (
+              <div className="space-y-2">
+                {bonusEntries.map((entry, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <RolesDropdown
+                        roles={guildRoles}
+                        value={entry.roleId}
+                        onChange={(id) => updateBonusEntry(i, 'roleId', id)}
+                        placeholder="Select a role…"
+                      />
+                    </div>
+                    <div className="w-24 flex-shrink-0">
+                      <NumberInput
+                        value={entry.entries}
+                        onChange={(n) => updateBonusEntry(i, 'entries', n)}
+                        min={1}
+                        max={100}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeBonusEntry(i)}
+                      className="p-1.5 text-white/30 hover:text-red-400 hover:bg-red-500/10 rounded-md"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3 space-y-2.5">
+            <p className="text-white/40 text-xs font-semibold uppercase tracking-widest">Options</p>
+
+            {([
+              { label: 'Ping winners', sub: 'Mention winners in channel on end', val: pingWinners, set: setPingWinners },
+              { label: 'DM winners', sub: 'Send each winner a direct message', val: dmWinners, set: setDmWinners },
+              { label: 'Allow multiple wins', sub: 'One user can win more than one slot', val: allowMultipleWins, set: setAllowMultipleWins },
+            ] as const).map(({ label, sub, val, set }) => (
+              <label key={label} className="flex items-center justify-between cursor-pointer gap-4">
+                <div className="min-w-0">
+                  <p className="text-white/80 text-sm">{label}</p>
+                  <p className="text-white/30 text-xs">{sub}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => set((v: boolean) => !v)}
+                  className={`relative flex-shrink-0 w-10 h-5 rounded-full transition-colors ${val ? 'bg-orange' : 'bg-white/10'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${val ? 'translate-x-5' : ''}`} />
+                </button>
+              </label>
+            ))}
+          </div>
+
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={onClose}
@@ -683,6 +819,55 @@ function GiveawayDetailsModal({
             <div>
               <p className="text-white/40 text-xs">Channel</p>
               <p className="text-white">#{channelName || giveaway.channelId}</p>
+            </div>
+          )}
+
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3 space-y-2">
+            <p className="text-white/40 text-xs font-semibold uppercase tracking-widest">Settings</p>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-white/30 text-[10px]">Ping winners</p>
+                <p className={`text-xs font-medium ${giveaway.pingWinners !== false ? 'text-green-400' : 'text-white/40'}`}>
+                  {giveaway.pingWinners !== false ? 'On' : 'Off'}
+                </p>
+              </div>
+              <div>
+                <p className="text-white/30 text-[10px]">DM winners</p>
+                <p className={`text-xs font-medium ${giveaway.dmWinners ? 'text-green-400' : 'text-white/40'}`}>
+                  {giveaway.dmWinners ? 'On' : 'Off'}
+                </p>
+              </div>
+              <div>
+                <p className="text-white/30 text-[10px]">Multi-win</p>
+                <p className={`text-xs font-medium ${giveaway.allowMultipleWins ? 'text-orange-warm' : 'text-white/40'}`}>
+                  {giveaway.allowMultipleWins ? 'On' : 'Off'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {giveaway.bonusEntries && giveaway.bonusEntries.length > 0 && (
+            <div>
+              <p className="text-white/40 text-xs mb-1">Bonus Entries</p>
+              <div className="space-y-1">
+                {giveaway.bonusEntries.map((b, i) => (
+                  <div key={i} className="flex items-center justify-between bg-white/[0.03] rounded-lg px-3 py-1.5">
+                    <p className="text-white/60 text-xs font-mono">{b.roleId}</p>
+                    <p className="text-orange-warm text-xs">+{b.entries}x</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {giveaway.imageUrl && (
+            <div>
+              <p className="text-white/40 text-xs mb-1">Banner Image</p>
+              <img
+                src={giveaway.imageUrl}
+                alt="Giveaway banner"
+                className="rounded-lg w-full max-h-40 object-cover"
+              />
             </div>
           )}
 

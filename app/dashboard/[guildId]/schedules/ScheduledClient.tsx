@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Sidebar from '@/components/layout/Sidebar';
 import { useGuildData } from '@/hooks/useGuildData';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
 import { formatTimestamp, DateTimePicker, formatDt } from '@/components/ui/DateTimerPicker';
 import SelectDropdown from '@/components/ui/SelectDropdown';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
@@ -32,7 +32,7 @@ interface Props {
   activeGuildId: string;
   userGuild: FluxerGuild & { botPresent: boolean };
   initialData: GuildData;
-  guildChannels?: { id: string; name: string; type?: number }[];
+  guildChannels?: { id: string; name: string; type: number, parentId: string }[];
 }
 
 function mapScheduled(raw: any[]): ScheduledEntry[] {
@@ -79,10 +79,10 @@ export default function ScheduledClient({
   activeGuildId,
   userGuild,
   initialData,
-  guildChannels = [],
 }: Props) {
   const { guild, loading, error, save, saving } = useGuildData(initialData.id);
   const data = guild ?? initialData;
+  const guildChannels = (data as any).guildChannels ?? [];
 
   const [scheduled, setScheduled] = useState<ScheduledEntry[]>(() =>
     mapScheduled((data as any).scheduledMessages || [])
@@ -127,7 +127,7 @@ export default function ScheduledClient({
   );
 
   const channelName = (id: string) =>
-    guildChannels.find((c) => c.id === id)?.name ?? id;
+    guildChannels.find((c: Channels) => c.id === id)?.name ?? id;
 
   const shownLoading = useRef(false);
   const shownError = useRef<string | null>(null);
@@ -298,6 +298,7 @@ export default function ScheduledClient({
         <ViewModal
           item={viewItem}
           channelName={channelName(viewItem.channelId)}
+          prefix={(data as any).prefix || 'f!'}
           onClose={() => setViewItem(null)}
         />
       )}
@@ -407,7 +408,7 @@ function ScheduleModal({
   onClose,
 }: {
   initial?: ScheduledEntry;
-  channels: { id: string; name: string; type?: number }[];
+  channels: { id: string; name: string; type: number, parentId: string }[];
   userId: string;
   saving?: boolean;
   onSave: (item: ScheduledEntry) => void | Promise<void>;
@@ -438,9 +439,53 @@ function ScheduleModal({
   const [recurring, setRecurring] = useState(initial?.recurring || 'none');
   const [commandName, setCommandName] = useState(initial?.commandName || '');
   const [submitting, setSubmitting] = useState(false);
+  const [pollDuration, setPollDuration] = useState('');
+  const [pollTitle, setPollTitle] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  const [gwDuration, setGwDuration] = useState('');
+  const [gwWinners, setGwWinners] = useState('1');
+  const [gwPrize, setGwPrize] = useState('');
+  const [gwRequirement, setGwRequirement] = useState('');
+  const [gwDmWinners, setGwDmWinners] = useState(false);
+  const [gwPingWinners, setGwPingWinners] = useState(true);
+  const [gwAllowMultipleWins, setGwAllowMultipleWins] = useState(false);
+  const [gwImageUrl, setGwImageUrl] = useState('');
+  const [remindDuration, setRemindDuration] = useState('');
+  const [remindMessage, setRemindMessage] = useState('');
+
+  useEffect(() => {
+    if (!initial || initial.type !== 'command') return;
+    const args = initial.commandArgs ?? [];
+    if (initial.commandName === 'polls') {
+      setPollDuration(args[0] ?? '');
+      setPollTitle(args[1] ?? '');
+      setPollOptions(args.slice(2).length >= 2 ? args.slice(2) : ['', '']);
+    } else if (initial.commandName === 'giveaway') {
+      setGwDuration(args[0] ?? '');
+      setGwWinners(args[1] ?? '1');
+      setGwPrize(args[2] ?? '');
+      for (const flag of args.slice(3)) {
+        const f = flag.toLowerCase();
+        if (/^dm:(yes|true|1)$/i.test(f)) setGwDmWinners(true);
+        if (/^ping:(no|false|0)$/i.test(f)) setGwPingWinners(false);
+        if (/^multiwin:(yes|true|1)$/i.test(f)) setGwAllowMultipleWins(true);
+        if (/^image:/i.test(flag)) setGwImageUrl(flag.replace(/^image:/i, ''));
+        if (/^requirement:/i.test(flag)) setGwRequirement(flag.replace(/^requirement:/i, ''));
+      }
+    } else if (initial.commandName === 'remind') {
+      const full = args[0] ?? '';
+      const spaceIdx = full.indexOf(' ');
+      if (spaceIdx !== -1) {
+        setRemindDuration(full.slice(0, spaceIdx));
+        setRemindMessage(full.slice(spaceIdx + 1));
+      } else {
+        setRemindDuration(full);
+      }
+    }
+  }, []);
 
   const AVAILABLE_COMMANDS = [
-    { value: 'poll', label: 'Poll' },
+    { value: 'polls', label: 'Poll' },
     { value: 'giveaway', label: 'Giveaway' },
     { value: 'remind', label: 'Reminder' },
   ];
@@ -464,14 +509,43 @@ function ScheduleModal({
 
     const ts = Math.floor(new Date(timestampStr).getTime() / 1000);
     if (!Number.isFinite(ts) || ts <= Math.floor(Date.now() / 1000)) {
-      showErrorToast('Error', {
-        description: 'Please choose a time in the future.',
-      });
+      showErrorToast('Error', { description: 'Please choose a time in the future.' });
       return;
+    }
+
+    let builtCommandArgs: string[] | undefined = initial?.commandArgs;
+    if (type === 'command') {
+      if (commandName === 'polls') {
+        const opts = pollOptions.map(o => o.trim()).filter(o => o);
+        if (!pollDuration.trim() || !pollTitle.trim() || opts.length < 2) {
+          showErrorToast('Error', { description: 'Poll needs a duration, title, and at least 2 options.' });
+          return;
+        }
+        builtCommandArgs = [pollDuration.trim(), pollTitle.trim(), ...opts];
+      } else if (commandName === 'giveaway') {
+        const w = parseInt(gwWinners, 10);
+        if (!gwDuration.trim() || isNaN(w) || w < 1 || w > 50 || !gwPrize.trim()) {
+          showErrorToast('Error', { description: 'Giveaway needs a duration, winner count (1-50), and prize.' });
+          return;
+        }
+        builtCommandArgs = [gwDuration.trim(), String(w), gwPrize.trim()];
+        if (gwRequirement.trim()) builtCommandArgs.push(`requirement:${gwRequirement.trim()}`);
+        if (gwDmWinners) builtCommandArgs.push('dm:yes');
+        if (!gwPingWinners) builtCommandArgs.push('ping:no');
+        if (gwAllowMultipleWins) builtCommandArgs.push('multiwin:yes');
+        if (gwImageUrl.trim()) builtCommandArgs.push(`image:${gwImageUrl.trim()}`);
+      } else if (commandName === 'remind') {
+        if (!remindDuration.trim() || !remindMessage.trim()) {
+          showErrorToast('Error', { description: 'Reminder needs a duration and message.' });
+          return;
+        }
+        builtCommandArgs = [`${remindDuration.trim()} ${remindMessage.trim()}`];
+      }
     }
 
     try {
       setSubmitting(true);
+      const resolvedCommandName = commandName;
 
       const newItem: ScheduledEntry = {
         id: initial?.id || makeScheduleId(),
@@ -488,8 +562,8 @@ function ScheduleModal({
               ? { ...initial.embedData, description: content?.slice(0, 4040) || '' }
               : { description: content?.slice(0, 4040) || '' }
             : null,
-        commandName: type === 'command' ? commandName : undefined,
-        commandArgs: type === 'command' ? initial?.commandArgs : undefined,
+        commandName: type === 'command' ? resolvedCommandName : undefined,
+        commandArgs: type === 'command' ? builtCommandArgs : undefined,
         recurring: recurring || 'none',
         webhook: initial?.webhook ?? null,
         createdAt: initial?.createdAt ?? Math.floor(Date.now() / 1000),
@@ -552,7 +626,7 @@ function ScheduleModal({
               <ChannelDropdown
                 channels={channels}
                 value={channelId}
-                onChange={setChannelId}
+                onChangeAction={setChannelId}
               />
             </div>
           </div>
@@ -578,12 +652,236 @@ function ScheduleModal({
           )}
 
           {type === 'command' && (
-            <SelectDropdown
-              label="Command to Run"
-              value={commandName}
-              onChange={setCommandName}
-              options={AVAILABLE_COMMANDS}
-            />
+            <div className="space-y-4">
+              <SelectDropdown
+                label="Command to Run"
+                value={commandName}
+                onChange={(v) => { setCommandName(v); }}
+                options={AVAILABLE_COMMANDS}
+              />
+
+              {commandName === 'polls' && (
+                <div className="rounded-xl bg-white/[0.03] p-4 space-y-3">
+                  <p className="text-white/40 text-xs font-semibold uppercase tracking-widest">Poll Settings</p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-white/50 text-xs font-medium mb-1.5">
+                        Duration
+                        <span className="text-white/25 ml-1">e.g. 30m, 2h, 1d</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={pollDuration}
+                        onChange={(e) => setPollDuration(e.target.value)}
+                        placeholder="30m"
+                        className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white/50 text-xs font-medium mb-1.5">Question / Title</label>
+                      <input
+                        type="text"
+                        value={pollTitle}
+                        onChange={(e) => setPollTitle(e.target.value)}
+                        placeholder="What's your favourite color?"
+                        maxLength={256}
+                        className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-white/50 text-xs font-medium">
+                        Options <span className="text-white/25">(2–10)</span>
+                      </label>
+                      {pollOptions.length < 10 && (
+                        <button
+                          type="button"
+                          onClick={() => setPollOptions(p => [...p, ''])}
+                          className="text-xs text-orange-warm hover:text-orange px-2 py-0.5 rounded bg-orange/10 hover:bg-orange/20 transition-colors"
+                        >
+                          + Add
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {pollOptions.map((opt, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-white/30 text-xs w-4 text-right flex-shrink-0">{i + 1}.</span>
+                          <input
+                            type="text"
+                            value={opt}
+                            onChange={(e) => setPollOptions(p => p.map((o, j) => j === i ? e.target.value : o))}
+                            placeholder={`Option ${i + 1}`}
+                            maxLength={100}
+                            className="flex-1 bg-white/5 rounded-lg px-3 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:ring-1 focus:ring-orange"
+                          />
+                          {pollOptions.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => setPollOptions(p => p.filter((_, j) => j !== i))}
+                              className="p-1.5 text-white/25 hover:text-red-400 hover:bg-red-500/10 rounded-md"
+                            >
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {commandName === 'giveaway' && (
+                <div className="rounded-xl bg-white/[0.03] p-4 space-y-3">
+                  <p className="text-white/40 text-xs font-semibold uppercase tracking-widest">Giveaway Settings</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-white/50 text-xs font-medium mb-1.5">
+                        Duration
+                        <span className="text-white/25 ml-1">e.g. 20m, 2h</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={gwDuration}
+                        onChange={(e) => setGwDuration(e.target.value)}
+                        placeholder="20m"
+                        className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white/50 text-xs font-medium mb-1.5">Winners</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={gwWinners}
+                        onChange={(e) => setGwWinners(e.target.value)}
+                        className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-orange"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-white/50 text-xs font-medium mb-1.5">Prize</label>
+                    <input
+                      type="text"
+                      value={gwPrize}
+                      onChange={(e) => setGwPrize(e.target.value)}
+                      placeholder="A Fluxer t-shirt"
+                      maxLength={500}
+                      className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white/50 text-xs font-medium mb-1.5">
+                      Requirement <span className="text-white/25">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={gwRequirement}
+                      onChange={(e) => setGwRequirement(e.target.value)}
+                      placeholder="Must boost the server"
+                      maxLength={500}
+                      className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white/50 text-xs font-medium mb-1.5">
+                      Banner Image URL <span className="text-white/25">(optional)</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={gwImageUrl}
+                      onChange={(e) => setGwImageUrl(e.target.value)}
+                      placeholder="https://example.com/banner.png"
+                      className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+                    />
+                  </div>
+                  <div className="space-y-2 pt-1">
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <p className="text-white/70 text-xs">Ping winners</p>
+                        <p className="text-white/25 text-[10px]">Mention winners in channel on end</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setGwPingWinners(v => !v)}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${gwPingWinners ? 'bg-orange' : 'bg-white/10'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gwPingWinners ? 'translate-x-4' : ''}`} />
+                      </button>
+                    </label>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <p className="text-white/70 text-xs">DM winners</p>
+                        <p className="text-white/25 text-[10px]">Send each winner a direct message</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setGwDmWinners(v => !v)}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${gwDmWinners ? 'bg-orange' : 'bg-white/10'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gwDmWinners ? 'translate-x-4' : ''}`} />
+                      </button>
+                    </label>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <p className="text-white/70 text-xs">Allow multiple wins</p>
+                        <p className="text-white/25 text-[10px]">One user can win more than one slot</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setGwAllowMultipleWins(v => !v)}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${gwAllowMultipleWins ? 'bg-orange' : 'bg-white/10'}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gwAllowMultipleWins ? 'translate-x-4' : ''}`} />
+                      </button>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {commandName === 'remind' && (
+                <div className="rounded-xl bg-white/[0.03] p-4 space-y-3">
+                  <p className="text-white/40 text-xs font-semibold uppercase tracking-widest">Reminder Settings</p>
+                  <div>
+                    <label className="block text-white/50 text-xs font-medium mb-1.5">
+                      Remind after
+                      <span className="text-white/25 ml-1">e.g. 30m, 1h, 2d</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={remindDuration}
+                      onChange={(e) => setRemindDuration(e.target.value)}
+                      placeholder="1h"
+                      className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white/50 text-xs font-medium mb-1.5">Message</label>
+                    <textarea
+                      value={remindMessage}
+                      onChange={(e) => setRemindMessage(e.target.value)}
+                      rows={3}
+                      placeholder="Don't forget to check the announcements!"
+                      maxLength={1000}
+                      className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange resize-y"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           <SelectDropdown
@@ -604,7 +902,14 @@ function ScheduleModal({
             </button>
             <button
               type="submit"
-              disabled={!channelId || (type === 'command' && !commandName) || busy}
+              disabled={
+                !channelId ||
+                (type === 'command' && !commandName) ||
+                (type === 'command' && commandName === 'polls' && (pollOptions.filter(o => o.trim()).length < 2 || !pollTitle.trim() || !pollDuration.trim())) ||
+                (type === 'command' && commandName === 'giveaway' && (!gwDuration.trim() || !gwPrize.trim())) ||
+                (type === 'command' && commandName === 'remind' && (!remindDuration.trim() || !remindMessage.trim())) ||
+                busy
+              }
               className="flex-1 py-3 bg-orange hover:bg-orange-bright disabled:opacity-50 rounded-xl font-semibold text-white"
             >
               {busy ? 'Saving…' : initial ? 'Save Changes' : 'Schedule Message'}
@@ -619,58 +924,285 @@ function ScheduleModal({
 function ViewModal({
   item,
   channelName,
+  prefix,
   onClose,
 }: {
   item: ScheduledEntry;
   channelName: string;
+  prefix: string;
   onClose: () => void;
 }) {
+  function buildCommandPreview(): string | null {
+    if (item.type !== 'command' || !item.commandName || !item.commandArgs) return null;
+    const args = item.commandArgs;
+    const cmd = item.commandName;
+
+    if (cmd === 'polls') {
+      return `${prefix}polls ${args.join(' | ')}`;
+    }
+    if (cmd === 'giveaway') {
+      return `${prefix}giveaway ${args.join(' | ')}`;
+    }
+    if (cmd === 'remind') {
+      return `${prefix}remind ${args[0] ?? ''}`;
+    }
+    return `${prefix}${cmd} ${args.join(' | ')}`;
+  }
+
+  function parseGiveawayFlags() {
+    if (item.commandName !== 'giveaway' || !item.commandArgs) return null;
+    const args = item.commandArgs;
+    const flags: Record<string, string> = {};
+    for (const f of args.slice(3)) {
+      const [key, ...rest] = f.split(':');
+      flags[key.toLowerCase()] = rest.join(':');
+    }
+    return {
+      duration: args[0],
+      winners: args[1],
+      prize: args[2],
+      requirement: flags['requirement'] ?? null,
+      dm: ['yes', 'true', '1'].includes(flags['dm'] ?? ''),
+      ping: !['no', 'false', '0'].includes(flags['ping'] ?? 'yes'),
+      multiwin: ['yes', 'true', '1'].includes(flags['multiwin'] ?? ''),
+      image: flags['image'] ?? null,
+    };
+  }
+
+  function parsePollArgs() {
+    if (item.commandName !== 'polls' || !item.commandArgs) return null;
+    const args = item.commandArgs;
+    return {
+      duration: args[0],
+      title: args[1],
+      options: args.slice(2),
+    };
+  }
+
+  const commandPreview = buildCommandPreview();
+  const giveawayFlags = parseGiveawayFlags();
+  const pollArgs = parsePollArgs();
+
+  const typeLabel: Record<string, string> = {
+    content: 'Text Message',
+    embed: 'Embed',
+    command: item.commandName
+      ? { polls: 'Poll', giveaway: 'Giveaway', remind: 'Reminder' }[item.commandName] ?? item.commandName
+      : 'Command',
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
-      <div className="bg-[#160a0a] rounded-2xl w-full max-w-md overflow-hidden">
-        <div className="p-5 border-b border-white/10">
-          <h2 className="text-white text-xl font-bold">Scheduled Message</h2>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-[#160a0a] rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+
+        <div className="flex items-center justify-between p-5 border-b border-[#471B1B]">
+          <div>
+            <h2 className="text-white text-lg font-bold">Scheduled Message</h2>
+            <p className="text-white/30 text-xs mt-0.5">{typeLabel[item.type] ?? item.type}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-white/40 hover:text-white text-xl"
+          >
+            ✕
+          </button>
         </div>
-        <div className="p-5 space-y-4 text-sm">
-          <div>
-            <p className="text-white/50">Type</p>
-            <p className="text-white">{item.type}</p>
+
+        <div className="p-5 space-y-4 overflow-y-auto text-sm">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Channel</p>
+              <p className="text-white font-medium">#{channelName}</p>
+            </div>
+            <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Fires at</p>
+              <p className="text-white font-medium">
+                {new Date(item.timestamp * 1000).toLocaleString(undefined, {
+                  dateStyle: 'medium',
+                  timeStyle: 'short',
+                })}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-white/50">Channel</p>
-            <p className="text-white">#{channelName}</p>
-          </div>
-          <div>
-            <p className="text-white/50">Time</p>
-            <p className="text-white">
-              {new Date(item.timestamp * 1000).toLocaleString()}
-            </p>
-          </div>
+
           {item.recurring && item.recurring !== 'none' && (
-            <div>
-              <p className="text-white/50">Recurring</p>
-              <p className="text-white capitalize">{item.recurring}</p>
+            <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Recurring</p>
+              <p className="text-white capitalize font-medium">{item.recurring}</p>
             </div>
           )}
-          {item.type === 'command' && item.commandName && (
-            <div>
-              <p className="text-white/50">Command</p>
-              <p className="text-white">{item.commandName}</p>
+
+          {item.sendCount !== undefined && item.sendCount > 1 && (
+            <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Send count</p>
+              <p className="text-white font-medium">{item.sendCount}</p>
             </div>
           )}
-          {item.content && (
+
+          {(item.type === 'content' || item.type === 'embed') && item.content && (
             <div>
-              <p className="text-white/50">Content</p>
-              <div className="bg-black/30 p-3 rounded text-white/90 whitespace-pre-wrap text-xs">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1.5">
+                {item.type === 'embed' ? 'Embed Description' : 'Message Content'}
+              </p>
+              <div className="bg-white/[0.03] rounded-xl p-3 text-white/80 whitespace-pre-wrap text-xs leading-relaxed max-h-48 overflow-y-auto">
                 {item.content}
               </div>
             </div>
           )}
+
+          {item.type === 'embed' && item.embedData && (() => {
+            const ed = item.embedData;
+            const fields = [
+              ed.title && { label: 'Title', value: ed.title },
+              ed.footer?.text && { label: 'Footer', value: ed.footer.text },
+              ed.author?.name && { label: 'Author', value: ed.author.name },
+              ed.image && { label: 'Image', value: ed.image },
+              ed.thumbnail && { label: 'Thumbnail', value: ed.thumbnail },
+              ed.color && { label: 'Color', value: ed.color },
+            ].filter(Boolean) as { label: string; value: string }[];
+
+            return fields.length > 0 ? (
+              <div className="rounded-xl bg-white/[0.03] divide-y divide-white/5">
+                {fields.map((f) => (
+                  <div key={f.label} className="flex items-start gap-3 px-3 py-2">
+                    <p className="text-white/40 text-xs w-20 flex-shrink-0 pt-px">{f.label}</p>
+                    <p className="text-white/75 text-xs break-all">{f.value}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null;
+          })()}
+
+          {item.type === 'command' && (
+            <div className="space-y-3">
+              {commandPreview && (
+                <div>
+                  <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1.5">Command preview</p>
+                  <div className="bg-black/40 rounded-xl px-3 py-2.5 font-mono text-xs text-orange-warm break-all">
+                    {commandPreview}
+                  </div>
+                </div>
+              )}
+
+              {pollArgs && (
+                <div className="rounded-xl bg-white/[0.03] divide-y divide-white/5">
+                  <div className="flex items-center gap-3 px-3 py-2">
+                    <p className="text-white/40 text-xs w-20 flex-shrink-0">Duration</p>
+                    <p className="text-white/80 text-xs font-medium">{pollArgs.duration}</p>
+                  </div>
+                  <div className="flex items-start gap-3 px-3 py-2">
+                    <p className="text-white/40 text-xs w-20 flex-shrink-0 pt-px">Question</p>
+                    <p className="text-white/80 text-xs">{pollArgs.title}</p>
+                  </div>
+                  <div className="px-3 py-2">
+                    <p className="text-white/40 text-xs mb-1.5">Options</p>
+                    <div className="space-y-1">
+                      {pollArgs.options.map((opt, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-white/25 text-xs w-4 text-right">{i + 1}.</span>
+                          <span className="text-white/70 text-xs">{opt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {giveawayFlags && (
+                <div className="rounded-xl bg-white/[0.03] divide-y divide-white/5">
+                  <div className="flex items-center gap-3 px-3 py-2">
+                    <p className="text-white/40 text-xs w-28 flex-shrink-0">Duration</p>
+                    <p className="text-white/80 text-xs font-medium">{giveawayFlags.duration}</p>
+                  </div>
+                  <div className="flex items-center gap-3 px-3 py-2">
+                    <p className="text-white/40 text-xs w-28 flex-shrink-0">Winners</p>
+                    <p className="text-white/80 text-xs">{giveawayFlags.winners}</p>
+                  </div>
+                  <div className="flex items-start gap-3 px-3 py-2">
+                    <p className="text-white/40 text-xs w-28 flex-shrink-0 pt-px">Prize</p>
+                    <p className="text-white/80 text-xs">{giveawayFlags.prize}</p>
+                  </div>
+                  {giveawayFlags.requirement && (
+                    <div className="flex items-start gap-3 px-3 py-2">
+                      <p className="text-white/40 text-xs w-28 flex-shrink-0 pt-px">Requirement</p>
+                      <p className="text-white/80 text-xs">{giveawayFlags.requirement}</p>
+                    </div>
+                  )}
+                  {giveawayFlags.image && (
+                    <div className="flex items-start gap-3 px-3 py-2">
+                      <p className="text-white/40 text-xs w-28 flex-shrink-0 pt-px">Banner</p>
+                      <p className="text-white/50 text-xs break-all font-mono">{giveawayFlags.image}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 gap-0 divide-x divide-white/5">
+                    {[
+                      { label: 'Ping winners', value: giveawayFlags.ping },
+                      { label: 'DM winners', value: giveawayFlags.dm },
+                      { label: 'Multi-win', value: giveawayFlags.multiwin },
+                    ].map((f) => (
+                      <div key={f.label} className="px-3 py-2 text-center">
+                        <p className="text-white/30 text-[10px]">{f.label}</p>
+                        <p className={`text-xs font-medium mt-0.5 ${f.value ? 'text-green-400' : 'text-white/30'}`}>
+                          {f.value ? 'On' : 'Off'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {item.commandName === 'remind' && item.commandArgs && (
+                <div className="rounded-xl bg-white/[0.03] divide-y divide-white/5">
+                  {(() => {
+                    const full = item.commandArgs[0] ?? '';
+                    const spaceIdx = full.indexOf(' ');
+                    const duration = spaceIdx !== -1 ? full.slice(0, spaceIdx) : full;
+                    const msg = spaceIdx !== -1 ? full.slice(spaceIdx + 1) : '';
+                    return (
+                      <>
+                        <div className="flex items-center gap-3 px-3 py-2">
+                          <p className="text-white/40 text-xs w-20 flex-shrink-0">After</p>
+                          <p className="text-white/80 text-xs font-medium">{duration}</p>
+                        </div>
+                        {msg && (
+                          <div className="flex items-start gap-3 px-3 py-2">
+                            <p className="text-white/40 text-xs w-20 flex-shrink-0 pt-px">Message</p>
+                            <p className="text-white/80 text-xs">{msg}</p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+
+          {item.webhook?.name && (
+            <div className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-3 py-2.5">
+              <svg className="w-3.5 h-3.5 text-white/40 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+              <div>
+                <p className="text-white/40 text-[10px] uppercase tracking-wider leading-none mb-0.5">Webhook</p>
+                <p className="text-white/70 text-xs">{item.webhook.name}</p>
+              </div>
+            </div>
+          )}
+
         </div>
-        <div className="p-4 border-t border-white/10 flex justify-end">
+
+        <div className="p-4 border-t border-[#471B1B] flex justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white"
+            className="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white text-sm transition-colors"
           >
             Close
           </button>

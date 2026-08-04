@@ -1,7 +1,31 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GuildData } from '@/lib/types';
+
+interface CacheEntry {
+  data: GuildData;
+  fetchedAt: number;
+}
+
+const cache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 30_000;
+
+function getCached(guildId: string): GuildData | null {
+  const entry = cache.get(guildId);
+  if (!entry) return null;
+  if (Date.now() - entry.fetchedAt > CACHE_TTL_MS) return null;
+  return entry.data;
+}
+
+function setCached(guildId: string, data: GuildData) {
+  cache.set(guildId, { data, fetchedAt: Date.now() });
+}
+
+function patchCached(guildId: string, updates: Partial<GuildData>) {
+  const entry = cache.get(guildId);
+  if (entry) cache.set(guildId, { ...entry, data: { ...entry.data, ...updates } });
+}
 
 interface TempSetupOptions {
   customCategoryId?: string | null;
@@ -24,48 +48,62 @@ interface UseGuildDataResult {
 }
 
 export function useGuildData(guildId: string): UseGuildDataResult {
-  const [guild, setGuild] = useState<GuildData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [guild, setGuild] = useState<GuildData | null>(() => getCached(guildId));
+  const [loading, setLoading] = useState(() => getCached(guildId) === null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchGuild = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/bot/guilds/${guildId}`, {
-        credentials: 'include',
-      });
-      if (res.status === 401) {
-        setError('Not authorised.');
-        return;
-      }
-      if (res.status === 404) {
-        setError('Failed to load: 404');
-        return;
-      }
+  const guildIdRef = useRef(guildId);
+  useEffect(() => { guildIdRef.current = guildId; }, [guildId]);
 
-      if (!res.ok) {
-        setError('Failed to load server settings.');
-        return;
+  const fetchGuild = useCallback(
+    async (background = false) => {
+      if (!background) {
+        setLoading(true);
+        setError(null);
       }
-      const data: GuildData = await res.json();
-      setGuild(data);
-    } catch {
-      setError('Could not reach the server. Try again later.');
-    } finally {
-      setLoading(false);
-    }
-  }, [guildId]);
+      try {
+        const res = await fetch(`/api/bot/guilds/${guildId}`, {
+          credentials: 'include',
+        });
+        if (res.status === 401) { setError('Not authorised.'); return; }
+        if (res.status === 404) { setError('Failed to load: 404'); return; }
+        if (!res.ok) { setError('Failed to load server settings.'); return; }
+
+        const data: GuildData = await res.json();
+
+        if (guildIdRef.current === guildId) {
+          setCached(guildId, data);
+          setGuild(data);
+          setError(null);
+        }
+      } catch {
+        if (!background) setError('Could not reach the server. Try again later.');
+      } finally {
+        if (!background && guildIdRef.current === guildId) setLoading(false);
+      }
+    },
+    [guildId]
+  );
 
   useEffect(() => {
-    fetchGuild();
-  }, [fetchGuild]);
+    const cached = getCached(guildId);
+    if (cached) {
+      setGuild(cached);
+      setLoading(false);
+      fetchGuild(true);
+    } else {
+      fetchGuild(false);
+    }
+  }, [guildId, fetchGuild]);
 
   const save = useCallback(
     async (updates: Partial<GuildData>) => {
       setSaving(true);
       setError(null);
+      setGuild(prev => (prev ? { ...prev, ...updates } : prev));
+      patchCached(guildId, updates);
+
       try {
         const res = await fetch(`/api/bot/guilds/${guildId}`, {
           method: 'PATCH',
@@ -73,8 +111,11 @@ export function useGuildData(guildId: string): UseGuildDataResult {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updates),
         });
-        if (!res.ok) throw new Error('Save failed');
-        setGuild(prev => (prev ? { ...prev, ...updates } : prev));
+        if (!res.ok) {
+          const rollback = getCached(guildId);
+          if (rollback) setGuild(rollback);
+          throw new Error('Save failed');
+        }
       } catch {
         setError('Failed to save changes. Please try again.');
         throw new Error('Save failed');
@@ -100,7 +141,8 @@ export function useGuildData(guildId: string): UseGuildDataResult {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || 'Setup failed');
         }
-        await fetchGuild();
+        cache.delete(guildId);
+        await fetchGuild(false);
       } catch (err: any) {
         setError(err?.message || 'Failed to setup temp channels.');
         throw err;
@@ -123,7 +165,8 @@ export function useGuildData(guildId: string): UseGuildDataResult {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Reset failed');
       }
-      await fetchGuild();
+      cache.delete(guildId);
+      await fetchGuild(false);
     } catch (err: any) {
       setError(err?.message || 'Failed to reset temp channels.');
       throw err;
@@ -136,7 +179,7 @@ export function useGuildData(guildId: string): UseGuildDataResult {
     guild,
     loading,
     error,
-    refresh: fetchGuild,
+    refresh: () => { cache.delete(guildId); fetchGuild(false); },
     save,
     saving,
     setupTempChannels,

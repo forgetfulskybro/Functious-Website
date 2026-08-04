@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Sidebar from '@/components/layout/Sidebar';
 import { useGuildData } from '@/hooks/useGuildData';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import { DateTimePicker, formatDt } from '@/components/ui/DateTimerPicker';
 
@@ -302,7 +302,7 @@ function defaultEndTime() {
 
 
 function CreatePollModal({ channels, busy, onSave, onClose }: {
-  channels: { id: string; name: string; type?: number }[];
+  channels: { id: string; name: string; type: number, parentId: string }[];
   busy?: boolean;
   onSave: (payload: { channelId: string; question: string; duration: string; options: string[] }) => Promise<void>;
   onClose: () => void;
@@ -379,7 +379,7 @@ function CreatePollModal({ channels, busy, onSave, onClose }: {
           <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
             <div>
               <label className="block text-white/50 text-xs font-medium mb-1.5">Channel</label>
-              <ChannelDropdown channels={channels} value={channelId} onChange={setChannelId} types={[0]} />
+              <ChannelDropdown channels={channels} value={channelId} onChangeAction={setChannelId} types={[0]} />
             </div>
 
             <div>
@@ -476,12 +476,13 @@ interface Props {
   activeGuildId: string;
   userGuild: FluxerGuild & { botPresent: boolean };
   initialData: GuildData;
-  guildChannels?: { id: string; name: string; type?: number }[];
+  guildChannels?: { id: string; name: string; type: number, parentId: string }[];
 }
 
-export default function PollsClient({ user, guilds, activeGuildId, userGuild, initialData, guildChannels = [] }: Props) {
+export default function PollsClient({ user, guilds, activeGuildId, userGuild, initialData, guildChannels: guildChannelsProp = [] }: Props) {
   const { guild, loading, error } = useGuildData(initialData.id);
   const data = guild ?? initialData;
+  const guildChannels = (data as any).guildChannels ?? guildChannelsProp;
 
   const [polls, setPolls] = useState<PollEntry[]>(() =>
     ((data as any).activePolls ?? []).map(mapPoll)
@@ -558,9 +559,9 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
     }
   }, [activeGuildId]);
 
-  const channelName = (id: string) => guildChannels.find(c => c.id === id)?.name ?? id;
+  const channelName = (id: string) => guildChannels.find((c: Channels) => c.id === id)?.name ?? id;
   const iconUrl = userGuild.icon ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64` : null;
-  const textChannels = guildChannels.filter(c => c.type === 0 || c.type == null);
+  const textChannels = guildChannels.filter((c: Channels) => c.type === 0 || c.type == null);
 
   return (
     <div className="min-h-screen bg-bg-dark flex">

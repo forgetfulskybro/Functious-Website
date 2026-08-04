@@ -51,7 +51,7 @@ export default function HeroSection() {
             <a
               href="/dashboard"
               className={[
-                'group inline-flex items-center justify-center gap-2 rounded-2xl font-semibold',
+                'group inline-flex items-center justify-center gap-3 rounded-2xl font-semibold',
                 'bg-white/10 border border-white/20',
                 'text-white/90 shadow-xl shadow-black/30',
                 'hover:bg-white/15 hover:border-white/30 hover:text-white',

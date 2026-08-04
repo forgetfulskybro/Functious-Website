@@ -38,7 +38,6 @@ export async function POST(req: NextRequest) {
       user: FluxerUser;
       guilds: FluxerGuild[];
     };
-
  
     const session: Session = { user, accessToken };
 
