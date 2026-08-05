@@ -53,7 +53,7 @@ export default function HeroSection() {
                 'relative inline-flex items-center justify-center gap-3 rounded-2xl font-semibold',
                 'bg-white/10 border border-white/20',
                 'text-white/50 shadow-xl shadow-black/30',
-                'cursor-not-allowed select-none',
+                'cursor-not-allowed select-none overflow-hidden',
                 'px-9 py-4 text-lg',
               ].join(' ')}
               aria-disabled="true"
@@ -77,7 +77,7 @@ export default function HeroSection() {
               <span>Dashboard</span>
 
               <span
-                className="absolute -right-2 top-1/2 -translate-y-1/2 origin-center rotate-90 whitespace-nowrap rounded bg-orange-500/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm"
+                className="absolute -right-6 top-2 w-28 rotate-45 bg-[#C54A0B] py-1 text-[9px] font-bold uppercase tracking-wide text-white shadow-md"
               >
                 Coming Soon
               </span>
