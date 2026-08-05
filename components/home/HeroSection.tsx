@@ -48,15 +48,18 @@ export default function HeroSection() {
         <motion.div variants={itemVariants}>
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <InviteButton size="lg" />
-            <div
+            <a
+              href="/dashboard"
               className={[
-                'relative inline-flex items-center justify-center gap-3 rounded-2xl font-semibold',
+                'group inline-flex items-center justify-center gap-3 rounded-2xl font-semibold',
                 'bg-white/10 border border-white/20',
-                'text-white/50 shadow-xl shadow-black/30',
-                'cursor-not-allowed select-none overflow-hidden',
+                'text-white/90 shadow-xl shadow-black/30',
+                'hover:bg-white/15 hover:border-white/30 hover:text-white',
+                'active:scale-[0.97]',
+                'transition-all duration-200 ease-out',
+                'focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
                 'px-9 py-4 text-lg',
               ].join(' ')}
-              aria-disabled="true"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -66,7 +69,7 @@ export default function HeroSection() {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
-                className="text-white/40"
+                className="text-white/70 group-hover:text-white transition-colors"
                 aria-hidden="true"
               >
                 <rect x="3" y="3" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round"/>
@@ -74,14 +77,8 @@ export default function HeroSection() {
                 <rect x="3" y="14" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round"/>
                 <rect x="14" y="14" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span>Dashboard</span>
-
-              <span
-                className="absolute -right-6 top-2 w-28 rotate-45 bg-[#C54A0B] py-1 text-[9px] font-bold uppercase tracking-wide text-white shadow-md"
-              >
-                Coming Soon
-              </span>
-            </div>
+              <span className="group-hover:text-white transition-colors">Dashboard</span>
+            </a>
           </div>
         </motion.div>
       </motion.div>
