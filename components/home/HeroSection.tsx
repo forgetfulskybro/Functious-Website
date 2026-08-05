@@ -48,18 +48,15 @@ export default function HeroSection() {
         <motion.div variants={itemVariants}>
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <InviteButton size="lg" />
-            <a
-              href="/dashboard"
+            <div
               className={[
-                'group inline-flex items-center justify-center gap-3 rounded-2xl font-semibold',
+                'relative inline-flex items-center justify-center gap-3 rounded-2xl font-semibold',
                 'bg-white/10 border border-white/20',
-                'text-white/90 shadow-xl shadow-black/30',
-                'hover:bg-white/15 hover:border-white/30 hover:text-white',
-                'active:scale-[0.97]',
-                'transition-all duration-200 ease-out',
-                'focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
+                'text-white/50 shadow-xl shadow-black/30',
+                'cursor-not-allowed select-none',
                 'px-9 py-4 text-lg',
               ].join(' ')}
+              aria-disabled="true"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -69,7 +66,7 @@ export default function HeroSection() {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
-                className="text-white/70 group-hover:text-white transition-colors"
+                className="text-white/40"
                 aria-hidden="true"
               >
                 <rect x="3" y="3" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round"/>
@@ -77,8 +74,14 @@ export default function HeroSection() {
                 <rect x="3" y="14" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round"/>
                 <rect x="14" y="14" width="7" height="7" rx="1" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="group-hover:text-white transition-colors">Dashboard</span>
-            </a>
+              <span>Dashboard</span>
+
+              <span
+                className="absolute -right-2 top-1/2 -translate-y-1/2 origin-center rotate-90 whitespace-nowrap rounded bg-orange-500/90 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm"
+              >
+                Coming Soon
+              </span>
+            </div>
           </div>
         </motion.div>
       </motion.div>
@@ -92,4 +95,3 @@ export default function HeroSection() {
     </section>
   );
 }
-
