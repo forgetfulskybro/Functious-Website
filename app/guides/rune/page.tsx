@@ -19,7 +19,7 @@ export default function RuneOverviewPage() {
     <GuidePage
       guide={RUNE_GUIDE}
       chapter={chapter}
-      description="Rune is the scripting language behind Fluxer tags. It is small on purpose, built for Discord, and fully sandboxed."
+      description="Rune is the scripting language behind Fluxer tags. It is small on purpose, built for Fluxer, and fully sandboxed."
     >
       <GuideSection title="What is Rune?">
         <p>
@@ -59,11 +59,11 @@ export default function RuneOverviewPage() {
           <code className="font-mono text-orange-light">f!tags add</code>, giving it a name, a
           type, and the code that runs when someone uses it.
         </p>
-        <CodeBlock title="discord" code={'f!tags add welcome text say("hello, world")'} />
+        <CodeBlock title="Fluxer" code={'f!tags add welcome text say("hello, world")'} />
         <p>
           Now anyone can run it by name:
         </p>
-        <CodeBlock title="discord" code={'f!tags welcome'} />
+        <CodeBlock title="Fluxer" code={'f!tags welcome'} />
         <p>
           Anything typed after the tag name is passed to the code as{" "}
           <code className="font-mono text-orange-light">args</code>.{" "}
@@ -80,7 +80,7 @@ export default function RuneOverviewPage() {
           with it. A single tag turns into a command.
         </p>
         <CodeBlock
-          title="discord"
+          title="Fluxer"
           code={'f!tags add greet text say("hi [args.0]!")\nf!tags greet rubik'}
         />
       </GuideSection>
