@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { BOT_INVITE_URL } from '@/lib/constants';
 import InviteButton from '@/components/ui/InviteButton';
 import type { FluxerUser } from '@/lib/types';
@@ -10,6 +11,7 @@ import type { FluxerUser } from '@/lib/types';
 const NAV_LINKS = [
   { label: 'Features', href: '/#features' },
   { label: 'Commands', href: '/commands' },
+  { label: 'Guides',   href: '/guides' },
   { label: 'Support',  href: 'https://fluxer.gg/YnINU09E' },
 ] as const;
 
@@ -170,6 +172,11 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser]             = useState<FluxerUser | null>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
+  const pathname = usePathname();
+
+  const isActiveLink = (href: string) =>
+    href.startsWith('/') &&
+    (pathname === href || pathname.startsWith(`${href}/`));
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 80);
@@ -218,7 +225,11 @@ export default function Navbar() {
               <Link
                 key={label}
                 href={href}
-                className="text-orange-light/80 hover:text-orange-warm transition-colors duration-200 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+                aria-current={isActiveLink(href) ? 'page' : undefined}
+                className={[
+                  'text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange',
+                  isActiveLink(href) ? 'text-orange-warm' : 'text-orange-light/80 hover:text-orange-warm',
+                ].join(' ')}
               >
                 {label}
               </Link>
@@ -263,7 +274,11 @@ export default function Navbar() {
                   <Link
                     href={href}
                     onClick={() => setMobileOpen(false)}
-                    className="block text-orange-light/80 hover:text-orange-warm transition-colors duration-200 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+                    aria-current={isActiveLink(href) ? 'page' : undefined}
+                    className={[
+                      'block text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange',
+                      isActiveLink(href) ? 'text-orange-warm' : 'text-orange-light/80 hover:text-orange-warm',
+                    ].join(' ')}
                   >
                     {label}
                   </Link>
