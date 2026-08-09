@@ -15,7 +15,7 @@ export interface Guide {
 export const RUNE_GUIDE: Guide = {
   slug: 'rune',
   title: 'Rune',
-  tagline: 'a tag scripting language for Functious',
+  tagline: 'A scripting language for tags.',
   description:
     'Rune is the scripting language behind Fluxer tags. It runs inside every tag, so you can build anything from a one-line reply to a full embed.',
   chapters: [
