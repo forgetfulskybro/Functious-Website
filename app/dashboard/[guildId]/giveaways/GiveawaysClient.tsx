@@ -1,15 +1,15 @@
 'use client';
-
-import { useState, useEffect, useRef, useCallback } from 'react';
-import Image from 'next/image';
-import Sidebar from '@/components/layout/Sidebar';
-import { useGuildData } from '@/hooks/useGuildData';
-import { showErrorToast, showToast } from '@/components/ui/Toast';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
+import { DateTimePicker, formatDt } from '@/components/ui/DateTimerPicker';
+import { showErrorToast, showToast } from '@/components/ui/Toast';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { GiveawayRowSkeleton } from '@/components/ui/Skeletons';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import RolesDropdown from '@/components/ui/RolesDropdown';
 import NumberInput from '@/components/ui/NumberInput';
-import { DateTimePicker, formatDt } from '@/components/ui/DateTimerPicker';
+import { useGuildData } from '@/hooks/useGuildData';
+import Sidebar from '@/components/layout/Sidebar';
+import Image from 'next/image';
 
 interface GiveawayEntry {
   id: string;
@@ -92,22 +92,6 @@ function mapGiveaways(raw: any[]): GiveawayEntry[] {
     imageUrl: g.imageUrl ?? null,
     bonusEntries: Array.isArray(g.bonusEntries) ? g.bonusEntries : [],
   }));
-}
-
-function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-white/[0.06] ${className}`} />;
-}
-
-function GiveawayRowSkeleton() {
-  return (
-    <li className="rounded-xl px-4 py-3 flex items-center gap-3 bg-white/[0.03]">
-      <div className="flex-1 min-w-0 space-y-2">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-3 w-56" />
-      </div>
-      <Skeleton className="h-7 w-7 rounded-md flex-shrink-0" />
-    </li>
-  );
 }
 
 export default function GiveawaysClient({
@@ -442,7 +426,7 @@ function CreateGiveawayModal({
     setBonusEntries((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (!channelId || !prize.trim() || winners < 1) return;
     if (submitting || busy) return;
@@ -492,7 +476,7 @@ function CreateGiveawayModal({
       />
 
       <div className="relative w-full max-w-lg rounded-2xl bg-[#160a0a] shadow-2xl overflow-visible">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-lg">Create New Giveaway</h2>
             <p className="text-white/30 text-xs mt-0.5">
@@ -709,7 +693,7 @@ function DeleteGiveawayModal({
         onClick={isBusy ? undefined : onClose}
       />
       <div className="relative w-full max-w-sm rounded-2xl bg-[#160a0a] shadow-2xl overflow-hidden">
-        <div className="px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <h2 className="text-white font-bold text-lg">Delete giveaway?</h2>
           <p className="text-white/30 text-xs mt-0.5">
             Ends the giveaway and removes the channel message.
@@ -773,7 +757,7 @@ function GiveawayDetailsModal({
     >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-[#160a0a] shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <h2 className="text-white font-bold text-lg">Giveaway Details</h2>
           <button
             type="button"

@@ -1,14 +1,16 @@
 'use client';
-
-import { useState, useEffect, useRef, useCallback } from 'react';
-import Image from 'next/image';
-import Sidebar from '@/components/layout/Sidebar';
-import { useGuildData } from '@/hooks/useGuildData';
-import { showErrorToast, showToast } from '@/components/ui/Toast';
+import EmbedBuilderForm, { type EmbedData, emptyEmbedData, normalizeEmbedData, embedHasContent, EmbedDataSummary } from '@/components/ui/EmbedBuilderForm';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
 import { formatTimestamp, DateTimePicker, formatDt } from '@/components/ui/DateTimerPicker';
-import SelectDropdown from '@/components/ui/SelectDropdown';
+import { showErrorToast, showToast } from '@/components/ui/Toast';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { ScheduleRowSkeleton } from '@/components/ui/Skeletons';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
+import SelectDropdown from '@/components/ui/SelectDropdown';
+import { useGuildData } from '@/hooks/useGuildData';
+import Sidebar from '@/components/layout/Sidebar';
+import Image from 'next/image';
+
 
 interface ScheduledEntry {
   id: string;
@@ -16,7 +18,7 @@ interface ScheduledEntry {
   channelId: string;
   timestamp: number;
   content?: string | null;
-  embedData?: any;
+  embedData?: EmbedData | null;
   commandName?: string;
   commandArgs?: string[];
   recurring?: string;
@@ -32,7 +34,7 @@ interface Props {
   activeGuildId: string;
   userGuild: FluxerGuild & { botPresent: boolean };
   initialData: GuildData;
-  guildChannels?: { id: string; name: string; type: number, parentId: string }[];
+  guildChannels?: { id: string; name: string; type: number; parentId: string }[];
 }
 
 function mapScheduled(raw: any[]): ScheduledEntry[] {
@@ -55,22 +57,6 @@ function mapScheduled(raw: any[]): ScheduledEntry[] {
 
 function makeScheduleId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-white/[0.06] ${className}`} />;
-}
-
-function ScheduleRowSkeleton() {
-  return (
-    <li className="rounded-xl px-4 py-3 bg-white/[0.03] flex items-center gap-3">
-      <div className="flex-1 min-w-0 space-y-2">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-3 w-52" />
-      </div>
-      <Skeleton className="h-7 w-7 rounded-md flex-shrink-0" />
-    </li>
-  );
 }
 
 export default function ScheduledClient({
@@ -361,7 +347,7 @@ function DeleteConfirmModal({
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={busy ? undefined : onClose} />
 
       <div className="relative w-full max-w-sm rounded-2xl bg-[#160a0a] shadow-2xl overflow-hidden">
-        <div className="px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <h2 className="text-white font-bold text-lg">Delete scheduled message?</h2>
           <p className="text-white/30 text-xs mt-0.5">This action cannot be undone.</p>
         </div>
@@ -408,7 +394,7 @@ function ScheduleModal({
   onClose,
 }: {
   initial?: ScheduledEntry;
-  channels: { id: string; name: string; type: number, parentId: string }[];
+  channels: { id: string; name: string; type: number; parentId: string }[];
   userId: string;
   saving?: boolean;
   onSave: (item: ScheduledEntry) => void | Promise<void>;
@@ -436,6 +422,17 @@ function ScheduleModal({
         )
   );
   const [content, setContent] = useState(initial?.content || '');
+  const [embedData, setEmbedData] = useState<EmbedData>(() => {
+    if (initial?.embedData) {
+      return {
+        ...emptyEmbedData(),
+        ...initial.embedData,
+        footer: initial.embedData.footer ? { ...initial.embedData.footer } : null,
+        author: initial.embedData.author ? { ...initial.embedData.author } : null,
+      };
+    }
+    return emptyEmbedData();
+  });
   const [recurring, setRecurring] = useState(initial?.recurring || 'none');
   const [commandName, setCommandName] = useState(initial?.commandName || '');
   const [submitting, setSubmitting] = useState(false);
@@ -516,7 +513,7 @@ function ScheduleModal({
     let builtCommandArgs: string[] | undefined = initial?.commandArgs;
     if (type === 'command') {
       if (commandName === 'polls') {
-        const opts = pollOptions.map(o => o.trim()).filter(o => o);
+        const opts = pollOptions.map((o) => o.trim()).filter((o) => o);
         if (!pollDuration.trim() || !pollTitle.trim() || opts.length < 2) {
           showErrorToast('Error', { description: 'Poll needs a duration, title, and at least 2 options.' });
           return;
@@ -543,9 +540,15 @@ function ScheduleModal({
       }
     }
 
+    if (type === 'embed' && !embedHasContent(embedData)) {
+      showErrorToast('Error', { description: 'Embed needs at least a title, description, or media.' });
+      return;
+    }
+
     try {
       setSubmitting(true);
-      const resolvedCommandName = commandName;
+
+      const finalEmbed = type === 'embed' ? normalizeEmbedData(embedData) : null;
 
       const newItem: ScheduledEntry = {
         id: initial?.id || makeScheduleId(),
@@ -553,16 +556,13 @@ function ScheduleModal({
         channelId,
         timestamp: ts,
         content:
-          type === 'content' || type === 'embed'
+          type === 'content'
             ? content?.slice(0, 1960) || null
-            : null,
-        embedData:
-          type === 'embed'
-            ? initial?.embedData
-              ? { ...initial.embedData, description: content?.slice(0, 4040) || '' }
-              : { description: content?.slice(0, 4040) || '' }
-            : null,
-        commandName: type === 'command' ? resolvedCommandName : undefined,
+            : type === 'embed'
+              ? finalEmbed?.description || null
+              : null,
+        embedData: finalEmbed,
+        commandName: type === 'command' ? commandName : undefined,
         commandArgs: type === 'command' ? builtCommandArgs : undefined,
         recurring: recurring || 'none',
         webhook: initial?.webhook ?? null,
@@ -592,7 +592,7 @@ function ScheduleModal({
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative w-full max-w-lg rounded-2xl bg-[#160a0a] shadow-2xl overflow-visible">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-lg">
               {initial ? 'Edit Scheduled Message' : 'New Scheduled Message'}
@@ -611,23 +611,33 @@ function ScheduleModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <SelectDropdown
-              label="Type"
-              value={type}
-              onChange={(v) => {
-                setType(v as any);
-                if (v !== 'command') setCommandName('');
-              }}
-              options={typeOptions}
-            />
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col min-w-0">
+              <label className="block text-white/50 text-xs font-medium mb-1.5">Type</label>
+              <div className="h-10 [&_>_*]:!h-10 [&_>_*]:!min-h-[40px] [&_button]:!h-10 [&_button]:!min-h-[40px]">
+                <SelectDropdown
+                  label=""
+                  value={type}
+                  onChange={(v) => {
+                    setType(v as any);
+                    if (v !== 'command') setCommandName('');
+                    if (v === 'embed' && !embedData.description && content) {
+                      setEmbedData((prev) => ({ ...prev, description: content }));
+                    }
+                  }}
+                  options={typeOptions}
+                />
+              </div>
+            </div>
+            <div className="flex flex-col min-w-0">
               <label className="block text-white/50 text-xs font-medium mb-1.5">Channel</label>
-              <ChannelDropdown
-                channels={channels}
-                value={channelId}
-                onChangeAction={setChannelId}
-              />
+              <div className="h-10 [&_>_*]:!h-10 [&_>_*]:!min-h-[40px] [&_button]:!h-10 [&_button]:!min-h-[40px]">
+                <ChannelDropdown
+                  channels={channels}
+                  value={channelId}
+                  onChangeAction={setChannelId}
+                />
+              </div>
             </div>
           </div>
 
@@ -638,17 +648,21 @@ function ScheduleModal({
             <DateTimePicker value={timestampStr} onChangeAction={setTimestampStr} />
           </div>
 
-          {(type === 'content' || type === 'embed') && (
+          {type === 'content' && (
             <div>
               <label className="block text-white/50 text-xs font-medium mb-1.5">Content</label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={4}
-                className="w-full bg-white/5 rounded-lg px-3 py-3 text-sm text-white placeholder-white/30 resize-y"
+                className="w-full bg-white/5 rounded-lg px-3 py-3 text-sm text-white placeholder-white/30 resize-y focus:outline-none focus:ring-1 focus:ring-orange"
                 placeholder="Message content..."
               />
             </div>
+          )}
+
+          {type === 'embed' && (
+            <EmbedBuilderForm value={embedData} onChange={setEmbedData} />
           )}
 
           {type === 'command' && (
@@ -656,7 +670,9 @@ function ScheduleModal({
               <SelectDropdown
                 label="Command to Run"
                 value={commandName}
-                onChange={(v) => { setCommandName(v); }}
+                onChange={(v) => {
+                  setCommandName(v);
+                }}
                 options={AVAILABLE_COMMANDS}
               />
 
@@ -701,7 +717,7 @@ function ScheduleModal({
                       {pollOptions.length < 10 && (
                         <button
                           type="button"
-                          onClick={() => setPollOptions(p => [...p, ''])}
+                          onClick={() => setPollOptions((p) => [...p, ''])}
                           className="text-xs text-orange-warm hover:text-orange px-2 py-0.5 rounded bg-orange/10 hover:bg-orange/20 transition-colors"
                         >
                           + Add
@@ -715,7 +731,9 @@ function ScheduleModal({
                           <input
                             type="text"
                             value={opt}
-                            onChange={(e) => setPollOptions(p => p.map((o, j) => j === i ? e.target.value : o))}
+                            onChange={(e) =>
+                              setPollOptions((p) => p.map((o, j) => (j === i ? e.target.value : o)))
+                            }
                             placeholder={`Option ${i + 1}`}
                             maxLength={100}
                             className="flex-1 bg-white/5 rounded-lg px-3 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:ring-1 focus:ring-orange"
@@ -723,7 +741,7 @@ function ScheduleModal({
                           {pollOptions.length > 2 && (
                             <button
                               type="button"
-                              onClick={() => setPollOptions(p => p.filter((_, j) => j !== i))}
+                              onClick={() => setPollOptions((p) => p.filter((_, j) => j !== i))}
                               className="p-1.5 text-white/25 hover:text-red-400 hover:bg-red-500/10 rounded-md"
                             >
                               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -814,7 +832,7 @@ function ScheduleModal({
                       </div>
                       <button
                         type="button"
-                        onClick={() => setGwPingWinners(v => !v)}
+                        onClick={() => setGwPingWinners((v) => !v)}
                         className={`relative w-9 h-5 rounded-full transition-colors ${gwPingWinners ? 'bg-orange' : 'bg-white/10'}`}
                       >
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gwPingWinners ? 'translate-x-4' : ''}`} />
@@ -827,7 +845,7 @@ function ScheduleModal({
                       </div>
                       <button
                         type="button"
-                        onClick={() => setGwDmWinners(v => !v)}
+                        onClick={() => setGwDmWinners((v) => !v)}
                         className={`relative w-9 h-5 rounded-full transition-colors ${gwDmWinners ? 'bg-orange' : 'bg-white/10'}`}
                       >
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gwDmWinners ? 'translate-x-4' : ''}`} />
@@ -840,7 +858,7 @@ function ScheduleModal({
                       </div>
                       <button
                         type="button"
-                        onClick={() => setGwAllowMultipleWins(v => !v)}
+                        onClick={() => setGwAllowMultipleWins((v) => !v)}
                         className={`relative w-9 h-5 rounded-full transition-colors ${gwAllowMultipleWins ? 'bg-orange' : 'bg-white/10'}`}
                       >
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gwAllowMultipleWins ? 'translate-x-4' : ''}`} />
@@ -905,9 +923,17 @@ function ScheduleModal({
               disabled={
                 !channelId ||
                 (type === 'command' && !commandName) ||
-                (type === 'command' && commandName === 'polls' && (pollOptions.filter(o => o.trim()).length < 2 || !pollTitle.trim() || !pollDuration.trim())) ||
-                (type === 'command' && commandName === 'giveaway' && (!gwDuration.trim() || !gwPrize.trim())) ||
-                (type === 'command' && commandName === 'remind' && (!remindDuration.trim() || !remindMessage.trim())) ||
+                (type === 'command' &&
+                  commandName === 'polls' &&
+                  (pollOptions.filter((o) => o.trim()).length < 2 ||
+                    !pollTitle.trim() ||
+                    !pollDuration.trim())) ||
+                (type === 'command' &&
+                  commandName === 'giveaway' &&
+                  (!gwDuration.trim() || !gwPrize.trim())) ||
+                (type === 'command' &&
+                  commandName === 'remind' &&
+                  (!remindDuration.trim() || !remindMessage.trim())) ||
                 busy
               }
               className="flex-1 py-3 bg-orange hover:bg-orange-bright disabled:opacity-50 rounded-xl font-semibold text-white"
@@ -987,7 +1013,8 @@ function ViewModal({
     content: 'Text Message',
     embed: 'Embed',
     command: item.commandName
-      ? { polls: 'Poll', giveaway: 'Giveaway', remind: 'Reminder' }[item.commandName] ?? item.commandName
+      ? ({ polls: 'Poll', giveaway: 'Giveaway', remind: 'Reminder' }[item.commandName] ??
+        item.commandName)
       : 'Command',
   };
 
@@ -999,8 +1026,7 @@ function ViewModal({
     >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-[#160a0a] rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-
-        <div className="flex items-center justify-between p-5 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between p-5 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white text-lg font-bold">Scheduled Message</h2>
             <p className="text-white/30 text-xs mt-0.5">{typeLabel[item.type] ?? item.type}</p>
@@ -1045,10 +1071,10 @@ function ViewModal({
             </div>
           )}
 
-          {(item.type === 'content' || item.type === 'embed') && item.content && (
+          {item.type === 'content' && item.content && (
             <div>
               <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1.5">
-                {item.type === 'embed' ? 'Embed Description' : 'Message Content'}
+                Message Content
               </p>
               <div className="bg-white/[0.03] rounded-xl p-3 text-white/80 whitespace-pre-wrap text-xs leading-relaxed max-h-48 overflow-y-auto">
                 {item.content}
@@ -1056,28 +1082,9 @@ function ViewModal({
             </div>
           )}
 
-          {item.type === 'embed' && item.embedData && (() => {
-            const ed = item.embedData;
-            const fields = [
-              ed.title && { label: 'Title', value: ed.title },
-              ed.footer?.text && { label: 'Footer', value: ed.footer.text },
-              ed.author?.name && { label: 'Author', value: ed.author.name },
-              ed.image && { label: 'Image', value: ed.image },
-              ed.thumbnail && { label: 'Thumbnail', value: ed.thumbnail },
-              ed.color && { label: 'Color', value: ed.color },
-            ].filter(Boolean) as { label: string; value: string }[];
-
-            return fields.length > 0 ? (
-              <div className="rounded-xl bg-white/[0.03] divide-y divide-white/5">
-                {fields.map((f) => (
-                  <div key={f.label} className="flex items-start gap-3 px-3 py-2">
-                    <p className="text-white/40 text-xs w-20 flex-shrink-0 pt-px">{f.label}</p>
-                    <p className="text-white/75 text-xs break-all">{f.value}</p>
-                  </div>
-                ))}
-              </div>
-            ) : null;
-          })()}
+          {item.type === 'embed' && item.embedData && (
+            <EmbedDataSummary data={item.embedData} />
+          )}
 
           {item.type === 'command' && (
             <div className="space-y-3">
@@ -1196,10 +1203,9 @@ function ViewModal({
               </div>
             </div>
           )}
-
         </div>
 
-        <div className="p-4 border-t border-[#471B1B] flex justify-end">
+        <div className="p-4 border-t border-[#2A1313] flex justify-end">
           <button
             onClick={onClose}
             className="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white text-sm transition-colors"

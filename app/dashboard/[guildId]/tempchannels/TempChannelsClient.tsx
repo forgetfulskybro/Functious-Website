@@ -1,12 +1,13 @@
 'use client';
-
-import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import Sidebar from '@/components/layout/Sidebar';
-import { useGuildData } from '@/hooks/useGuildData';
-import { showErrorToast, showToast } from '@/components/ui/Toast';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
+import { FieldSkeleton, Skeleton } from '@/components/ui/Skeletons';
+import { showErrorToast, showToast } from '@/components/ui/Toast';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
+import { useState, useEffect, useRef } from 'react';
+import { useGuildData } from '@/hooks/useGuildData';
+import Sidebar from '@/components/layout/Sidebar';
+import Image from 'next/image';
+
 
 interface TempConfig {
   channelName?: string;
@@ -27,19 +28,6 @@ interface Props {
 }
 
 type ConfirmAction = 'setup' | 'reset' | 'manage' | null;
-
-function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-white/[0.06] ${className}`} />;
-}
-
-function FieldSkeleton() {
-  return (
-    <div className="space-y-1.5">
-      <Skeleton className="h-3 w-36" />
-      <Skeleton className="h-10 w-full rounded-lg" />
-    </div>
-  );
-}
 
 function ConfirmModal({
   open,
@@ -66,7 +54,7 @@ function ConfirmModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={loading ? undefined : onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-[#160a0a] shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-lg">{title}</h2>
           </div>
@@ -378,7 +366,7 @@ export default function TempChannelsClient({
               <div className="rounded-2xl bg-white/[0.03] px-5 py-4">
                 <p className="text-white/35 text-[10px] uppercase tracking-widest font-semibold mb-1">Join-to-Create</p>
                 <p className="text-white/80 text-sm font-medium truncate">
-                  {childChannel ? `#${channelName(childChannel)}` : '—'}
+                  {childChannel ? `#${channelName(childChannel)}` : '-'}
                 </p>
               </div>
               {isSetup && (
@@ -386,14 +374,14 @@ export default function TempChannelsClient({
                   <div className="rounded-2xl bg-white/[0.03] px-5 py-4">
                     <p className="text-white/35 text-[10px] uppercase tracking-widest font-semibold mb-1">Category</p>
                     <p className="text-white/80 text-sm font-medium truncate">
-                      {parentChannel ? `#${channelName(parentChannel)}` : '—'}
+                      {parentChannel ? `#${channelName(parentChannel)}` : '-'}
                       {config.customParent && <span className="text-white/30 ml-1 text-xs">(custom)</span>}
                     </p>
                   </div>
                   <div className="rounded-2xl bg-white/[0.03] px-5 py-4">
                     <p className="text-white/35 text-[10px] uppercase tracking-widest font-semibold mb-1">Manage Panel</p>
                     <p className="text-white/80 text-sm font-medium truncate">
-                      {config.manage && config.manage !== 'pending' ? `#${channelName(config.manage)}` : '—'}
+                      {config.manage && config.manage !== 'pending' ? `#${channelName(config.manage)}` : '-'}
                     </p>
                   </div>
                 </>

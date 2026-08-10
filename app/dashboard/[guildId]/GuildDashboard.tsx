@@ -1,13 +1,12 @@
 'use client';
-
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
+import { showErrorToast, showToast } from '@/components/ui/Toast';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useBotPresence } from '@/hooks/useBotPresence';
+import { useGuildData } from '@/hooks/useGuildData';
+import Sidebar from '@/components/layout/Sidebar';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useGuildData } from '@/hooks/useGuildData';
-import { useBotPresence } from '@/hooks/useBotPresence';
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
-import Sidebar from '@/components/layout/Sidebar';
-import { showErrorToast, showToast } from '@/components/ui/Toast';
 
 const syncCooldowns = new Map<string, { channels: number; roles: number }>();
 const SYNC_COOLDOWN_MS = 30_000;
@@ -60,7 +59,7 @@ function StatCard({ label, value }: { label: string; value: number | string | nu
   return (
     <div className="bg-white/[0.03] rounded-2xl px-5 py-4">
       <p className="text-white/35 text-[10px] uppercase tracking-widest font-semibold mb-1.5">{label}</p>
-      <p className="text-2xl font-bold text-white">{value ?? '—'}</p>
+      <p className="text-2xl font-bold text-white">{value ?? '-'}</p>
     </div>
   );
 }

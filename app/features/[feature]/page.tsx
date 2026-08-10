@@ -20,11 +20,11 @@ export async function generateMetadata({
   );
 
   if (!feature) {
-    return { title: 'Feature Not Found — Functious' };
+    return { title: 'Feature Not Found - Functious' };
   }
 
   return {
-    title: `${feature.name} — Functious`,
+    title: `${feature.name} - Functious`,
     description: feature.fullDescription,
   };
 }

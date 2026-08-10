@@ -1,5 +1,5 @@
-import { getSession, getSessionGuilds } from '@/lib/auth';
 import { filterBotGuilds, emptyGuildData } from '@/lib/api';
+import { getSession, getSessionGuilds } from '@/lib/auth';
 import { redirect, notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import TagsClient from './TagsClient';

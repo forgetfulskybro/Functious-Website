@@ -311,7 +311,7 @@ const EXPLANATIONS: StepExplanation[] = [
   },
   {
     id: 'react-0',
-    label: 'React — roles update live',
+    label: 'React - roles update live',
     detail:
       'Each emoji you add is immediately paired to the matching {role:X} tag. The tag flips to the emoji + role name right away.',
   },
@@ -328,7 +328,7 @@ export default function ReactionRolesDemo() {
     <ChannelDemo
       channelName="roles"
       title="See Reaction Roles in Action"
-      subtitle="The full setup flow — exactly how it works in your server"
+      subtitle="The full setup flow - exactly how it works in your server"
       timeline={TIMELINE}
       explanations={EXPLANATIONS}
     />

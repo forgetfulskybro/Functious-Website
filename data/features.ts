@@ -8,6 +8,7 @@ export interface FeatureData {
   capabilities: string[];
   usageExamples: string[];
   relatedCommands: string[];
+  relatedGuides?: string[];
   category: Category;
 }
 
@@ -75,7 +76,7 @@ export const FEATURES: FeatureData[] = [
     name: 'Tags',
     shortDescription: 'Store and quickly send reusable text or embed messages.',
     fullDescription:
-      'Tags are custom reusable messages for FAQs, server rules, or announcements. Create a tag once and send it instantly by name at any time. Supports both plain text and rich embed formats.',
+      'Tags are custom reusable messages for FAQs, server rules, or announcements. Create a tag once and send it instantly by name at any time. Supports plain text, embeds, or Rune scripts To learn more, click the related Guide above.',
     capabilities: [
       'Text or embed format',
       'Up to 50 tags per server',
@@ -89,6 +90,7 @@ export const FEATURES: FeatureData[] = [
       'f!tags list',
     ],
     relatedCommands: ['tags'],
+    relatedGuides: ['rune'],
     category: 'utility',
   },
   {

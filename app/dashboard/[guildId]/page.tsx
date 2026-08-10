@@ -1,8 +1,8 @@
-import type { Metadata } from 'next';
-import { getSession, getSessionGuilds } from '@/lib/auth';
 import { filterBotGuilds, emptyGuildData } from '@/lib/api';
+import { getSession, getSessionGuilds } from '@/lib/auth';
 import { redirect, notFound } from 'next/navigation';
 import GuildDashboard from './GuildDashboard';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 

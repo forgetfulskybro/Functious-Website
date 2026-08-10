@@ -6,10 +6,12 @@ import Image from 'next/image';
 import { BOT_INVITE_URL } from '@/lib/constants';
 import InviteButton from '@/components/ui/InviteButton';
 import type { FluxerUser } from '@/lib/types';
+import { usePathname } from 'next/navigation';
 
 const NAV_LINKS = [
   { label: 'Features', href: '/#features' },
   { label: 'Commands', href: '/commands' },
+  { label: 'Guides',   href: '/guides' },
   { label: 'Support',  href: 'https://fluxer.gg/YnINU09E' },
 ] as const;
 
@@ -53,7 +55,7 @@ function UserMenu({ user }: { user: FluxerUser }) {
         onClick={() => setOpen(prev => !prev)}
         aria-expanded={open}
         aria-haspopup="true"
-        aria-label={`${displayName} — account menu`}
+        aria-label={`${displayName} - account menu`}
         className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/8 border border-white/10 hover:bg-white/12 hover:border-white/20 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange group"
       >
         <Image
@@ -114,13 +116,13 @@ function UserMenu({ user }: { user: FluxerUser }) {
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/6 transition-colors focus-visible:outline-none focus-visible:bg-white/6"
             >
-              <svg 
-                className="w-4 h-4 text-white/40" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="1.8" 
-                strokeLinecap="round" 
+              <svg
+                className="w-4 h-4 text-white/40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden="true"
               >
@@ -166,10 +168,15 @@ function UserMenu({ user }: { user: FluxerUser }) {
 }
 
 export default function Navbar() {
-  const [scrolled, setScrolled]     = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser]             = useState<FluxerUser | null>(null);
+  const [user, setUser] = useState<FluxerUser | null>(null);
   const [authLoaded, setAuthLoaded] = useState(false);
+
+  const pathname = usePathname();
+  const isActiveLink = (href: string) =>
+    href.startsWith('/') &&
+    (pathname === href || pathname.startsWith(`${href}/`));
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 80);
@@ -218,8 +225,10 @@ export default function Navbar() {
               <Link
                 key={label}
                 href={href}
-                className="text-orange-light/80 hover:text-orange-warm transition-colors duration-200 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
-              >
+                aria-current={isActiveLink(href) ? 'page' : undefined}
+                className={['text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange',
+                  isActiveLink(href) ? 'text-orange-warm' : 'text-orange-light/80 hover:text-orange-warm',
+                  ].join(' ')} >
                 {label}
               </Link>
             ))}
@@ -263,8 +272,10 @@ export default function Navbar() {
                   <Link
                     href={href}
                     onClick={() => setMobileOpen(false)}
-                    className="block text-orange-light/80 hover:text-orange-warm transition-colors duration-200 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
-                  >
+                    aria-current={isActiveLink(href) ? 'page' : undefined}
+                    className={['block text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange',
+                    isActiveLink(href) ? 'text-orange-warm' : 'text-orange-light/80 hover:text-orange-warm',
+                    ].join(' ')} >
                     {label}
                   </Link>
                 </li>

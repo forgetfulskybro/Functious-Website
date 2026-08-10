@@ -1,64 +1,13 @@
 'use client';
-
-import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import Sidebar from '@/components/layout/Sidebar';
-import { useGuildData } from '@/hooks/useGuildData';
-import { showToast, showErrorToast } from '@/components/ui/Toast';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
-
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={value}
-      onClick={() => onChange(!value)}
-      className={[
-        'relative inline-flex w-10 h-5 rounded-full transition-colors duration-200',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange focus-visible:ring-offset-2 focus-visible:ring-offset-bg-dark',
-        value ? 'bg-orange' : 'bg-white/10',
-      ].join(' ')}
-    >
-      <span className={[
-        'block w-3.5 h-3.5 rounded-full bg-white shadow top-[3px] absolute transition-transform duration-200',
-        value ? 'translate-x-[22px]' : 'translate-x-1',
-      ].join(' ')} />
-    </button>
-  );
-}
-
-function SettingRow({ label, description, children }: {
-  label: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-6 py-3.5 border-b border-white/5 last:border-0">
-      <div className="flex-1 min-w-0">
-        <p className="text-white/90 text-sm font-medium">{label}</p>
-        {description && <p className="text-white/40 text-xs mt-0.5">{description}</p>}
-      </div>
-      <div className="flex-shrink-0">{children}</div>
-    </div>
-  );
-}
-
-function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-white/[0.06] ${className}`} />;
-}
-
-function SettingRowSkeleton({ controlWidth = 'w-24' }: { controlWidth?: string }) {
-  return (
-    <div className="flex items-center justify-between gap-6 py-3.5 border-b border-white/5 last:border-0">
-      <div className="flex-1 min-w-0 space-y-2">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-3 w-48" />
-      </div>
-      <Skeleton className={`h-8 ${controlWidth} flex-shrink-0`} />
-    </div>
-  );
-}
+import { showToast, showErrorToast } from '@/components/ui/Toast';
+import { SettingRowSkeleton } from '@/components/ui/Skeletons';
+import { SettingRow } from '@/components/ui/SettingRow';
+import { useGuildData } from '@/hooks/useGuildData';
+import { useState, useEffect, useRef } from 'react';
+import Sidebar from '@/components/layout/Sidebar';
+import { Toggle } from '@/components/ui/Toggle';
+import Image from 'next/image';
 
 const LANGUAGES = [
   { value: 'en_EN', label: 'English' },
@@ -191,7 +140,6 @@ export default function ConfigurationClient({
               <SettingRowSkeleton controlWidth="w-24" />
               <SettingRowSkeleton controlWidth="w-44" />
               <SettingRowSkeleton controlWidth="w-10" />
-              <SettingRowSkeleton controlWidth="w-10" />
             </>
           ) : (
             <>
@@ -213,12 +161,8 @@ export default function ConfigurationClient({
                 />
               </SettingRow>
 
-              <SettingRow label="DM Notifications" description="Send direct messages for reaction roles">
-                <Toggle value={data.dm} onChange={v => handleSave({ dm: v })} />
-              </SettingRow>
-
               <SettingRow label="Timezone Conversion" description="Automatically convert times mentioned in chat.">
-                <Toggle value={data.timezoneConvert} onChange={v => handleSave({ timezoneConvert: v })} />
+                <Toggle value={data.timezoneConvert} onChangeAction={v => handleSave({ timezoneConvert: v })} />
               </SettingRow>
             </>
           )}

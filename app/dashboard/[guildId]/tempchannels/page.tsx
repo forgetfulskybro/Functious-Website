@@ -1,8 +1,8 @@
-import { getSession, getSessionGuilds } from '@/lib/auth';
 import { filterBotGuilds, emptyGuildData } from '@/lib/api';
+import { getSession, getSessionGuilds } from '@/lib/auth';
+import TempChannelsClient from './TempChannelsClient';
 import { redirect, notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import TempChannelsClient from './TempChannelsClient';
 
 export const dynamic = 'force-dynamic';
 

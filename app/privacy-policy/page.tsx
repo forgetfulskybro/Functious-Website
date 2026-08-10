@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'Privacy Policy for the Functious Discord bot — what data we collect, how we use it, and your rights.',
+  description: 'Privacy Policy for the Functious Fluxer bot - what data we collect, how we use it, and your rights.',
 };
 
 export default function PrivacyPolicyPage() {
@@ -31,9 +31,9 @@ export default function PrivacyPolicyPage() {
             We do not use cookies, tracking pixels, or any form of user tracking.
           </p>
           <ul className="mt-3 space-y-2 pl-5 list-disc">
-            <li><strong className="text-white">User IDs</strong> — only for giveaway entries, poll votes (with public avatar URL), and timezone settings you choose to set.</li>
-            <li><strong className="text-white">Guild IDs</strong> — stored for every server Functious is in, to remember per-server settings.</li>
-            <li><strong className="text-white">Temporary Voice Channels</strong> — User IDs of people in bot-created voice channels only.</li>
+            <li><strong className="text-white">User IDs</strong> - only for giveaway entries, poll votes (with public avatar URL), and timezone settings you choose to set.</li>
+            <li><strong className="text-white">Guild IDs</strong> - stored for every server Functious is in, to remember per-server settings.</li>
+            <li><strong className="text-white">Temporary Voice Channels</strong> - User IDs of people in bot-created voice channels only.</li>
           </ul>
         </Section>
 
@@ -59,14 +59,14 @@ export default function PrivacyPolicyPage() {
         <Section title="4. Your Right to Delete Your Data">
           <p>
             <strong className="text-white">Timezone data</strong> can be removed at any time using Functious' dedicated removal command
-            (shown in the help menu). All other data is automatically deleted on schedule — no manual action required.
+            (shown in the help menu). All other data is automatically deleted on schedule - no manual action required.
           </p>
         </Section>
 
         <Section title="5. Data Storage & Security">
           <p>
             Data is stored in a secure database hosted locally on the developer's home lab hardware.
-            Nothing is stored externally — no cloud providers, no third-party servers.
+            Nothing is stored externally - no cloud providers, no third-party servers.
             We use industry-standard security practices, but no system is 100% secure.
           </p>
         </Section>

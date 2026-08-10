@@ -1,8 +1,8 @@
 import { getSession, getSessionGuilds } from '@/lib/auth';
 import { filterBotGuilds, emptyGuildData } from '@/lib/api';
 import { redirect, notFound } from 'next/navigation';
-import type { Metadata } from 'next';
 import ScheduledClient from './ScheduledClient';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 

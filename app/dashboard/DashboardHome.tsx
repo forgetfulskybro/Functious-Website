@@ -27,7 +27,6 @@ const COUNT_KEY = 'dashboard-refresh-count';
 const BASE_COOLDOWN_MS = 15_000;
 const MAX_COOLDOWN_MS = 5 * 60_000;
 const RESET_AFTER_MS = 5 * 60_000;
-
 const GUILDS_PER_PAGE = 6;
 
 interface Props {

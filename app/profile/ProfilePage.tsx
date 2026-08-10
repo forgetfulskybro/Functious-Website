@@ -297,10 +297,9 @@ function ReminderModal({
     : toDatetimeLocal(Math.floor(Date.now() / 1000) + 3600);
   const [datetime, setDatetime] = useState(defaultDt);
   const [saving, setSaving] = useState(false);
-
   const isGuild = initial?.type === 'guild';
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
     if (!message.trim() || !datetime) return;
     setSaving(true);
@@ -314,7 +313,7 @@ function ReminderModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-[#160a0a] shadow-2xl">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-base">{initial ? 'Edit reminder' : 'New reminder'}</h2>
             {!initial && (
@@ -322,7 +321,7 @@ function ReminderModal({
             )}
             {isGuild && (
               <p className="text-white/30 text-xs mt-0.5">
-                Guild reminder — sent in <span className="font-mono text-orange-light/60">#{initial?.channelId ?? 'channel'}</span>
+                Guild reminder - sent in <span className="font-mono text-orange-light/60">#{initial?.channelId ?? 'channel'}</span>
               </p>
             )}
           </div>

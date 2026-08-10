@@ -9,7 +9,7 @@ import PollsDemo from '@/components/home/PollsDemo';
 import SchedulesDemo from '@/components/home/SchedulesDemo';
 
 export const metadata: Metadata = {
-  title: 'Functious — Fluxer companion',
+  title: 'Functious - Fluxer companion',
   description:
     'Functious is simple yet useful Fluxer companion bringing live polls, reaction roles, autoroles, tags, and much more.',
 };

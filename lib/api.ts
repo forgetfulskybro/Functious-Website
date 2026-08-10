@@ -60,6 +60,7 @@ export function emptyGuildData(guildId: string) {
     prefix: '!',
     language: 'en_EN',
     dm: false,
+    emojis: [],
     timezoneConvert: false,
     stickyRolesEnabled: false,
     roles: [],
@@ -183,6 +184,72 @@ export async function getBotGiveaways(guildId: string) {
     },
   );
   return res.json();
+}
+
+export async function deleteReactionRoles(guildId: string, messageId: string) {
+  const res = await safeFetch(
+    `${BOT_API_URL}/api/guilds/${guildId}/reactionroles/${messageId}`,
+    {
+      method: "DELETE",
+      headers: botHeaders(),
+      cache: "no-store",
+    },
+  );
+  const data = await res.json();
+  return data;
+}
+
+export async function exclusiveReactionRoles(guildId: string, messageId: string) {
+  const res = await safeFetch(
+    `${BOT_API_URL}/api/guilds/${guildId}/reactionroles/${messageId}/exclusive`,
+    {
+      method: "POST",
+      headers: botHeaders(),
+      cache: "no-store",
+    },
+  );
+  const data = await res.json();
+  return data;
+}
+
+export async function updateReactionRoles(guildId: string, messageId: string, data: any) {
+  const res = await safeFetch(
+    `${BOT_API_URL}/api/guilds/${guildId}/reactionroles/${messageId}`,
+    {
+      method: "PATCH",
+      headers: botHeaders(),
+      body: JSON.stringify(data),
+      cache: "no-store",
+    },
+  );
+  const result = await res.json();
+  return result;
+}
+
+export async function fetchReactionRoles(guildId: string, messageId: string) {
+  const res = await safeFetch(
+    `${BOT_API_URL}/api/guilds/${guildId}/reactionroles/${messageId}`,
+    { 
+      headers: botHeaders(),
+      cache: "no-store",
+    }
+  );
+  const data = await res.json();
+  return data;
+}
+
+export async function createReactionRoles(guildId: string, data: any) {
+  const res = await safeFetch(
+    `${BOT_API_URL}/api/guilds/${guildId}/reactionroles/`,
+    {
+      method: "POST",
+      headers: botHeaders(),
+      body: JSON.stringify(data),
+      cache: "no-store",
+    },
+  );
+  const result = await res.json();
+  return result;
 }
 
 export async function setupTempChannels(

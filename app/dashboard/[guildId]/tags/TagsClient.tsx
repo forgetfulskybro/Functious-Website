@@ -1,19 +1,21 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import Image from 'next/image';
-import Sidebar from '@/components/layout/Sidebar';
-import { useGuildData } from '@/hooks/useGuildData';
-import { showErrorToast, showToast } from '@/components/ui/Toast';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
+import { showErrorToast, showToast } from '@/components/ui/Toast';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import SelectDropdown from '@/components/ui/SelectDropdown';
+import { TagRowSkeleton } from '@/components/ui/Skeletons';
+import { useGuildData } from '@/hooks/useGuildData';
+import Sidebar from '@/components/layout/Sidebar';
+import Image from 'next/image';
+import { runTagSafe } from '@/app/interpreter';
 
 interface TagEntry {
   id: string;
   name: string;
-  type: 'text' | 'embed';
+  type: 'text' | 'embed' | 'script';
   content?: string | null;
-  embedData?: { description: string } | null;
+  embedData?: { description: string; color?: string | number } | null;
   createdBy?: string;
   createdAt?: number;
   uses?: number;
@@ -32,7 +34,7 @@ function mapTags(raw: any[]): TagEntry[] {
   return raw.map((t: any) => ({
     id: t.id || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     name: String(t.name || ''),
-    type: t.type === 'embed' ? 'embed' : 'text',
+    type: t.type === 'embed' ? 'embed' : t.type === 'script' ? 'script' : 'text',
     content: t.content ?? null,
     embedData:
       t.embedData ||
@@ -43,21 +45,180 @@ function mapTags(raw: any[]): TagEntry[] {
   }));
 }
 
-function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-white/[0.06] ${className}`} />;
+function codeSnippet(code: string, line?: number | null, col?: number | null) {
+  if (!code) return null;
+  if (line != null) {
+    const text = code.split('\n')[line - 1] ?? '';
+    const colIndex = Math.min(Math.max(0, (col ?? 1) - 1), text.length);
+    const gutter = String(line);
+    return `${gutter} | ${text}\n${' '.repeat(gutter.length + 3 + colIndex)}^`;
+  }
+  const head = code.split('\n').slice(0, 12).join('\n');
+  return head.length > 800 ? head.slice(0, 800) + '\n...' : head;
 }
 
-function TagRowSkeleton() {
-  return (
-    <li className="rounded-xl px-4 py-3 bg-white/[0.03] flex items-center gap-3">
-      <div className="flex-1 min-w-0 space-y-2">
-        <Skeleton className="h-4 w-36" />
-        <Skeleton className="h-3 w-44" />
-      </div>
-      <Skeleton className="h-7 w-7 rounded-md flex-shrink-0" />
-    </li>
-  );
+function buildPreviewContext(
+  args: string[] = [],
+  user: FluxerUser,
+  guild: FluxerGuild
+) {
+  return {
+    args,
+    user: {
+      id: user.id,
+      username: user.username,
+      discriminator: user.discriminator ?? '0',
+      tag: `${user.username}#${user.discriminator ?? '0'}`,
+      display_name: user.global_name || user.username,
+      global_name: user.global_name ?? user.username,
+      avatar: user.avatar ?? null,
+      avatar_url: user.avatar
+        ? `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.png`
+        : null,
+      banner: null,
+      bot: false,
+      system: false,
+      created_at: '2021-05-14T18:32:00.000Z',
+    },
+
+    channel: {
+      id: '987654321098765432',
+      name: 'general',
+      type: 0,
+      guild_id: guild.id,
+      position: 3,
+      topic: 'General discussion',
+      nsfw: false,
+      mention: '<#987654321098765432>',
+      rate_limit: 0,
+      created_at: '2022-01-10T09:15:00.000Z',
+    },
+
+    message: {
+      id: '111222333444555666',
+      content: '!tag example',
+      author_id: user.id,
+      author: {
+        id: user.id,
+        username: user.username,
+        discriminator: user.discriminator ?? '0',
+        tag: `${user.username}#${user.discriminator ?? '0'}`,
+        display_name: user.global_name || user.username,
+        global_name: user.global_name ?? user.username,
+        avatar: user.avatar ?? null,
+        avatar_url: user.avatar
+          ? `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.png`
+          : null,
+        banner: null,
+        bot: false,
+        system: false,
+        created_at: '2021-05-14T18:32:00.000Z',
+      },
+      channel_id: '987654321098765432',
+      guild_id: guild.id,
+      created_at: new Date().toISOString(),
+      edited_timestamp: null,
+      mentions: [],
+      mention_roles: [],
+      mention_everyone: false,
+      attachments: [],
+      pinned: false,
+      tts: false,
+      webhook_id: null,
+      type: 0,
+      flags: 0,
+      url: `https://fluxer.app/channels/${guild.id}/987654321098765432/111222333444555666`,
+    },
+
+    guild: {
+      id: guild.id,
+      name: guild.name,
+      icon: guild.icon ?? null,
+      icon_url: guild.icon
+        ? `https://fluxerusercontent.com/icons/${guild.id}/${guild.icon}.png`
+        : null,
+      banner: null,
+      banner_url: null,
+      description: null,
+      owner_id: (guild as any).owner_id ?? user.id,
+      features: [],
+      premium_tier: 0,
+      member_count: (guild as any).memberCount ?? 128,
+      preferred_locale: 'en-US',
+      created_at: '2020-11-03T14:22:00.000Z',
+    },
+  };
 }
+
+const CONTEXT_FIELDS: Record<string, { field: string; description: string }[]> = {
+  user: [
+    { field: 'id', description: 'user id' },
+    { field: 'username', description: 'username' },
+    { field: 'discriminator', description: 'discriminator, like 0001' },
+    { field: 'tag', description: 'username and discriminator together' },
+    { field: 'display_name', description: 'the name shown in chat' },
+    { field: 'global_name', description: 'global display name' },
+    { field: 'avatar', description: 'avatar hash' },
+    { field: 'avatar_url', description: 'avatar image URL' },
+    { field: 'banner', description: 'banner hash' },
+    { field: 'bot', description: 'true if this is a bot' },
+    { field: 'system', description: 'true if this is a system account' },
+    { field: 'created_at', description: 'account creation date' },
+  ],
+  channel: [
+    { field: 'id', description: 'channel id' },
+    { field: 'name', description: 'channel name' },
+    { field: 'type', description: 'channel type number' },
+    { field: 'guild_id', description: 'id of the guild it belongs to' },
+    { field: 'position', description: 'position in the channel list' },
+    { field: 'topic', description: 'channel topic' },
+    { field: 'nsfw', description: 'true for NSFW channels' },
+    { field: 'mention', description: 'the channel mention string' },
+    { field: 'rate_limit', description: 'slowmode in seconds' },
+    { field: 'created_at', description: 'channel creation date' },
+  ],
+  message: [
+    { field: 'id', description: 'message id' },
+    { field: 'content', description: 'full message text' },
+    { field: 'author_id', description: 'id of the author' },
+    { field: 'author', description: 'the $user dict for the author' },
+    { field: 'channel_id', description: 'channel it was sent in' },
+    { field: 'guild_id', description: 'guild it was sent in' },
+    { field: 'created_at', description: 'when it was sent' },
+    { field: 'edited_timestamp', description: 'when it was last edited' },
+    { field: 'mentions', description: 'list of users mentioned' },
+    { field: 'mention_roles', description: 'list of role ids mentioned' },
+    { field: 'mention_everyone', description: 'true if it pings everyone' },
+    { field: 'attachments', description: 'list of attachments' },
+    { field: 'pinned', description: 'true if pinned' },
+    { field: 'tts', description: 'true if sent with text to speech' },
+    { field: 'webhook_id', description: 'webhook id if sent by a webhook' },
+    { field: 'type', description: 'message type number' },
+    { field: 'flags', description: 'message flags' },
+    { field: 'url', description: 'link to the message' },
+  ],
+  guild: [
+    { field: 'id', description: 'guild id' },
+    { field: 'name', description: 'guild name' },
+    { field: 'icon', description: 'icon hash' },
+    { field: 'icon_url', description: 'icon image URL' },
+    { field: 'banner', description: 'banner hash' },
+    { field: 'banner_url', description: 'banner image URL' },
+    { field: 'description', description: 'guild description' },
+    { field: 'owner_id', description: 'id of the owner' },
+    { field: 'features', description: 'list of guild features' },
+    { field: 'premium_tier', description: 'boost tier' },
+    { field: 'member_count', description: 'number of members' },
+    { field: 'preferred_locale', description: 'server language' },
+    { field: 'created_at', description: 'guild creation date' },
+  ],
+  args: [
+    { field: '0', description: 'first argument' },
+    { field: '1', description: 'second argument' },
+    { field: '2', description: 'third argument' },
+    { field: 'length / len(args)', description: 'how many arguments there are' },
+  ],
+};
 
 export default function TagsClient({
   user,
@@ -133,7 +294,7 @@ export default function TagsClient({
         activeGuildId={activeGuildId}
         currentPage="dashboard"
       />
-      <main className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full">
+      <main className="flex-1 px-6 py-8 max-w-3xl mx-auto w-full">
         <div className="flex items-center gap-4 mb-8 pb-5 border-b border-white/5">
           {iconUrl ? (
             <Image
@@ -161,7 +322,7 @@ export default function TagsClient({
                 Custom Tags
               </h2>
               <p className="text-white/20 text-[10px] mt-0.5">
-                Create, edit, view & delete tags
+                Text, embed & Rune script
               </p>
             </div>
             {!loading && (
@@ -198,7 +359,15 @@ export default function TagsClient({
                   <div className="flex-1 min-w-0">
                     <p className="text-white/80 font-medium truncate">
                       {tag.name}{' '}
-                      <span className="text-xs text-white/40">({tag.type})</span>
+                      <span className="text-xs text-white/40">
+                        (
+                        {tag.type === 'script'
+                          ? '⚡ script'
+                          : tag.type === 'embed'
+                          ? '📄 embed'
+                          : '📝 text'}
+                        )
+                      </span>
                     </p>
                     <p className="text-white/30 text-xs mt-0.5">
                       {tag.uses || 0} uses
@@ -210,7 +379,7 @@ export default function TagsClient({
                     <button
                       onClick={() => setViewTag(tag)}
                       className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
-                      title="View full content"
+                      title="View"
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -222,7 +391,7 @@ export default function TagsClient({
                       onClick={() => setModal(tag)}
                       disabled={saving}
                       className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors disabled:opacity-50"
-                      title="Edit tag"
+                      title="Edit"
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -234,7 +403,7 @@ export default function TagsClient({
                       onClick={() => setDeleteTag(tag)}
                       disabled={saving}
                       className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                      title="Delete tag"
+                      title="Delete"
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="3 6 5 6 21 6" />
@@ -268,6 +437,8 @@ export default function TagsClient({
             if (ok) setModal(null);
           }}
           onClose={() => setModal(null)}
+          guild={userGuild as any}
+          user={user as any}
         />
       )}
 
@@ -295,6 +466,8 @@ function TagModal({
   saving,
   onSave,
   onClose,
+  guild,
+  user,
 }: {
   initial?: TagEntry;
   existingNames: string[];
@@ -302,23 +475,178 @@ function TagModal({
   saving?: boolean;
   onSave: (tag: TagEntry) => void | Promise<void>;
   onClose: () => void;
+  guild: FluxerGuild;
+  user: FluxerUser;
 }) {
   const [name, setName] = useState(initial?.name ?? '');
-  const [type, setType] = useState<'text' | 'embed'>(initial?.type ?? 'text');
-  const [content, setContent] = useState(
-    initial?.type === 'embed'
-      ? initial.embedData?.description ?? ''
-      : initial?.content ?? ''
+  const [type, setType] = useState<'text' | 'embed' | 'script'>(
+    initial?.type ?? 'text'
   );
+  const [content, setContent] = useState(() => {
+    if (initial?.type === 'embed') return initial.embedData?.description ?? '';
+    return initial?.content ?? '';
+  });
   const [submitting, setSubmitting] = useState(false);
+  const [previewArgs, setPreviewArgs] = useState<string[]>([]);
+  const [argsInput, setArgsInput] = useState('');
+
+  const [previewResult, setPreviewResult] = useState<{
+    ok: boolean;
+    text?: string;
+    embeds?: any[];
+    error?: any;
+  } | null>(null);
+  const [validating, setValidating] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const [autocomplete, setAutocomplete] = useState<{
+    start: number;
+    query: string;
+    kind: keyof typeof CONTEXT_FIELDS;
+    active: number;
+  } | null>(null);
 
   const typeOptions = [
-    { value: 'text', label: 'Text' },
-    { value: 'embed', label: 'Embed' },
+    { value: 'text', label: '📝 Text' },
+    { value: 'embed', label: '📄 Embed' },
+    { value: 'script', label: '⚡ Rune' },
   ];
 
   const sanitizeName = (value: string) =>
     value.replace(/\s+/g, '').slice(0, 32);
+
+  useEffect(() => {
+    if (type !== 'script') {
+      setPreviewResult(null);
+      return;
+    }
+  
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+  
+    setValidating(true);
+    debounceRef.current = setTimeout(() => {
+      try {
+        const result = runTagSafe(
+          content || ' ',
+          buildPreviewContext(previewArgs, user, guild)
+        );
+        if (result.ok) {
+          setPreviewResult({
+            ok: true,
+            text: result.result!.text,
+            embeds: result.result!.embeds,
+          });
+        } else {
+          setPreviewResult({ ok: false, error: result.error });
+        }
+      } catch (e: any) {
+        setPreviewResult({
+          ok: false,
+          error: { name: 'Error', message: e?.message || 'Unknown error' },
+        });
+      } finally {
+        setValidating(false);
+      }
+    }, 280);
+  
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [content, type, previewArgs, user, guild]);
+
+  function detectContextTrigger(text: string, cursor: number) {
+    const before = text.slice(0, cursor);
+    const match = before.match(/\$(user|channel|message|guild|args)\.([a-zA-Z0-9_]*)$/);
+    if (match) {
+      return {
+        start: match.index!,
+        kind: match[1] as keyof typeof CONTEXT_FIELDS,
+        query: match[2] || '',
+      };
+    }
+    const match2 = before.match(/\$(user|channel|message|guild|args)$/);
+    if (match2) {
+      return {
+        start: match2.index!,
+        kind: match2[1] as keyof typeof CONTEXT_FIELDS,
+        query: '',
+      };
+    }
+    return null;
+  }
+
+  function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const v = e.target.value;
+    const pos = e.target.selectionStart ?? v.length;
+    setContent(v);
+
+    if (type === 'script') {
+      const trigger = detectContextTrigger(v, pos);
+      if (trigger) {
+        setAutocomplete({ ...trigger, active: 0 });
+      } else {
+        setAutocomplete(null);
+      }
+    } else {
+      setAutocomplete(null);
+    }
+  }
+
+  const filteredFields = (() => {
+    if (!autocomplete) return [];
+    const list = CONTEXT_FIELDS[autocomplete.kind] || [];
+    const q = autocomplete.query.toLowerCase();
+    return list
+      .filter(
+        (f) =>
+          f.field.toLowerCase().includes(q) ||
+          f.description.toLowerCase().includes(q)
+      )
+      .slice(0, 10);
+  })();
+
+  function insertField(field: string) {
+    if (!autocomplete || !taRef.current) return;
+
+    const before = content.slice(0, autocomplete.start);
+    const after = content.slice(taRef.current.selectionStart);
+    const prefix = `$${autocomplete.kind}.`;
+    const inserted = `${prefix}${field}`;
+    const next = before + inserted + after;
+
+    setContent(next);
+    setAutocomplete(null);
+
+    requestAnimationFrame(() => {
+      const pos = before.length + inserted.length;
+      taRef.current?.setSelectionRange(pos, pos);
+      taRef.current?.focus();
+    });
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!autocomplete || filteredFields.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setAutocomplete((d) =>
+        d ? { ...d, active: Math.min(d.active + 1, filteredFields.length - 1) } : d
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setAutocomplete((d) =>
+        d ? { ...d, active: Math.max(d.active - 1, 0) } : d
+      );
+    } else if (e.key === 'Tab' || e.key === 'Enter') {
+      e.preventDefault();
+      const chosen = filteredFields[autocomplete.active] ?? filteredFields[0];
+      insertField(chosen.field);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setAutocomplete(null);
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -338,14 +666,27 @@ function TagModal({
       return;
     }
 
+    if (type === 'script') {
+      const check = runTagSafe(content, buildPreviewContext([], user, guild));
+      if (!check.ok) {
+        showErrorToast('Rune Error', {
+          description: check.error?.message || 'Invalid script',
+        });
+        return;
+      }
+    }
+
     try {
       setSubmitting(true);
       const newTag: TagEntry = {
         id: initial?.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         name: cleanName,
         type,
-        content: type === 'text' ? content.trim() : null,
-        embedData: type === 'embed' ? { description: content.trim() } : null,
+        content: type === 'text' || type === 'script' ? content.trim() : null,
+        embedData:
+          type === 'embed'
+            ? { description: content.trim(), color: '#A52F05' }
+            : null,
         createdBy: initial?.createdBy ?? userId,
         createdAt: initial?.createdAt ?? Math.floor(Date.now() / 1000),
         uses: initial?.uses ?? 0,
@@ -359,6 +700,7 @@ function TagModal({
   };
 
   const busy = submitting || !!saving;
+  const isScript = type === 'script';
 
   return (
     <div
@@ -366,15 +708,26 @@ function TagModal({
       role="dialog"
       aria-modal="true"
     >
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={busy ? undefined : onClose} />
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={busy ? undefined : onClose}
+      />
 
-      <div className="relative w-full max-w-lg rounded-2xl bg-[#160a0a] shadow-2xl overflow-visible">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+      <div
+        className={`relative w-full rounded-2xl bg-[#160a0a] shadow-2xl ${
+          isScript ? 'max-w-5xl' : 'max-w-lg'
+        }`}
+      >
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-lg">
               {initial ? 'Edit Tag' : 'Create New Tag'}
             </h2>
-            <p className="text-white/30 text-xs mt-0.5">Custom server responses</p>
+            <p className="text-white/30 text-xs mt-0.5">
+              {isScript
+                ? 'Rune script'
+                : 'Custom server responses'}
+            </p>
           </div>
           <button
             type="button"
@@ -386,50 +739,343 @@ function TagModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-          <div>
-            <label className="block text-white/50 text-xs font-medium mb-1.5">
-              Tag Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(sanitizeName(e.target.value))}
-              onKeyDown={(e) => {
-                if (e.key === ' ') e.preventDefault();
-              }}
-              className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
-              placeholder="welcome"
-              maxLength={32}
-              autoComplete="off"
-              spellCheck={false}
-              required
+        <form onSubmit={handleSubmit}>
+        <div
+          className={`p-6 ${
+            isScript ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : 'space-y-5'
+          } max-h-[80vh] overflow-y-auto overflow-x-visible`}
+          >
+          <div className="space-y-5">
+            <div>
+              <label className="block text-white/50 text-xs font-medium mb-1.5">
+                Tag Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(sanitizeName(e.target.value))}
+                onKeyDown={(e) => {
+                  if (e.key === ' ') e.preventDefault();
+                }}
+                className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+                placeholder="welcome"
+                maxLength={32}
+                autoComplete="off"
+                spellCheck={false}
+                required
+              />
+              <p className="text-white/25 text-[10px] mt-1.5">
+                No spaces · max 32 characters
+              </p>
+            </div>
+          
+            <SelectDropdown
+              label="Type"
+              value={type}
+              onChange={(v) => setType(v as any)}
+              options={typeOptions}
             />
-            <p className="text-white/25 text-[10px] mt-1.5">No spaces allowed · max 32 characters</p>
+          
+            {isScript && (
+              <div>
+                <label className="block text-white/50 text-xs font-medium mb-1.5">
+                  Test Arguments
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={argsInput}
+                    onChange={(e) => setArgsInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const parts = argsInput
+                          .trim()
+                          .match(/(?:[^\s"]+|"[^"]*")+/g)
+                          ?.map((p) => p.replace(/^"|"$/g, '')) ?? [];
+                        if (parts.length) {
+                          setPreviewArgs(parts);
+                          setArgsInput('');
+                        }
+                      }
+                    }}
+                    className="flex-1 bg-white/5 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange font-mono"
+                    placeholder='e.g. "random args" 2'
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const parts = argsInput
+                        .trim()
+                        .match(/(?:[^\s"]+|"[^"]*")+/g)
+                        ?.map((p) => p.replace(/^"|"$/g, '')) ?? [];
+                      if (parts.length) {
+                        setPreviewArgs(parts);
+                        setArgsInput('');
+                      }
+                    }}
+                    className="px-3 py-2 rounded-lg bg-orange/15 hover:bg-orange/25 text-orange-warm text-xs font-medium transition-colors"
+                  >
+                    Set
+                  </button>
+                </div>
+          
+                {previewArgs.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {previewArgs.map((arg, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-mono text-white/70"
+                      >
+                        <span className="text-white/30">args[{i}]</span>
+                        {arg}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPreviewArgs((prev) => prev.filter((_, idx) => idx !== i))
+                          }
+                          className="ml-0.5 text-white/30 hover:text-red-400"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setPreviewArgs([])}
+                      className="text-[10px] text-white/30 hover:text-white/60 px-1"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+                <p className="text-white/25 text-[10px] mt-1.5">
+                  Used as <code className="text-orange-light/60">args.0</code>,{' '}
+                  <code className="text-orange-light/60">args[1]</code>, etc. in the preview
+                </p>
+              </div>
+            )}
+          
+            <div className="relative">
+              <label className="block text-white/50 text-xs font-medium mb-1.5">
+                {type === 'text'
+                  ? 'Content'
+                  : type === 'embed'
+                  ? 'Embed Description'
+                  : 'Script Source'}
+              </label>
+          
+              <textarea
+                ref={taRef}
+                value={content}
+                onChange={handleContentChange}
+                onKeyDown={handleKeyDown}
+                onBlur={() => setTimeout(() => setAutocomplete(null), 150)}
+                rows={isScript ? 14 : 6}
+                spellCheck={false}
+                className={`w-full bg-white/5 rounded-lg px-3 py-3 text-sm text-white placeholder-white/30 font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-orange resize-none overflow-y-auto ${
+                  isScript ? 'h-[320px]' : ''
+                }`}
+                placeholder={
+                  type === 'text'
+                    ? 'Hello!'
+                    : type === 'embed'
+                    ? 'Welcome to the server!'
+                    : `say("Hello", $user.username + "!")\nsay(embed()\n  .title("Welcome")\n  .description("You are in " + $guild.name)\n  .color("blurple"))`
+                }
+                required
+              />
+            </div>
           </div>
 
-          <SelectDropdown
-            label="Type"
-            value={type}
-            onChange={(v) => setType(v as 'text' | 'embed')}
-            options={typeOptions}
-          />
+            {isScript && (
+              <div className="space-y-4 flex flex-col min-h-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-white/50 text-xs font-medium uppercase tracking-wider">
+                    Live Preview
+                    <a
+                      href="/guides/rune"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex ml-4 items-center gap-1 text-orange-warm/80 hover:text-orange-warm text-[11px] transition-colors"
+                    >
+                        Rune language guide →
+                    </a>
+                  </p>
+                  <span className="text-[10px] text-white/30">
+                    {validating
+                      ? 'Checking…'
+                      : previewResult?.ok
+                      ? 'Valid'
+                      : previewResult
+                      ? 'Error'
+                      : '-'}
+                  </span>
+                </div>
+            
+                {previewResult && !previewResult.ok && (
+                  <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-2 flex-shrink-0">
+                    <p className="text-red-400 text-xs font-medium mb-1">
+                      {previewResult.error?.name || 'Error'}
+                      {previewResult.error?.line != null &&
+                        ` (line ${previewResult.error.line}${
+                          previewResult.error.col != null
+                            ? `:${previewResult.error.col}`
+                            : ''
+                        })`}
+                    </p>
+                    <p className="text-red-300/80 text-xs mb-2">
+                      {previewResult.error?.message}
+                    </p>
+                    {previewResult.error?.line != null && (
+                      <pre className="text-[11px] text-red-200/70 font-mono whitespace-pre overflow-x-auto">
+                        {codeSnippet(
+                          content,
+                          previewResult.error.line,
+                          previewResult.error.col
+                        )}
+                      </pre>
+                    )}
+                  </div>
+                )}
+            
+                <div className="w-full overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24] shadow-2xl flex flex-col min-h-[240px] max-h-[440px]">
+                  <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2.5 flex-shrink-0">
+                    <span className="text-sm font-medium text-white/40">#</span>
+                    <span className="text-sm font-semibold text-white/70">preview</span>
+                  </div>
+            
+                  <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                    <div className="flex min-h-full flex-col justify-end gap-4">
+                      {!previewResult || validating ? (
+                        <p className="text-white/25 text-xs italic">
+                          {validating ? 'Running…' : 'Start typing to preview'}
+                        </p>
+                      ) : previewResult.ok ? (
+                        <div className="flex gap-3">
+                          <Image
+                            src="/Functious.png"
+                            alt="Functious bot"
+                            width={32}
+                            height={32}
+                            className="mt-0.5 h-8 w-8 flex-shrink-0 rounded-full"
+                          />
+            
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-sm font-semibold text-orange-300">
+                                Functious
+                              </span>
+                              <span className="rounded bg-orange/20 px-1 py-0.5 text-[10px] leading-none text-white/35">
+                                BOT
+                              </span>
+                            </div>
+            
+                            {previewResult.text?.trim() && (
+                              <div className="mt-0.5 text-sm leading-relaxed text-white/70 whitespace-pre-wrap break-words">
+                                {previewResult.text}
+                              </div>
+                            )}
+            
+                            {previewResult.embeds?.map((emb, i) => (
+                              <div
+                                key={i}
+                                className="mt-2 rounded overflow-hidden border-l-4 max-w-md"
+                                style={{
+                                  borderColor: emb.color
+                                    ? `#${Number(emb.color).toString(16).padStart(6, '0')}`
+                                    : '#A52F05',
+                                  background: 'rgba(255,255,255,0.03)',
+                                }}
+                              >
+                                <div className="p-3 space-y-1.5">
+                                  {emb.author?.name && (
+                                    <p className="text-white/60 text-xs font-medium">
+                                      {emb.author.name}
+                                    </p>
+                                  )}
+                                  {emb.title && (
+                                    <p className="text-white font-semibold text-sm">
+                                      {emb.title}
+                                    </p>
+                                  )}
+                                  {emb.description && (
+                                    <p className="text-white/75 text-sm whitespace-pre-wrap leading-relaxed">
+                                      {emb.description}
+                                    </p>
+                                  )}
+                                  {Array.isArray(emb.fields) && emb.fields.length > 0 && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                      {emb.fields.map((f: any, fi: number) => (
+                                        <div key={fi}>
+                                          <p className="text-white/50 text-[10px] font-semibold uppercase tracking-wider">
+                                            {f.name}
+                                          </p>
+                                          <p className="text-white/80 text-xs mt-0.5">
+                                            {f.value}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {emb.footer?.text && (
+                                    <p className="text-white/40 text-[10px] mt-2">
+                                      {emb.footer.text}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+            
+                            {!previewResult.text?.trim() &&
+                              (!previewResult.embeds || previewResult.embeds.length === 0) && (
+                                <p className="text-white/25 text-xs italic mt-1">
+                                  Rune produced no output
+                                </p>
+                              )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-red-400/70 text-xs">
+                          Fix the error to see a preview
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-          <div>
-            <label className="block text-white/50 text-xs font-medium mb-1.5">
-              {type === 'text' ? 'Content' : 'Embed Description'}
-            </label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={5}
-              className="w-full bg-white/5 rounded-lg px-3 py-3 text-sm text-white placeholder-white/30 resize-y"
-              placeholder={type === 'text' ? 'Hello {user}!' : 'Welcome to the server!'}
-              required
-            />
+                {autocomplete && filteredFields.length > 0 && (
+                  <div className="rounded-xl bg-[#1a0e0e] border border-white/10 shadow-xl overflow-hidden max-h-56 overflow-y-auto flex-shrink-0">
+                    <div className="px-3 py-1.5 border-b border-white/5 text-[10px] text-white/40 font-medium uppercase tracking-wider">
+                      ${autocomplete.kind}
+                    </div>
+                    {filteredFields.map((f, i) => (
+                      <button
+                        key={f.field}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => insertField(f.field)}
+                        className={[
+                          'w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors',
+                          i === autocomplete.active
+                            ? 'bg-orange/15 text-white'
+                            : 'text-white/70 hover:bg-white/5 hover:text-white',
+                        ].join(' ')}
+                      >
+                        <span className="font-mono text-orange-light/80">.{f.field}</span>
+                        <span className="text-white/40 truncate">{f.description}</span>
+                      </button>
+                    ))}
+                    <div className="px-3 py-1.5 border-t border-white/5 text-[10px] text-white/25">
+                      ↑↓ navigate · Tab / Enter select · Esc close
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 px-6 pb-6 pt-2 border-t border-[#2A1313]">
             <button
               type="button"
               onClick={onClose}
@@ -440,7 +1086,12 @@ function TagModal({
             </button>
             <button
               type="submit"
-              disabled={!sanitizeName(name) || !content.trim() || busy}
+              disabled={
+                !sanitizeName(name) ||
+                !content.trim() ||
+                busy ||
+                (isScript && previewResult && !previewResult.ok) as any
+              }
               className="flex-1 py-3 bg-orange hover:bg-orange-bright disabled:opacity-50 rounded-xl font-semibold text-white transition-colors"
             >
               {busy ? 'Saving…' : initial ? 'Save Changes' : 'Create Tag'}
@@ -488,7 +1139,7 @@ function DeleteTagModal({
       />
 
       <div className="relative w-full max-w-sm rounded-2xl bg-[#160a0a] shadow-2xl overflow-hidden">
-        <div className="px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <h2 className="text-white font-bold text-lg">Delete tag?</h2>
           <p className="text-white/30 text-xs mt-0.5">This action cannot be undone.</p>
         </div>
@@ -499,9 +1150,7 @@ function DeleteTagModal({
               {tag.name}{' '}
               <span className="text-xs text-white/40">({tag.type})</span>
             </p>
-            <p className="text-white/30 text-xs mt-0.5">
-              {tag.uses || 0} uses
-            </p>
+            <p className="text-white/30 text-xs mt-0.5">{tag.uses || 0} uses</p>
           </div>
         </div>
 
@@ -529,19 +1178,31 @@ function DeleteTagModal({
 }
 
 function TagViewModal({ tag, onClose }: { tag: TagEntry; onClose: () => void }) {
-  const content = tag.type === 'text' ? tag.content : tag.embedData?.description;
+  const content =
+    tag.type === 'text' || tag.type === 'script'
+      ? tag.content
+      : tag.embedData?.description;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative w-full max-w-lg rounded-2xl bg-[#160a0a] shadow-2xl overflow-visible">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-lg">{tag.name}</h2>
             <p className="text-white/30 text-xs mt-0.5">
-              {tag.type === 'embed' ? 'Embed tag' : 'Text tag'}
-              {(tag.uses ?? 0) > 0 && ` · ${tag.uses} use${tag.uses === 1 ? '' : 's'}`}
+              {tag.type === 'script'
+                ? '⚡ Rune tag'
+                : tag.type === 'embed'
+                ? '📄 Embed tag'
+                : '📝 Text tag'}
+              {(tag.uses ?? 0) > 0 &&
+                ` · ${tag.uses} use${tag.uses === 1 ? '' : 's'}`}
             </p>
           </div>
           <button
@@ -556,22 +1217,34 @@ function TagViewModal({ tag, onClose }: { tag: TagEntry; onClose: () => void }) 
         <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
           <div>
             <label className="block text-white/50 text-xs font-medium mb-1.5">
-              {tag.type === 'text' ? 'Content' : 'Embed Description'}
+              {tag.type === 'script'
+                ? 'Source'
+                : tag.type === 'text'
+                ? 'Content'
+                : 'Embed Description'}
             </label>
             <div className="w-full bg-white/5 rounded-lg px-3 py-3 text-sm text-white/85 whitespace-pre-wrap font-mono leading-relaxed min-h-[80px]">
-              {content || <span className="text-white/25 italic">No content</span>}
+              {content || (
+                <span className="text-white/25 italic">No content</span>
+              )}
             </div>
           </div>
 
           {tag.createdBy && (
             <div className="flex items-center gap-4 pt-1">
               <div>
-                <p className="text-white/30 text-[10px] uppercase tracking-widest">Created by</p>
-                <p className="text-white/60 text-xs font-mono mt-0.5">{tag.createdBy}</p>
+                <p className="text-white/30 text-[10px] uppercase tracking-widest">
+                  Created by
+                </p>
+                <p className="text-white/60 text-xs font-mono mt-0.5">
+                  {tag.createdBy}
+                </p>
               </div>
-          {tag.createdAt && (
+              {tag.createdAt && (
                 <div>
-                  <p className="text-white/30 text-[10px] uppercase tracking-widest">Created</p>
+                  <p className="text-white/30 text-[10px] uppercase tracking-widest">
+                    Created
+                  </p>
                   <p className="text-white/60 text-xs mt-0.5">
                     {new Date(
                       tag.createdAt > 1e12 ? tag.createdAt : tag.createdAt * 1000

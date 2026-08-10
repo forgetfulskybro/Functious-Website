@@ -1,14 +1,16 @@
 'use client';
-
-import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import Sidebar from '@/components/layout/Sidebar';
-import { useGuildData } from '@/hooks/useGuildData';
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Roles } from '@/lib/types';
+import { RoleRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import SelectDropdown from '@/components/ui/SelectDropdown';
 import RolesDropdown from '@/components/ui/RolesDropdown';
+import { SettingRow } from '@/components/ui/SettingRow';
 import NumberInput from '@/components/ui/NumberInput';
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Roles } from '@/lib/types';
+import { useGuildData } from '@/hooks/useGuildData';
+import { useState, useEffect, useRef } from 'react';
+import Sidebar from '@/components/layout/Sidebar';
+import { Toggle } from '@/components/ui/Toggle';
+import Image from 'next/image';
 
 interface BypassEntry {
   role: string;
@@ -20,17 +22,6 @@ interface JoinRoleEntry {
   type: 'join' | 'timed';
   durationMs?: number;
 }
-
-// interface ReactionMapping {
-//   emoji: string;
-//   roleId: string;
-// }
-
-// interface ReactionRoleEntry {
-//   id: string;
-//   message: string;
-//   reactions: ReactionMapping[];
-// }
 
 const DURATION_UNITS = [
   { value: 'minutes', label: 'Minutes', ms: 60_000 },
@@ -92,6 +83,7 @@ function formatDuration(ms: number): string {
 const BYPASS_COMMANDS = [
   'autoroles',
   'bypass',
+  'polls',
   'giveaway',
   'language',
   'prefix',
@@ -101,141 +93,6 @@ const BYPASS_COMMANDS = [
   'tempchannels',
   'timezone'
 ] as const;
-
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button type="button" role="switch" aria-checked={value} onClick={() => onChange(!value)}
-      className={['relative inline-flex w-10 h-5 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange focus-visible:ring-offset-2 focus-visible:ring-offset-bg-dark', value ? 'bg-orange' : 'bg-white/10'].join(' ')}>
-      <span className={['block w-3.5 h-3.5 rounded-full bg-white shadow top-[3px] absolute transition-transform duration-200', value ? 'translate-x-[22px]' : 'translate-x-1'].join(' ')} />
-    </button>
-  );
-}
-
-function SettingRow({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-6 py-3.5 border-b border-white/5 last:border-0">
-      <div className="flex-1 min-w-0">
-        <p className="text-white/90 text-sm font-medium">{label}</p>
-        {description && <p className="text-white/40 text-xs mt-0.5">{description}</p>}
-      </div>
-      <div className="flex-shrink-0">{children}</div>
-    </div>
-  );
-}
-
-function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-white/[0.06] ${className}`} />;
-}
-
-function SettingRowSkeleton() {
-  return (
-    <div className="flex items-center justify-between gap-6 py-3.5">
-      <div className="flex-1 min-w-0 space-y-2">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-3 w-48" />
-      </div>
-      <Skeleton className="h-5 w-10 rounded-full flex-shrink-0" />
-    </div>
-  );
-}
-
-function RoleRowSkeleton() {
-  return (
-    <li className="rounded-xl px-4 py-3 flex items-center gap-3 bg-white/[0.03]">
-      <div className="flex-1 min-w-0 space-y-2">
-        <Skeleton className="h-4 w-36" />
-        <Skeleton className="h-3 w-28" />
-      </div>
-      <Skeleton className="h-7 w-7 rounded-md flex-shrink-0" />
-    </li>
-  );
-}
-
-// function MessageWithRoleMentions({
-//   value,
-//   onChange,
-//   roles,
-// }: {
-//   value: string;
-//   onChange: (v: string) => void;
-//   roles: { id: string; name: string; color?: number }[];
-// }) {
-//   const taRef = useRef<HTMLTextAreaElement>(null);
-//   const [dropdown, setDropdown] = useState<{ start: number; query: string } | null>(null);
-
-//   const filtered = useMemo(() => {
-//     if (!dropdown) return [];
-//     const q = dropdown.query.toLowerCase();
-//     return roles.filter(r =>
-//       r.name.toLowerCase().includes(q) || r.id.includes(q)
-//     ).slice(0, 8);
-//   }, [dropdown, roles]);
-
-//   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-//     const v = e.target.value;
-//     const pos = e.target.selectionStart ?? v.length;
-//     onChange(v);
-
-//     const before = v.slice(0, pos);
-//     const match = before.match(/role:([^\s{]*)$/i);
-//     if (match) {
-//       setDropdown({ start: match.index!, query: match[1] });
-//     } else {
-//       setDropdown(null);
-//     }
-//   }
-
-//   function insertRole(role: { id: string; name: string }) {
-//     if (!dropdown || !taRef.current) return;
-//     const before = value.slice(0, dropdown.start);
-//     const after = value.slice(taRef.current.selectionStart);
-//     const inserted = `{role:${role.name}}`;
-//     const next = before + inserted + after;
-//     onChange(next);
-//     setDropdown(null);
-//     requestAnimationFrame(() => {
-//       const pos = before.length + inserted.length;
-//       taRef.current?.setSelectionRange(pos, pos);
-//       taRef.current?.focus();
-//     });
-//   }
-
-//   return (
-//     <div className="relative">
-//       <textarea
-//         ref={taRef}
-//         value={value}
-//         onChange={handleChange}
-//         onBlur={() => setTimeout(() => setDropdown(null), 150)}
-//         rows={4}
-//         placeholder={'React for roles!\nrole:  ← type this to pick a role'}
-//         className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/20  resize-none font-mono"
-//       />
-//       {dropdown && filtered.length > 0 && (
-//         <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl bg-[#160a0a] shadow-2xl overflow-hidden max-h-40 overflow-y-auto">
-//           {filtered.map(role => (
-//             <button
-//               key={role.id}
-//               type="button"
-//               onMouseDown={e => e.preventDefault()}
-//               onClick={() => insertRole(role)}
-//               className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-white/70 hover:bg-white/5 hover:text-white transition-colors"
-//             >
-//               <span
-//                 className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-//                 style={{ backgroundColor: role.color ? `#${role.color.toString(16).padStart(6, '0')}` : '#888' }}
-//               />
-//               <span className="truncate font-medium">{role.name}</span>
-//             </button>
-//           ))}
-//         </div>
-//       )}
-//       <p className="text-white/25 text-[10px] mt-1.5">
-//         Type <code className="text-orange-light/70">role:</code> to insert a role mention.
-//       </p>
-//     </div>
-//   );
-// }
 
 function BypassModal({
   roles,
@@ -264,7 +121,7 @@ function BypassModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-[#160a0a] shadow-2xl">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-base">{initial ? 'Edit bypass role' : 'New bypass role'}</h2>
             <p className="text-white/30 text-xs mt-0.5">Bypass permission locks on commands</p>
@@ -328,15 +185,15 @@ function JoinRoleModal({
   }
 
   const TYPE_OPTIONS = [
-    { value: 'join',  label: 'Permanent — assigned immediately on join' },
-    { value: 'timed', label: 'Timed — assigned after a delay' },
+    { value: 'join',  label: 'Permanent - assigned immediately on join' },
+    { value: 'timed', label: 'Timed - assigned after a delay' },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-[#160a0a] shadow-2xl">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-base">{initial ? 'Edit join role' : 'New join role'}</h2>
             <p className="text-white/30 text-xs mt-0.5">Automatically assign a role when members join</p>
@@ -426,7 +283,7 @@ function StickyEditModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-[#160a0a] shadow-2xl">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-base">Edit saved roles</h2>
             <p className="text-white/30 text-xs mt-0.5 font-mono">{entry.user}</p>
@@ -679,7 +536,6 @@ export default function RolesClient({ user, guilds, activeGuildId, userGuild, in
 
   const [bypassModal, setBypassModal] = useState<'create' | BypassEntry | null>(null);
   const [joinModal, setJoinModal] = useState<'create' | JoinRoleEntry | null>(null);
-  // const [reactionModal, setReactionModal] = useState<'create' | ReactionRoleEntry | null>(null);
 
   async function handleSave(updates: Partial<GuildData>) {
     try {
@@ -759,10 +615,10 @@ export default function RolesClient({ user, guilds, activeGuildId, userGuild, in
 
         <div className="rounded-xl bg-bg-card px-6 py-1 mb-5">
           {loading ? (
-            <SettingRowSkeleton />
+            <div className="py-3.5"><Skeleton className="h-5 w-full" /></div>
           ) : (
             <SettingRow label="Sticky Roles" description="Re-assign roles to members when they rejoin.">
-              <Toggle value={data.stickyRolesEnabled} onChange={v => handleSave({ stickyRolesEnabled: v })} />
+              <Toggle value={data.stickyRolesEnabled} onChangeAction={v => handleSave({ stickyRolesEnabled: v })} />
             </SettingRow>
           )}
         </div>

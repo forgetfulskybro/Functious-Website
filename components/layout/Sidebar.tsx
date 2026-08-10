@@ -31,6 +31,10 @@ const GUILD_NAV_LINKS: { label: string; href: string; icon: React.ReactNode }[] 
     icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   },
   {
+    label: 'Reaction Roles', href: 'reaction-roles',
+    icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M8.5 10.5h.01M15.5 10.5h.01" /><path d="M8.8 14.5c1.2 1.4 3.2 1.8 5.4 0" /><path d="M18 4.5l1.2 2.4 2.6.4-1.9 1.9.5 2.6L18 10.5l-2.4 1.3.5-2.6-1.9-1.9 2.6-.4L18 4.5z" /></svg>,
+  },
+  {
     label: 'Temp Channels', href: 'tempchannels',
     icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   },

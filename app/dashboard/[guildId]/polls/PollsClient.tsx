@@ -1,13 +1,15 @@
 'use client';
-
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import Image from 'next/image';
-import Sidebar from '@/components/layout/Sidebar';
-import { useGuildData } from '@/hooks/useGuildData';
-import { showErrorToast, showToast } from '@/components/ui/Toast';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
-import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import { DateTimePicker, formatDt } from '@/components/ui/DateTimerPicker';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { PollRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
+import { showErrorToast, showToast } from '@/components/ui/Toast';
+import ChannelDropdown from '@/components/ui/ChannelDropdown';
+import { SettingRow } from '@/components/ui/SettingRow';
+import { useGuildData } from '@/hooks/useGuildData';
+import Sidebar from '@/components/layout/Sidebar';
+import { Toggle } from '@/components/ui/Toggle';
+import Image from 'next/image';
 
 interface PollEntry {
   id: string;
@@ -72,24 +74,6 @@ function pct(part: number, total: number) {
   return Math.floor((part / total) * 1000) / 10;
 }
 
-
-function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-white/[0.06] ${className}`} />;
-}
-
-function PollRowSkeleton() {
-  return (
-    <li className="rounded-xl px-4 py-3 flex items-center gap-3 bg-white/[0.03]">
-      <div className="flex-1 min-w-0 space-y-2">
-        <Skeleton className="h-4 w-48" />
-        <Skeleton className="h-3 w-40" />
-      </div>
-      <Skeleton className="h-7 w-7 rounded-md flex-shrink-0" />
-    </li>
-  );
-}
-
-
 function PollResultsModal({ poll, onClose }: { poll: PollEntry; onClose: () => void }) {
   const names = poll.options?.name ?? [];
   const votes = poll.votes ?? names.map(() => 0);
@@ -125,7 +109,7 @@ function PollResultsModal({ poll, onClose }: { poll: PollEntry; onClose: () => v
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl bg-[#160a0a] shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
 
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#471B1B] shrink-0">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[#2A1313] shrink-0">
           <div className="min-w-0 pr-4">
             <h2 className="text-white font-semibold text-base truncate">{poll.desc}</h2>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -247,7 +231,7 @@ function DeletePollModal({ poll, channelName, busy, onConfirm, onClose }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={isBusy ? undefined : onClose} />
       <div className="relative w-full max-w-sm rounded-2xl bg-[#160a0a] shadow-2xl overflow-hidden">
-        <div className="px-6 pt-5 pb-4 border-b border-[#471B1B]">
+        <div className="px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <h2 className="text-white font-bold text-lg">Delete poll?</h2>
           <p className="text-white/30 text-xs mt-0.5">This will end the poll and remove the channel message.</p>
         </div>
@@ -364,7 +348,7 @@ function CreatePollModal({ channels, busy, onSave, onClose }: {
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={isBusy ? undefined : onClose} />
       <div className="relative w-full max-w-lg rounded-2xl bg-[#160a0a] shadow-2xl flex flex-col max-h-[90vh]">
 
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#471B1B] shrink-0">
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313] shrink-0">
           <div>
             <h2 className="text-white font-bold text-lg">Create Poll</h2>
             <p className="text-white/30 text-xs mt-0.5">The bot posts it in the selected channel</p>
@@ -480,7 +464,7 @@ interface Props {
 }
 
 export default function PollsClient({ user, guilds, activeGuildId, userGuild, initialData, guildChannels: guildChannelsProp = [] }: Props) {
-  const { guild, loading, error } = useGuildData(initialData.id);
+  const { guild, loading, error, save, saving } = useGuildData(initialData.id);
   const data = guild ?? initialData;
   const guildChannels = (data as any).guildChannels ?? guildChannelsProp;
 
@@ -491,7 +475,30 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
   const [modal, setModal] = useState<'create' | null>(null);
   const [viewPoll, setViewPoll] = useState<PollEntry | null>(null);
   const [deleteItem, setDeleteItem] = useState<PollEntry | null>(null);
+  const [pollPerm, setPollPerm] = useState<boolean>(() => !!(data as any).pollPerm);
 
+  useEffect(() => {
+    if (saving) return;
+    if (typeof (data as any).pollPerm === 'boolean') {
+      setPollPerm((data as any).pollPerm);
+    }
+  }, [data, saving]);
+  
+  async function togglePollPerm(next: boolean) {
+    setPollPerm(next);
+    try {
+      await save({ pollPerm: next } as any);
+      showToast('Poll permissions', {
+        description: next
+          ? 'Anyone can create polls'
+          : 'Only users with Manage Guild can create polls',
+      });
+    } catch {
+      setPollPerm(!next);
+      showErrorToast('Error', { description: 'Failed to update poll permission.' });
+    }
+  }
+  
   useEffect(() => {
     const raw = (data as any).activePolls;
     if (Array.isArray(raw)) setPolls(raw.map(mapPoll));
@@ -580,6 +587,21 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
             <h1 className="text-xl font-extrabold text-white">Polls</h1>
             <p className="text-white/40 text-xs mt-0.5">{userGuild.name}</p>
           </div>
+        </div>
+
+        <div className="rounded-xl bg-bg-card px-6 py-1 mb-5">
+          {loading ? (
+            <div className="py-3.5">
+              <Skeleton className="h-5 w-full" />
+            </div>
+          ) : (
+            <SettingRow
+              label="Allow members to create polls"
+              description="When enabled, anyone can run the poll command. When disabled, only users with Manage Guild can."
+            >
+              <Toggle value={pollPerm} onChangeAction={togglePollPerm} disabled={saving} />
+            </SettingRow>
+          )}
         </div>
 
         <section className="rounded-2xl bg-bg-card p-6">
