@@ -103,7 +103,7 @@ function Mention({ children, type = 'user' }: { children: ReactNode; type?: 'use
   );
 }
 
-function Markdown({ text }: { text: string }) {
+export function Markdown({ text }: { text: string }) {
   if (!text) return null;
 
   const parts: Array<{ type: 'text' | 'code'; content: string; lang?: string }> = [];
