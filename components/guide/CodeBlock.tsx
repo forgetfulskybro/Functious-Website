@@ -143,7 +143,6 @@ export function Markdown({ text }: { text: string }) {
 
         const lines = part.content.split('\n');
         
-        // Group consecutive quote lines + detect headers
         const groups: Array<
           | { type: 'quote'; content: string[] }
           | { type: 'header'; level: number; content: string }
@@ -151,7 +150,6 @@ export function Markdown({ text }: { text: string }) {
         > = [];
         
         for (const line of lines) {
-          // Headers: # ## ### #### ##### ######
           const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
           if (headerMatch) {
             groups.push({

@@ -116,7 +116,6 @@ function parseEmbedTimestamp(raw: unknown): Date | null {
     return Number.isNaN(raw.getTime()) ? null : raw;
   }
   if (typeof raw === 'number') {
-    // Discord / most bots use seconds; JS Date needs ms. Heuristic: < 1e12 → seconds
     const ms = raw < 1e12 ? raw * 1000 : raw;
     const d = new Date(ms);
     return Number.isNaN(d.getTime()) ? null : d;
@@ -124,7 +123,6 @@ function parseEmbedTimestamp(raw: unknown): Date | null {
   if (typeof raw === 'string') {
     const trimmed = raw.trim();
     if (!trimmed) return null;
-    // Pure numeric string → treat like number
     if (/^\d+(\.\d+)?$/.test(trimmed)) {
       const n = Number(trimmed);
       const ms = n < 1e12 ? n * 1000 : n;
@@ -1241,7 +1239,6 @@ export function TagViewModal({ tag, onClose }: { tag: TagEntry; onClose: () => v
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // fallback
       const ta = document.createElement('textarea');
       ta.value = source;
       document.body.appendChild(ta);
