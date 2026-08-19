@@ -275,15 +275,15 @@ export default function RuneBuiltinsPage() {
         <ProseTable
           headers={['function', 'output']}
           rows={[
-            ['bold(s)', '**s**'],
-            ['italic(s)', '*s*'],
-            ['underline(s)', 's'],
-            ['strikethrough(s)', 's'],
-            ['spoiler(s)', 's'],
-            ['code(s)', 'a code block'],
-            ['inlineCode(s)', 'inline code'],
-            ['quote(s)', 'a quote'],
-            ['link(text, url)', 'a hyperlink'],
+            ['bold(s)', '**bold**'],
+            ['italic(s)', '*italic*'],
+            ['underline(s)', '__underline__'],
+            ['strikethrough(s)', '~~strikethrough~~'],
+            ['spoiler(s)', '||spoiler||'],
+            ['code(s)', '```a code block```'],
+            ['inlineCode(s)', '`inline code`'],
+            ['quote(s)', '> This is a quote'],
+            ['link(text, url)', '[a hyperlink](https://functious.vercel.app/guides/rune)'],
           ]}
         />
       </GuideSection>

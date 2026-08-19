@@ -134,7 +134,7 @@ export function Markdown({ text }: { text: string }) {
           return (
             <pre
               key={i}
-              className="my-1.5 overflow-x-auto rounded bg-[#2b2d31] p-2.5 font-mono text-[0.85em] leading-relaxed text-[#dbdee1]"
+              className="my-1.5 overflow-x-auto rounded-lg border border-white/10 bg-[#1e1f22] px-3.5 py-2.5 font-mono text-[0.85em] leading-relaxed text-[#dbdee1]"
             >
               <code className="whitespace-pre">{part.content}</code>
             </pre>
@@ -142,14 +142,85 @@ export function Markdown({ text }: { text: string }) {
         }
 
         const lines = part.content.split('\n');
+        
+        // Group consecutive quote lines + detect headers
+        const groups: Array<
+          | { type: 'quote'; content: string[] }
+          | { type: 'header'; level: number; content: string }
+          | { type: 'normal'; content: string }
+        > = [];
+        
+        for (const line of lines) {
+          // Headers: # ## ### #### ##### ######
+          const headerMatch = line.match(/^(#{1,6})\s+(.*)$/);
+          if (headerMatch) {
+            groups.push({
+              type: 'header',
+              level: headerMatch[1].length,
+              content: headerMatch[2],
+            });
+            continue;
+          }
+        
+          const quoteMatch = line.match(/^>\s?(.*)$/);
+          if (quoteMatch) {
+            const last = groups[groups.length - 1];
+            if (last?.type === 'quote') {
+              last.content.push(quoteMatch[1] || '\u00A0');
+            } else {
+              groups.push({ type: 'quote', content: [quoteMatch[1] || '\u00A0'] });
+            }
+            continue;
+          }
+        
+          groups.push({ type: 'normal', content: line });
+        }
+        
         return (
           <Fragment key={i}>
-            {lines.map((line, lineIdx) => (
-              <Fragment key={lineIdx}>
-                {lineIdx > 0 && <br />}
-                {renderInline(line)}
-              </Fragment>
-            ))}
+            {groups.map((group, gIdx) => {
+              if (group.type === 'quote') {
+                return (
+                  <div
+                    key={gIdx}
+                    className="border-l-4 border-[#66678D] pl-3 my-1 text-white/80"
+                  >
+                    {group.content.map((text, tIdx) => (
+                      <div key={tIdx} className={tIdx > 0 ? 'mt-0.5' : undefined}>
+                        {text}
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+        
+              if (group.type === 'header') {
+                const sizes: Record<number, string> = {
+                  1: 'text-2xl font-bold mt-4 mb-2',
+                  2: 'text-xl font-bold mt-3 mb-1.5',
+                  3: 'text-lg font-semibold mt-2.5 mb-1',
+                  4: 'text-base font-semibold mt-2 mb-1',
+                  5: 'text-sm font-semibold mt-1.5 mb-0.5',
+                  6: 'text-sm font-medium mt-1 mb-0.5 text-white/70',
+                };
+              
+                const className = `${sizes[group.level] || sizes[6]} text-white`;
+              
+                if (group.level === 1) return <h1 key={gIdx} className={className}>{renderInline(group.content)}</h1>;
+                if (group.level === 2) return <h2 key={gIdx} className={className}>{renderInline(group.content)}</h2>;
+                if (group.level === 3) return <h3 key={gIdx} className={className}>{renderInline(group.content)}</h3>;
+                if (group.level === 4) return <h4 key={gIdx} className={className}>{renderInline(group.content)}</h4>;
+                if (group.level === 5) return <h5 key={gIdx} className={className}>{renderInline(group.content)}</h5>;
+                return <h6 key={gIdx} className={className}>{renderInline(group.content)}</h6>;
+              }     
+        
+              return (
+                <Fragment key={gIdx}>
+                  {gIdx > 0 && <br />}
+                  {renderInline(group.content)}
+                </Fragment>
+              );
+            })}
           </Fragment>
         );
       })}
@@ -167,6 +238,49 @@ function renderInline(text: string): ReactNode[] {
     render: (match: RegExpExecArray) => ReactNode;
   }> = [
     {
+        regex: /<(https?:\/\/[^>\s]+)>/,
+        render: (m) => (
+          <a
+            key={key++}
+            href={m[1]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#00a8fc] hover:underline break-all"
+          >
+            {m[1]}
+          </a>
+        ),
+      },
+      {
+        regex: /\[([^\]]+)\]\((?:<(https?:\/\/[^>\s]+)>|(https?:\/\/[^)\s]+))\)/,
+        render: (m) => (
+          <a
+            key={key++}
+            href={m[2] || m[3]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#00a8fc] hover:underline"
+          >
+            {m[1]}
+          </a>
+        ),
+      },
+
+      {
+        regex: /(?<!<)(https?:\/\/[^\s<]+)/,
+        render: (m) => (
+          <a
+            key={key++}
+            href={m[1]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#00a8fc] hover:underline break-all"
+          >
+            {m[1]}
+          </a>
+        ),
+      },
+      {
       regex: /<@!?(\d+)>/,
       render: (m) => (
         <Mention key={key++} type="user">
@@ -251,34 +365,6 @@ function renderInline(text: string): ReactNode[] {
         >
           {m[1]}
         </code>
-      ),
-    },
-    {
-      regex: /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/,
-      render: (m) => (
-        <a
-          key={key++}
-          href={m[2]}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#00a8fc] hover:underline"
-        >
-          {m[1]}
-        </a>
-      ),
-    },
-    {
-      regex: /(https?:\/\/[^\s<]+)/,
-      render: (m) => (
-        <a
-          key={key++}
-          href={m[1]}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#00a8fc] hover:underline break-all"
-        >
-          {m[1]}
-        </a>
       ),
     },
   ];

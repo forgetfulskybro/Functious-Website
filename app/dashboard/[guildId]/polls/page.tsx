@@ -38,7 +38,6 @@ export default async function PollsPage({ params }: Props) {
       activeGuildId={guildId}
       userGuild={userGuild}
       initialData={emptyGuildData(guildId) as any}
-      guildChannels={[]}
     />
   );
 }

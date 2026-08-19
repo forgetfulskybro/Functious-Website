@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Markdown } from '@/components/guide/CodeBlock';
 
 interface ProseTableProps {
   headers: string[];
@@ -36,7 +37,7 @@ export default function ProseTable({ headers, rows }: ProseTableProps) {
                       : 'px-4 py-2.5 align-top text-white/70'
                   }
                 >
-                  {cell}
+                  <Markdown text={String(cell)} />
                 </td>
               ))}
             </tr>
