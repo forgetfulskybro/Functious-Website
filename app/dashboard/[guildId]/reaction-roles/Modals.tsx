@@ -162,7 +162,7 @@ export function ReactionRoleModal({
     return text.slice(0, type === 'embed' ? 4040 : 1960);
   }
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!channelId || submitting || saving) return;
 
@@ -383,18 +383,47 @@ export function ReactionRoleModal({
             <div className="space-y-2">
               {mappingSlice.map((m, sliceIdx) => {
                 const i = mappingPage * MAPPINGS_PER_PAGE + sliceIdx;
+                const selectedRolesElsewhere = new Set(
+                  mappings
+                    .filter((_, j) => j !== i && mappings[j].role)
+                    .map((mm) => mm.role)
+                );
+                const availableRoles = roles.filter(
+                  (r) => r.id === m.role || !selectedRolesElsewhere.has(r.id)
+                );
+
+                const selectedEmojisElsewhere = new Set(
+                  mappings
+                    .filter((_, j) => j !== i && mappings[j].emoji)
+                    .map((mm) => mm.emoji)
+                );
+                const availableCustomEmojis = (emojis ?? []).filter((e) => {
+                  const candidates = [
+                    e.id,
+                    e.name,
+                    `<:${e.name}:${e.id}>`,
+                    `<a:${e.name}:${e.id}>`,
+                  ];
+                  const isCurrent = candidates.some((c) => c === m.emoji) || m.emoji?.includes(e.id);
+                  if (isCurrent) return true;
+                  return !candidates.some((c) => selectedEmojisElsewhere.has(c));
+                });
+
                 return (
                   <div key={i} className="flex items-center gap-2">
                     <div className="w-28 flex-shrink-0">
                       <ReactionSelect
                         value={m.emoji}
                         onChange={(emoji) => updateMapping(i, { emoji })}
-                        customEmojis={emojis ?? []}
+                        customEmojis={availableCustomEmojis}
+                        hiddenEmojis={[...selectedEmojisElsewhere].filter(
+                          (em) => em && em !== m.emoji
+                        )}
                       />
                     </div>
                     <div className="flex-1 min-w-0 h-10 min-h-[40px] [&_>_*]:!h-10 [&_>_*]:!min-h-[40px] [&_button]:!h-10 [&_button]:!min-h-[40px]">
                       <RolesDropdown
-                        roles={roles}
+                        roles={availableRoles}
                         value={m.role}
                         onChange={(id) => updateMapping(i, { role: id })}
                       />
@@ -601,12 +630,14 @@ function RoleAutocompleteTextarea({
 }
 
 export function ViewModal({
+  guildId,
   item,
   channelName,
   roleName,
   onToggleExclusive,
   onClose,
 }: {
+  guildId: string;
   item: ReactionRoleEntry;
   channelName: string;
   roleName: (id: string) => string;
@@ -680,7 +711,7 @@ export function ViewModal({
                     <TwemojiImg emoji={r.emoji} size={22} />
                   ) : (
                     <img
-                      src={`https://fluxerusercontent.com/emojis/${r.emojiKey}.webp?animated=${r.emoji.includes('<a:')}&size=240&quality=lossless`}
+                      src={`https://fluxerusercontent.com/emojis/${r?.emojiKey ? r.emojiKey : r.emoji.split(":")[2].replace(">", "")}.webp?animated=${r.emoji.includes('<a:')}&size=240&quality=lossless`}
                       alt=""
                       className="w-5 h-5 object-contain"
                     />
@@ -705,7 +736,7 @@ export function ViewModal({
           </div>
 
           <a
-            href={`https://fluxer.app/channels/${item.chanId.split('/')[0] || ''}/${item.chanId}/${item.msgId}`}
+            href={`https://web.fluxer.app/channels/${guildId}/${item.chanId}/${item.msgId}`}
             target="_blank"
             rel="noreferrer"
             className="block text-center text-orange-warm/80 hover:text-orange-warm text-xs py-2"

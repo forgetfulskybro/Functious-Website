@@ -322,6 +322,7 @@ export default function ReactionRolesClient({
 
       {viewItem && (
         <ViewModal
+          guildId={activeGuildId}
           item={viewItem}
           channelName={channelName(viewItem.chanId)}
           roleName={roleName}

@@ -1,10 +1,8 @@
 'use client';
-
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { EmojiPicker } from 'frimousse';
 import { isUnicodeEmoji, TwemojiImg } from './Twemoji';
-
 
 export interface CustomEmoji {
   id: string;
@@ -17,6 +15,7 @@ interface ReactionSelectProps {
   value: string;
   onChange: (emoji: string) => void;
   customEmojis?: CustomEmoji[];
+  hiddenEmojis?: string[];
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -26,6 +25,7 @@ export default function ReactionSelect({
   value,
   onChange,
   customEmojis = [],
+  hiddenEmojis = [],
   placeholder = 'Emoji picker',
   disabled,
   className = '',
@@ -36,6 +36,8 @@ export default function ReactionSelect({
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const hiddenSet = useMemo(() => new Set(hiddenEmojis.filter(Boolean)), [hiddenEmojis]);
 
   useEffect(() => {
     if (!open || !triggerRef.current) return;
@@ -92,11 +94,19 @@ export default function ReactionSelect({
 
   const filteredCustom = useMemo(() => {
     const q = customQuery.trim().toLowerCase();
-    if (!q) return customEmojis;
-    return customEmojis.filter(
-      (ce) => ce.name.toLowerCase().includes(q) || ce.id.includes(q)
-    );
-  }, [customEmojis, customQuery]);
+    return customEmojis.filter((ce) => {
+      if (
+        hiddenSet.has(ce.id) ||
+        hiddenSet.has(ce.name) ||
+        hiddenSet.has(`<:${ce.name}:${ce.id}>`) ||
+        hiddenSet.has(`<a:${ce.name}:${ce.id}>`)
+      ) {
+        return false;
+      }
+      if (!q) return true;
+      return ce.name.toLowerCase().includes(q) || ce.id.includes(q);
+    });
+  }, [customEmojis, customQuery, hiddenSet]);
 
   const isCustomImage =
     value.startsWith('http') ||
@@ -158,7 +168,10 @@ export default function ReactionSelect({
             <EmojiPicker.Root
               className="isolate flex h-full w-full flex-col"
               columns={11}
-              onEmojiSelect={({ emoji }) => select(emoji)}
+              onEmojiSelect={({ emoji }) => {
+                if (hiddenSet.has(emoji)) return;
+                select(emoji);
+              }}
             >
               <EmojiPicker.Search className="z-10 mx-2 mt-2 appearance-none rounded-lg bg-white/5 px-2.5 py-1.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange" />
               <EmojiPicker.Viewport className="relative flex-1 outline-none">
@@ -184,15 +197,20 @@ export default function ReactionSelect({
                         {children}
                       </div>
                     ),
-                    Emoji: ({ emoji, ...props }) => (
-                      <button
-                        type="button"
-                        className="flex size-8 shrink-0 items-center justify-center rounded-md text-lg hover:bg-white/10 data-[active]:bg-orange/20"
-                        {...props}
-                      >
-                        <TwemojiImg emoji={emoji.emoji} size={22} />
-                      </button>
-                    ),
+                    Emoji: ({ emoji, ...props }) => {
+                      if (hiddenSet.has(emoji.emoji)) {
+                        return <span className="size-8 shrink-0" aria-hidden />;
+                      }
+                      return (
+                        <button
+                          type="button"
+                          className="flex size-8 shrink-0 items-center justify-center rounded-md text-lg hover:bg-white/10 data-[active]:bg-orange/20"
+                          {...props}
+                        >
+                          <TwemojiImg emoji={emoji.emoji} size={22} />
+                        </button>
+                      );
+                    },
                   }}
                 />
               </EmojiPicker.Viewport>
@@ -228,7 +246,11 @@ export default function ReactionSelect({
                 </div>
               ) : filteredCustom.length === 0 ? (
                 <div className="h-full flex items-center justify-center">
-                  <p className="text-white/30 text-xs">No matches for “{customQuery}”</p>
+                  <p className="text-white/30 text-xs">
+                    {customQuery
+                      ? `No matches for “${customQuery}”`
+                      : 'All custom emojis are already in use'}
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-11 gap-1">
@@ -237,7 +259,9 @@ export default function ReactionSelect({
                       key={ce.id}
                       type="button"
                       title={ce.name}
-                      onClick={() => select(ce.animated ? `<a:${ce.name}:${ce.id}>` : `<:${ce.name}:${ce.id}>`)}
+                      onClick={() =>
+                        select(ce.animated ? `<a:${ce.name}:${ce.id}>` : `<:${ce.name}:${ce.id}>`)
+                      }
                       className="flex size-8 items-center justify-center rounded-md hover:bg-white/10 transition-colors"
                     >
                       <img src={ce.url} alt={ce.name} className="w-5 h-5 object-contain" />
@@ -282,13 +306,13 @@ export default function ReactionSelect({
               );
             })()
           ) : isUnicodeEmoji(value) ? (
-              <TwemojiImg emoji={value} size={20} />
-            ) : (
-              <span className="text-lg leading-none">{value}</span>
-            )
+            <TwemojiImg emoji={value} size={20} />
           ) : (
-            <span className="text-white/30 text-xs">{placeholder}</span>
-          )}
+            <span className="text-lg leading-none">{value}</span>
+          )
+        ) : (
+          <span className="text-white/30 text-xs">{placeholder}</span>
+        )}
         <svg
           className={[
             'absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/30 transition-transform',

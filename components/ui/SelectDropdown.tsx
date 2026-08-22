@@ -195,18 +195,6 @@ export default function SelectDropdown(props: SelectDropdownProps) {
               })
             )}
           </div>
-
-          {multiple && (
-            <div className="px-3 pb-3 pt-1 border-t border-white/5">
-              <button
-                type="button"
-                onClick={() => { setOpen(false); setSearch(""); }}
-                className="w-full py-2 rounded-lg bg-orange/10 hover:bg-orange/20 text-orange-warm text-xs font-medium transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          )}
         </div>,
         document.body
       )

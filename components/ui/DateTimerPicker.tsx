@@ -299,13 +299,6 @@ export function DateTimePicker({
                 Earliest: {minDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                 {' '}(+5 min)
               </p>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="w-full py-2 rounded-lg bg-orange/10 hover:bg-orange/20 text-orange-warm text-xs font-semibold"
-              >
-                Confirm
-              </button>
             </div>
           </div>,
           document.body

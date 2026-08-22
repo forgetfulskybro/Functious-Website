@@ -1011,8 +1011,8 @@ export function TagModal({
                   )}
 
                   <div
-                    className="flex min-h-[200px] flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24]"
-                    style={{ maxHeight: editorHeight + 29 }}
+                    className="flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24]"
+                    style={{ maxHeight: editorHeight + 21 }}
                   >
                     <div className="flex flex-shrink-0 items-center gap-2 border-b border-white/10 px-4 py-2">
                       <span className="text-sm font-medium text-white/40">#</span>
