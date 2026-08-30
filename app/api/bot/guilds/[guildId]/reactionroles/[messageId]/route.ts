@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const body = await req.json();
 
   try {
-    const result = await updateReactionRoles(guildId, messageId, body);
+    const result = await updateReactionRoles(guildId, messageId, body, session.user.id);
     return NextResponse.json(result);
   } catch (e: any) {
     return NextResponse.json(

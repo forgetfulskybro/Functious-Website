@@ -45,8 +45,8 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const result = await createBotPoll(guildId, {
       ...body,
-      ownerId: session.user.id,
-    });
+      ownerId: session.user.id
+    }, session.user.id);
     return NextResponse.json(result, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to create poll' }, { status: 500 });

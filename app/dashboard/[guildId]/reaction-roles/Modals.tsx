@@ -162,7 +162,7 @@ export function ReactionRoleModal({
     return text.slice(0, type === 'embed' ? 4040 : 1960);
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (!channelId || submitting || saving) return;
 

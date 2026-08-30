@@ -26,7 +26,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
   }
 
   try {
-    const result = await resetTempChannels(guildId);
+    const result = await resetTempChannels(guildId, session.user.id);
     return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json(

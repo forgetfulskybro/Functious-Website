@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const result = await setupTempChannels(guildId, body);
+    const result = await setupTempChannels(guildId, body, session.user.id);
     return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json(

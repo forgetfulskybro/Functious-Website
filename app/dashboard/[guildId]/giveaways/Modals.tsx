@@ -125,7 +125,7 @@ export function CreateGiveawayModal({
     setBonusEntries((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (!channelId || !prize.trim() || winners < 1) return;
     if (submitting || busy) return;

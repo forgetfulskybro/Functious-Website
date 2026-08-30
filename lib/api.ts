@@ -1,10 +1,11 @@
 const BOT_API_URL = process.env.BOT_API_URL;
 const BOT_API_KEY = process.env.BOT_API_KEY ?? "";
 
-function botHeaders(): HeadersInit {
+function botHeaders(userId?: string): HeadersInit {
   return {
     "Content-Type": "application/json",
     "x-api-key": BOT_API_KEY,
+    "x-user-id": userId ?? "",
   };
 }
 
@@ -92,10 +93,11 @@ export function emptyGuildData(guildId: string) {
 export async function updateBotGuild(
   guildId: string,
   updates: Record<string, unknown>,
+  userId?: string,
 ) {
   const res = await safeFetch(`${BOT_API_URL}/api/guilds/${guildId}`, {
     method: "PATCH",
-    headers: botHeaders(),
+    headers: botHeaders(userId),
     body: JSON.stringify(updates),
     cache: "no-store",
   });
@@ -118,21 +120,22 @@ export async function createBotPoll(
     duration: string;
     options: string[];
     ownerId?: string;
-  }
+  },
+  userId?: string
 ) {
   const res = await safeFetch(`${BOT_API_URL}/api/guilds/${guildId}/polls`, {
     method: 'POST',
-    headers: botHeaders(),
+    headers: botHeaders(userId),
     body: JSON.stringify(body),
     cache: 'no-store',
   });
   return res.json();
 }
 
-export async function deleteBotPoll(guildId: string, messageId: string) {
+export async function deleteBotPoll(guildId: string, messageId: string, userId?: string) {
   const res = await safeFetch(`${BOT_API_URL}/api/guilds/${guildId}/polls/${messageId}`, {
     method: 'DELETE',
-    headers: botHeaders(),
+    headers: botHeaders(userId),
     cache: 'no-store',
   });
   return res.json();
@@ -148,12 +151,13 @@ export async function createBotGiveaway(
     requirement?: string | null;
     ownerId?: string;
   },
+  userId?: string
 ) {
   const res = await safeFetch(
     `${BOT_API_URL}/api/guilds/${guildId}/giveaways`,
     {
       method: "POST",
-      headers: botHeaders(),
+      headers: botHeaders(userId),
       body: JSON.stringify(body),
       cache: "no-store",
     },
@@ -162,12 +166,12 @@ export async function createBotGiveaway(
   return data;
 }
 
-export async function deleteBotGiveaway(guildId: string, messageId: string) {
+export async function deleteBotGiveaway(guildId: string, messageId: string, userId?: string) {
   const res = await safeFetch(
     `${BOT_API_URL}/api/guilds/${guildId}/giveaways/${messageId}`,
     {
       method: "DELETE",
-      headers: botHeaders(),
+      headers: botHeaders(userId),
       cache: "no-store",
     },
   );
@@ -186,12 +190,12 @@ export async function getBotGiveaways(guildId: string) {
   return res.json();
 }
 
-export async function deleteReactionRoles(guildId: string, messageId: string) {
+export async function deleteReactionRoles(guildId: string, messageId: string, userId?: string) {
   const res = await safeFetch(
     `${BOT_API_URL}/api/guilds/${guildId}/reactionroles/${messageId}`,
     {
       method: "DELETE",
-      headers: botHeaders(),
+      headers: botHeaders(userId),
       cache: "no-store",
     },
   );
@@ -199,12 +203,12 @@ export async function deleteReactionRoles(guildId: string, messageId: string) {
   return data;
 }
 
-export async function exclusiveReactionRoles(guildId: string, messageId: string) {
+export async function exclusiveReactionRoles(guildId: string, messageId: string, userId?: string) {
   const res = await safeFetch(
     `${BOT_API_URL}/api/guilds/${guildId}/reactionroles/${messageId}/exclusive`,
     {
       method: "POST",
-      headers: botHeaders(),
+      headers: botHeaders(userId),
       cache: "no-store",
     },
   );
@@ -212,12 +216,12 @@ export async function exclusiveReactionRoles(guildId: string, messageId: string)
   return data;
 }
 
-export async function updateReactionRoles(guildId: string, messageId: string, data: any) {
+export async function updateReactionRoles(guildId: string, messageId: string, data: any, userId?: string) {
   const res = await safeFetch(
     `${BOT_API_URL}/api/guilds/${guildId}/reactionroles/${messageId}`,
     {
       method: "PATCH",
-      headers: botHeaders(),
+      headers: botHeaders(userId),
       body: JSON.stringify(data),
       cache: "no-store",
     },
@@ -238,12 +242,12 @@ export async function fetchReactionRoles(guildId: string, messageId: string) {
   return data;
 }
 
-export async function createReactionRoles(guildId: string, data: any) {
+export async function createReactionRoles(guildId: string, data: any, userId?: string) {
   const res = await safeFetch(
     `${BOT_API_URL}/api/guilds/${guildId}/reactionroles/`,
     {
       method: "POST",
-      headers: botHeaders(),
+      headers: botHeaders(userId),
       body: JSON.stringify(data),
       cache: "no-store",
     },
@@ -262,12 +266,13 @@ export async function setupTempChannels(
     counting?: boolean;
     reset?: boolean;
   } = {},
+  userId?: string
 ) {
   const res = await fetch(
     `${BOT_API_URL}/api/guilds/${guildId}/tempchannels/setup`,
     {
       method: "POST",
-      headers: botHeaders(),
+      headers: botHeaders(userId),
       body: JSON.stringify(options),
       cache: "no-store",
     },
@@ -283,12 +288,12 @@ export async function setupTempChannels(
   return res.json();
 }
 
-export async function resetTempChannels(guildId: string) {
+export async function resetTempChannels(guildId: string, userId?: string) {
   const res = await fetch(
     `${BOT_API_URL}/api/guilds/${guildId}/tempchannels/reset`,
     {
       method: "POST",
-      headers: botHeaders(),
+      headers: botHeaders(userId),
       cache: "no-store",
     },
   );
@@ -305,29 +310,6 @@ export async function resetTempChannels(guildId: string) {
 
 export async function getBotHealth() {
   const res = await safeFetch(`${BOT_API_URL}/health`, {
-    cache: "no-store",
-  });
-  return res.json();
-}
-
-export async function getBotStats() {
-  const res = await safeFetch(`${BOT_API_URL}/api/stats`, {
-    headers: botHeaders(),
-    cache: "no-store",
-  });
-  return res.json();
-}
-
-export async function getBotHistoricalStats() {
-  const res = await safeFetch(`${BOT_API_URL}/api/stats/history`, {
-    headers: botHeaders(),
-    cache: "no-store",
-  });
-  return res.json();
-}
-
-export async function getBotHistoricalHealth() {
-  const res = await safeFetch(`${BOT_API_URL}/health/history`, {
     cache: "no-store",
   });
   return res.json();

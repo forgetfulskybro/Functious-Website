@@ -17,7 +17,6 @@ export default function FeatureDetailContent({ feature }: FeatureDetailContentPr
     try {
       await navigator.clipboard.writeText(text);
       setCopied(index);
-      console.log(index, copied)
       setTimeout(() => setCopied(null), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);

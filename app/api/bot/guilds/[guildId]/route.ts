@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const body = await req.json();
 
   try {
-    const result = await updateBotGuild(guildId, body);
+    const result = await updateBotGuild(guildId, body, session.user.id);
     return NextResponse.json(result);
   } catch {
     return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     default: 'Functious',
     template: '%s | Functious',
   },
-  description: 'Functious - a simple yet useful Fluxer companion',
+  description: 'Functious',
 };
 
 export default function RootLayout({

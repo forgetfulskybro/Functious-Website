@@ -23,6 +23,8 @@
     "typescript": "^5.5.3"
   },
   "dependencies": {
+    "@vanta-dev/node": "^0.1.7",
+    "@vanta-dev/web": "^0.1.2",
     "framer-motion": "^11.3.19",
     "frimousse": "^0.3.0",
     "jose": "^6.2.4",

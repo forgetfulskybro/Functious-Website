@@ -109,7 +109,6 @@ function codeSnippet(code: string, line?: number | null, col?: number | null) {
   return `${gutter} | ${text}\n${' '.repeat(gutter.length + 3 + colIndex)}^`;
 }
 
-/** Parse embed timestamp (ISO string, Date, unix seconds, or ms) → Date | null */
 function parseEmbedTimestamp(raw: unknown): Date | null {
   if (raw == null || raw === '') return null;
   if (raw instanceof Date) {
@@ -625,7 +624,7 @@ export function TagModal({
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (busy) return;
     const finalName = sanitizeName(name);

@@ -24,7 +24,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   }
 
   try {
-    const result = await deleteReactionRoles(guildId, messageId);
+    const result = await deleteReactionRoles(guildId, messageId, session.user.id);
     return NextResponse.json(result);
   } catch (e: any) {
     return NextResponse.json(

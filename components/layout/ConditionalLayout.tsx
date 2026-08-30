@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import Navbar from './Navbar';
 import Footer from './Footer';
 
-const BARE_ROUTES = ['/dashboard', '/login', '/profile', '/status'];
+const BARE_ROUTES = ['/dashboard', '/login', '/profile'];
 
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

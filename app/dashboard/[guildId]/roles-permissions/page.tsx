@@ -18,15 +18,27 @@ export default async function RolesPage({ params }: Props) {
   if (!session) redirect('/login');
 
   const guilds = await getSessionGuilds(session.accessToken);
-  const botGuildIds = await filterBotGuilds(guilds.map(g => g.id));
+  const botGuildIds = await filterBotGuilds(guilds.map((g) => g.id));
   const botGuildSet = new Set(botGuildIds);
 
   const dashboardGuilds = guilds
-    .filter(g => { const p = BigInt(g.permissions); return g.owner || (p & 0x20n) === 0x20n || (p & 0x8n) === 0x8n; })
-    .map(g => ({ ...g, botPresent: botGuildSet.has(g.id) }));
+    .filter((g) => {
+      const p = BigInt(g.permissions);
+      return g.owner || (p & 0x20n) === 0x20n || (p & 0x8n) === 0x8n;
+    })
+    .map((g) => ({ ...g, botPresent: botGuildSet.has(g.id) }));
 
-  const userGuild = dashboardGuilds.find(g => g.id === guildId);
+  const userGuild = dashboardGuilds.find((g) => g.id === guildId);
   if (!userGuild) notFound();
 
-  return <RolesClient user={session.user} guilds={dashboardGuilds} activeGuildId={guildId} userGuild={userGuild} initialData={emptyGuildData(guildId) as any} guildRoles={[]} />;
+  return (
+    <RolesClient
+      user={session.user}
+      guilds={dashboardGuilds}
+      activeGuildId={guildId}
+      userGuild={userGuild}
+      initialData={emptyGuildData(guildId) as any}
+      guildRoles={[]}
+    />
+  );
 }

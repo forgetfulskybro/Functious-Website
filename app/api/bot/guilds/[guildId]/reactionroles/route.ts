@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const body = await req.json();
 
   try {
-    const result = await createReactionRoles(guildId, body);
+    const result = await createReactionRoles(guildId, body, session.user.id);
     return NextResponse.json(result, { status: 201 });
   } catch (e: any) {
     return NextResponse.json(

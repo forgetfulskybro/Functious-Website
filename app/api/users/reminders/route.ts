@@ -12,7 +12,7 @@ async function safeBotFetch(url: string, options?: RequestInit) {
   const res = await fetch(url, options);
   const contentType = res.headers.get('content-type') ?? '';
   if (!contentType.includes('application/json')) {
-    throw new Error(`Bot API returned non-JSON response (status ${res.status}). Is the bot running?`);
+    throw new Error(`Bot API returned non-JSON response (status ${res.status}).`);
   }
   return res;
 }
