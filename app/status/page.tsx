@@ -13,11 +13,76 @@ import {
   formatRelative,
   formatMs,
   formatMemory,
-  dayTitle,
   statusColor,
   StatCard,
   RangeTabs,
 } from "./StatusParts";
+
+function formatBucketLabel(iso: string, range24h: boolean): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  if (range24h) {
+    return d.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatBucketTitle(day: StatusDay, range24h: boolean): string {
+  const when = formatBucketLabel(day.date, range24h);
+  if (day.status === "nodata" || day.uptimePct == null) {
+    return `${when} · no data`;
+  }
+  const label =
+    day.status === "up"
+      ? "Operational"
+      : day.status === "degraded"
+        ? "Degraded"
+        : day.status === "down"
+          ? "Down"
+          : "No data";
+  return `${when} · ${label} · ${day.uptimePct}%`;
+}
+
+export function StatusTimeline({
+  days,
+  range24h,
+}: {
+  days: StatusDay[];
+  range24h: boolean;
+}) {
+  return (
+    <div className="flex h-10 w-full gap-[2px]">
+      {days.map((day, i) => (
+        <div
+          key={`${day.date}-${i}`}
+          className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${statusColor(
+            day.status
+          )}`}
+          style={{ animationDelay: `${220 + i * 12}ms` }}
+        >
+          <div
+            role="tooltip"
+            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+          >
+            {formatBucketTitle(day, range24h)}
+            <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export const metadata: Metadata = {
   title: "Status",
@@ -34,6 +99,9 @@ const RANGE_MS: Record<RangeKey, number> = {
   "30d": 30 * 24 * 60 * 60 * 1000,
   "90d": 90 * 24 * 60 * 60 * 1000,
 };
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function parseRange(raw: string | string[] | undefined): RangeKey {
   const v = Array.isArray(raw) ? raw[0] : raw;
@@ -213,26 +281,27 @@ function buildPlaceholderDays(range: RangeKey): StatusDay[] {
   const days: StatusDay[] = [];
 
   if (range === "24h") {
-    const currentHourStart = new Date(now);
-    currentHourStart.setMinutes(0, 0, 0);
+    const currentHourStart = Math.floor(now / HOUR_MS) * HOUR_MS;
 
     for (let i = count - 1; i >= 0; i--) {
-      const t = currentHourStart.getTime() - i * 60 * 60 * 1000;
       days.push({
-        date: new Date(t).toISOString(),
+        date: new Date(currentHourStart - i * HOUR_MS).toISOString(),
         status: "nodata",
       });
     }
     return days;
   }
 
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
+  const nowDate = new Date(now);
+  const todayUtcStart = Date.UTC(
+    nowDate.getUTCFullYear(),
+    nowDate.getUTCMonth(),
+    nowDate.getUTCDate()
+  );
 
   for (let i = count - 1; i >= 0; i--) {
-    const d = new Date(todayStart.getTime() - i * 24 * 60 * 60 * 1000);
     days.push({
-      date: d.toISOString(),
+      date: new Date(todayUtcStart - i * DAY_MS).toISOString(),
       status: "nodata",
     });
   }
@@ -285,14 +354,6 @@ function statusFromPct(
   return "down";
 }
 
-function isSameCalendarDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
 function enrichDaysFromMonitors(
   days: StatusDay[],
   overallUptimePct: number,
@@ -303,17 +364,15 @@ function enrichDaysFromMonitors(
   const now = Date.now();
   const windowStart = now - RANGE_MS[range];
   const outages = buildOutages(incidents, now);
-  const nowDate = new Date(now);
 
   if (range === "24h") {
-    const step = 60 * 60 * 1000;
     return days.map((d) => {
       const t = new Date(d.date).getTime();
-      if (Number.isNaN(t) || t >= now || t < windowStart - step) {
+      if (Number.isNaN(t) || t >= now || t < windowStart - HOUR_MS) {
         return { ...d, status: "nodata" as const, uptimePct: undefined };
       }
 
-      const bucketEnd = Math.min(t + step, now);
+      const bucketEnd = Math.min(t + HOUR_MS, now);
       const bucketMs = Math.max(0, bucketEnd - t);
       if (bucketMs <= 0) {
         return { ...d, status: "nodata" as const, uptimePct: undefined };
@@ -332,10 +391,8 @@ function enrichDaysFromMonitors(
   }
 
   return days.map((d) => {
-    const dayStart = new Date(d.date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayStartMs = dayStart.getTime();
-    const dayEndFull = dayStartMs + 24 * 60 * 60 * 1000;
+    const dayStartMs = new Date(d.date).getTime();
+    const dayEndFull = dayStartMs + DAY_MS;
 
     if (dayStartMs > now) {
       return { ...d, status: "nodata" as const, uptimePct: undefined };
@@ -354,7 +411,7 @@ function enrichDaysFromMonitors(
     }
 
     const downMs = downtimeInBucket(bucketStart, bucketEnd, outages);
-    const isCurrent = isSameCalendarDay(dayStart, nowDate);
+    const isCurrent = dayStartMs <= now && now < dayEndFull;
     const hadOutage = downMs > 0;
 
     if (!hadOutage && !isCurrent) {
@@ -621,25 +678,8 @@ export default async function StatusPage({
             </div>
           </div>
 
-          <div className="flex h-10 w-full gap-[2px]">
-            {data.days.map((day, i) => (
-              <div
-                key={`${day.date}-${i}`}
-                className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${statusColor(
-                  day.status
-                )}`}
-                style={{ animationDelay: `${220 + i * 12}ms` }}
-              >
-                <div
-                  role="tooltip"
-                  className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
-                >
-                  {dayTitle(day)}
-                  <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <StatusTimeline days={data.days} range24h={range === "24h"} />
+
           <div className="mt-2 flex justify-between text-xs text-white/40">
             <span>{rangeLabel} ago</span>
             <span>now</span>
