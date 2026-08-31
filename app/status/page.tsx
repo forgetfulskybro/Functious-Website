@@ -213,24 +213,24 @@ function buildPlaceholderDays(range: RangeKey): StatusDay[] {
   const days: StatusDay[] = [];
 
   if (range === "24h") {
-    const endHour = new Date(now);
-    endHour.setMinutes(0, 0, 0);
-    endHour.setHours(endHour.getHours() + 1);
+    const currentHourStart = new Date(now);
+    currentHourStart.setMinutes(0, 0, 0);
 
-    for (let i = count; i >= 1; i--) {
+    for (let i = count - 1; i >= 0; i--) {
+      const t = currentHourStart.getTime() - i * 60 * 60 * 1000;
       days.push({
-        date: new Date(endHour.getTime() - i * 60 * 60 * 1000).toISOString(),
+        date: new Date(t).toISOString(),
         status: "nodata",
       });
     }
     return days;
   }
 
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
 
   for (let i = count - 1; i >= 0; i--) {
-    const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+    const d = new Date(todayStart.getTime() - i * 24 * 60 * 60 * 1000);
     days.push({
       date: d.toISOString(),
       status: "nodata",
@@ -309,7 +309,7 @@ function enrichDaysFromMonitors(
     const step = 60 * 60 * 1000;
     return days.map((d) => {
       const t = new Date(d.date).getTime();
-      if (Number.isNaN(t) || t < windowStart - step || t > now) {
+      if (Number.isNaN(t) || t >= now || t < windowStart - step) {
         return { ...d, status: "nodata" as const, uptimePct: undefined };
       }
 
