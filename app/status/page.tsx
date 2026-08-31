@@ -17,72 +17,7 @@ import {
   StatCard,
   RangeTabs,
 } from "./StatusParts";
-
-function formatBucketLabel(iso: string, range24h: boolean): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-
-  if (range24h) {
-    return d.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  }
-
-  return d.toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatBucketTitle(day: StatusDay, range24h: boolean): string {
-  const when = formatBucketLabel(day.date, range24h);
-  if (day.status === "nodata" || day.uptimePct == null) {
-    return `${when} · no data`;
-  }
-  const label =
-    day.status === "up"
-      ? "Operational"
-      : day.status === "degraded"
-        ? "Degraded"
-        : day.status === "down"
-          ? "Down"
-          : "No data";
-  return `${when} · ${label} · ${day.uptimePct}%`;
-}
-
-export function StatusTimeline({
-  days,
-  range24h,
-}: {
-  days: StatusDay[];
-  range24h: boolean;
-}) {
-  return (
-    <div className="flex h-10 w-full gap-[2px]">
-      {days.map((day, i) => (
-        <div
-          key={`${day.date}-${i}`}
-          className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${statusColor(
-            day.status
-          )}`}
-          style={{ animationDelay: `${220 + i * 12}ms` }}
-        >
-          <div
-            role="tooltip"
-            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
-          >
-            {formatBucketTitle(day, range24h)}
-            <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+import { StatusBars } from "@/components/ui/StatusBars";
 
 export const metadata: Metadata = {
   title: "Status",
@@ -274,39 +209,43 @@ async function queryMetricAvg(
   return null;
 }
 
-function buildPlaceholderDays(range: RangeKey): StatusDay[] {
-  const count =
-    range === "24h" ? 24 : range === "7d" ? 7 : range === "30d" ? 30 : 90;
-  const now = Date.now();
-  const days: StatusDay[] = [];
+/**
+ * Absolute UTC-aligned buckets. No setHours / setMinutes — those use
+ * the server's local zone (UTC on Vercel), which is what skewed labels.
+ * Never creates a bucket that starts in the future.
+ */
+ function buildPlaceholderDays(range: RangeKey): StatusDay[] {
+   const count =
+     range === "24h" ? 24 : range === "7d" ? 7 : range === "30d" ? 30 : 90;
+   const now = Date.now();
+   const days: StatusDay[] = [];
 
-  if (range === "24h") {
-    const currentHourStart = Math.floor(now / HOUR_MS) * HOUR_MS;
+   if (range === "24h") {
+     // Start of the current UTC hour (always ≤ now)
+     const hourStart = Math.floor(now / HOUR_MS) * HOUR_MS;
+     for (let i = count - 1; i >= 0; i--) {
+       days.push({
+         date: new Date(hourStart - i * HOUR_MS).toISOString(),
+         status: "nodata",
+       });
+     }
+     return days;
+   }
 
-    for (let i = count - 1; i >= 0; i--) {
-      days.push({
-        date: new Date(currentHourStart - i * HOUR_MS).toISOString(),
-        status: "nodata",
-      });
-    }
-    return days;
-  }
-
-  const nowDate = new Date(now);
-  const todayUtcStart = Date.UTC(
-    nowDate.getUTCFullYear(),
-    nowDate.getUTCMonth(),
-    nowDate.getUTCDate()
-  );
-
-  for (let i = count - 1; i >= 0; i--) {
-    days.push({
-      date: new Date(todayUtcStart - i * DAY_MS).toISOString(),
-      status: "nodata",
-    });
-  }
-  return days;
-}
+   const nowDate = new Date(now);
+   const dayStart = Date.UTC(
+     nowDate.getUTCFullYear(),
+     nowDate.getUTCMonth(),
+     nowDate.getUTCDate()
+   );
+   for (let i = count - 1; i >= 0; i--) {
+     days.push({
+       date: new Date(dayStart - i * DAY_MS).toISOString(),
+       status: "nodata",
+     });
+   }
+   return days;
+ }
 
 type OutageInterval = { start: number; end: number };
 
@@ -678,8 +617,8 @@ export default async function StatusPage({
             </div>
           </div>
 
-          <StatusTimeline days={data.days} range24h={range === "24h"} />
-
+          <StatusBars days={data.days} range24h={range === "24h"} />
+          
           <div className="mt-2 flex justify-between text-xs text-white/40">
             <span>{rangeLabel} ago</span>
             <span>now</span>
