@@ -565,13 +565,15 @@ function CommandUsageSection({
             <p className="text-white font-semibold text-lg tabular-nums leading-none">
               {total.toLocaleString()}
             </p>
-            <p className="text-white/30 text-[10px] mt-0.5 uppercase tracking-wider">total</p>
+            <p className="text-white/30 text-[10px] mt-0.5 uppercase tracking-wider">
+              total
+            </p>
           </div>
         )}
       </div>
 
       {sorted.length === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-10 px-4">
           <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center mx-auto mb-3">
             <svg
               className="w-5 h-5 text-white/20"
@@ -592,29 +594,38 @@ function CommandUsageSection({
           <div
             className={
               expanded
-                ? 'max-h-64 overflow-y-auto pr-1 scrollbar-thin space-y-2.5'
-                : 'space-y-2.5'
+                ? 'max-h-72 overflow-y-auto pr-1 scrollbar-thin space-y-2'
+                : 'space-y-2'
             }
           >
-            <ul className="space-y-2.5">
+            <ul className="space-y-2">
               {visible.map((cmd, i) => {
                 const pct = Math.round(((cmd.count || 0) / maxCount) * 100);
+
                 return (
-                  <li key={cmd.name + i} className="group">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-white/80 text-sm font-medium truncate min-w-0 flex-1 font-mono">
+                  <li
+                    key={cmd.name + i}
+                    className="rounded-xl px-3.5 py-3 bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <span className="text-white/90 text-sm font-medium truncate font-mono min-w-0">
                         f!{cmd.name}
                       </span>
                       <span className="text-white/40 text-xs tabular-nums shrink-0">
                         {(cmd.count || 0).toLocaleString()}
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-orange/70 to-orange-warm/80 transition-all duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-orange/70 to-orange-warm/80"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
+                    {cmd.lastUsed != null && (
+                      <p className="mt-1.5 text-[11px] text-white/25">
+                        Last used {formatRelative(cmd.lastUsed)}
+                      </p>
+                    )}
                   </li>
                 );
               })}
@@ -625,11 +636,11 @@ function CommandUsageSection({
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="mt-4 w-full py-2 rounded-xl text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange border border-white/5 bg-white/[0.03] hover:bg-white/[0.06] text-white/50 hover:text-white/80"
+              className="mt-4 w-full py-2.5 rounded-xl text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange border border-white/5 bg-white/[0.03] hover:bg-white/[0.06] text-white/50 hover:text-white/80"
             >
               {expanded
                 ? 'Show less'
-                : `View ${hiddenCount} other command${hiddenCount === 1 ? '' : 's'}`}
+                : `View ${hiddenCount} more command${hiddenCount === 1 ? '' : 's'}`}
             </button>
           )}
         </>

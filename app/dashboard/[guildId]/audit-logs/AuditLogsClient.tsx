@@ -536,7 +536,7 @@ export default function AuditLogsClient({
                     onClick={() => setExpanded((v) => !v)}
                     className="mt-4 w-full py-2.5 rounded-xl text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange border border-white/5 bg-white/[0.03] hover:bg-white/[0.06] text-white/50 hover:text-white/80"
                   >
-                    {expanded ? 'Show less' : `View ${hiddenCount} more`}
+                    {expanded ? 'Show less' : `View ${hiddenCount} more changes`}
                   </button>
                 )}
               </>

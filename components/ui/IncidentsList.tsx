@@ -98,7 +98,7 @@ export function IncidentsList({
 
   if (incidents.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-white/40">
+      <p className="py-8 text-center text-sm text-white/40">
         No incidents in this period. All clear.
       </p>
     );
@@ -119,6 +119,16 @@ export function IncidentsList({
 
   return (
     <div>
+      <style>{`
+        @keyframes incidentIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .incident-item {
+          animation: incidentIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+      `}</style>
+
       <div
         className={
           expanded
@@ -126,11 +136,15 @@ export function IncidentsList({
             : undefined
         }
       >
-        <ul className="divide-y divide-white/5">
-          {ordered.map((inc) => {
+        <ul className="space-y-2.5">
+          {ordered.map((inc, i) => {
             const isResolved = inc.status === "resolved";
             return (
-              <li key={inc.id} className="py-3 first:pt-0 last:pb-0">
+              <li
+                key={inc.id}
+                className="incident-item rounded-lg border border-white/10 bg-[#140b08] px-3.5 py-3 transition-colors hover:border-white/15"
+                style={{ animationDelay: `${i * 40}ms` }}
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs ring-1 ring-inset ${severityBadge(
@@ -139,7 +153,9 @@ export function IncidentsList({
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        isResolved ? "bg-emerald-400" : "bg-rose-400"
+                        isResolved
+                          ? "bg-emerald-400"
+                          : "bg-rose-400 animate-pulse"
                       }`}
                     />
                     {isResolved ? "Resolved" : "Active"}
@@ -164,12 +180,12 @@ export function IncidentsList({
                   </span>
                 </div>
 
-                <p className="mt-1 text-sm text-white/50 line-clamp-2">
+                <p className="mt-1.5 text-sm leading-relaxed text-white/50 line-clamp-2">
                   {inc.body}
                 </p>
 
                 {inc.resolvedAt && (
-                  <p className="mt-1 text-xs text-white/30">
+                  <p className="mt-1.5 text-xs text-white/30">
                     Resolved <ClientDate iso={inc.resolvedAt} />
                   </p>
                 )}
@@ -184,7 +200,7 @@ export function IncidentsList({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-white/60 transition-colors hover:border-orange/40 hover:text-orange-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+            className="w-full rounded-lg border border-white/10 bg-[#140b08] px-3 py-2 text-sm text-white/60 transition-colors hover:border-orange/40 hover:text-orange-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
           >
             {expanded
               ? "Show less"

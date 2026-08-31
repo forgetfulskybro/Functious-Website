@@ -332,53 +332,53 @@ function enrichDaysFromMonitors(
   }
 
   return days.map((d) => {
-      const dayStart = new Date(d.date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayStartMs = dayStart.getTime();
-      const dayEndFull = dayStartMs + 24 * 60 * 60 * 1000;
-  
-      if (dayStartMs > now) {
-        return { ...d, status: "nodata" as const, uptimePct: undefined };
-      }
-  
-      if (dayEndFull <= windowStart) {
-        return { ...d, status: "nodata" as const, uptimePct: undefined };
-      }
-  
-      const bucketStart = Math.max(dayStartMs, windowStart);
-      const bucketEnd = Math.min(dayEndFull, now);
-      const bucketMs = Math.max(0, bucketEnd - bucketStart);
-  
-      if (bucketMs <= 0) {
-        return { ...d, status: "nodata" as const, uptimePct: undefined };
-      }
-  
-      const downMs = downtimeInBucket(bucketStart, bucketEnd, outages);
-      const isCurrent = isSameCalendarDay(dayStart, nowDate);
-      const hadOutage = downMs > 0;
-  
-      if (!hadOutage && !isCurrent) {
-        return { ...d, status: "nodata" as const, uptimePct: undefined };
-      }
-  
-      if (!hadOutage && isCurrent) {
-        return {
-          ...d,
-          status: statusFromPct(overallUptimePct, currentStatus, true),
-          uptimePct: overallUptimePct,
-        };
-      }
-  
-      const pct = pctFromDowntime(bucketMs, downMs);
+    const dayStart = new Date(d.date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayStartMs = dayStart.getTime();
+    const dayEndFull = dayStartMs + 24 * 60 * 60 * 1000;
+
+    if (dayStartMs > now) {
+      return { ...d, status: "nodata" as const, uptimePct: undefined };
+    }
+
+    if (dayEndFull <= windowStart) {
+      return { ...d, status: "nodata" as const, uptimePct: undefined };
+    }
+
+    const bucketStart = Math.max(dayStartMs, windowStart);
+    const bucketEnd = Math.min(dayEndFull, now);
+    const bucketMs = Math.max(0, bucketEnd - bucketStart);
+
+    if (bucketMs <= 0) {
+      return { ...d, status: "nodata" as const, uptimePct: undefined };
+    }
+
+    const downMs = downtimeInBucket(bucketStart, bucketEnd, outages);
+    const isCurrent = isSameCalendarDay(dayStart, nowDate);
+    const hadOutage = downMs > 0;
+
+    if (!hadOutage && !isCurrent) {
+      return { ...d, status: "nodata" as const, uptimePct: undefined };
+    }
+
+    if (!hadOutage && isCurrent) {
       return {
         ...d,
-        status: statusFromPct(pct, currentStatus, isCurrent),
-        uptimePct: pct,
+        status: statusFromPct(overallUptimePct, currentStatus, true),
+        uptimePct: overallUptimePct,
       };
-    });
+    }
+
+    const pct = pctFromDowntime(bucketMs, downMs);
+    return {
+      ...d,
+      status: statusFromPct(pct, currentStatus, isCurrent),
+      uptimePct: pct,
+    };
+  });
 }
 
-  async function loadStatus(range: RangeKey): Promise<StatusPayload> {
+async function loadStatus(range: RangeKey): Promise<StatusPayload> {
   const fallbackDays = buildPlaceholderDays(range);
   const base: StatusPayload = {
     overall: "operational",
@@ -504,10 +504,38 @@ export default async function StatusPage({
 
   return (
     <main className="min-h-screen bg-bg-dark">
+      <style>{`
+        @keyframes statusFadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes statusBarIn {
+          from { opacity: 0; transform: scaleY(0.25); }
+          to { opacity: 1; transform: scaleY(1); }
+        }
+        @keyframes statusPulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.7; transform: scale(0.92); }
+        }
+        .status-fade {
+          animation: statusFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .status-bar {
+          animation: statusBarIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+          transform-origin: bottom center;
+        }
+        .status-dot-live {
+          animation: statusPulse 2.2s ease-in-out infinite;
+        }
+      `}</style>
+
       <AutoRefresh intervalMs={60_000} />
 
       <div className="mx-auto max-w-3xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
-        <header className="mb-10 max-w-2xl">
+        <header
+          className="status-fade mb-10 max-w-2xl"
+          style={{ animationDelay: "0ms" }}
+        >
           <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Status
           </h1>
@@ -516,10 +544,15 @@ export default async function StatusPage({
           </p>
         </header>
 
-        <section className={`mb-8 rounded-xl border px-6 py-5 ${overallRing}`}>
+        <section
+          className={`status-fade mb-8 rounded-xl border px-6 py-5 ${overallRing}`}
+          style={{ animationDelay: "60ms" }}
+        >
           <div className="flex items-start gap-3">
             <span
-              className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${overallDot}`}
+              className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${overallDot} ${
+                data.overall === "operational" ? "status-dot-live" : ""
+              }`}
             />
             <div>
               <h2 className="text-lg font-semibold tracking-tight text-white">
@@ -535,7 +568,10 @@ export default async function StatusPage({
           </div>
         </section>
 
-        <section className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <section
+          className="status-fade mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4"
+          style={{ animationDelay: "120ms" }}
+        >
           <StatCard
             label={`Uptime · ${RANGE_LABELS[range]}`}
             value={`${
@@ -558,7 +594,10 @@ export default async function StatusPage({
           />
         </section>
 
-        <section className="mb-8 rounded-xl border border-white/10 bg-[#140b08] p-5">
+        <section
+          className="status-fade mb-8 rounded-xl border border-white/10 bg-[#140b08] p-5"
+          style={{ animationDelay: "180ms" }}
+        >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-medium text-white/80">
               Last {rangeLabel}
@@ -582,15 +621,23 @@ export default async function StatusPage({
             </div>
           </div>
 
-          <div className="flex h-10 w-full gap-px overflow-hidden rounded-md">
+          <div className="flex h-10 w-full gap-[2px]">
             {data.days.map((day, i) => (
               <div
                 key={`${day.date}-${i}`}
-                title={dayTitle(day)}
-                className={`min-w-0 flex-1 transition-opacity hover:opacity-80 ${statusColor(
+                className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${statusColor(
                   day.status
                 )}`}
-              />
+                style={{ animationDelay: `${220 + i * 12}ms` }}
+              >
+                <div
+                  role="tooltip"
+                  className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+                >
+                  {dayTitle(day)}
+                  <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
+                </div>
+              </div>
             ))}
           </div>
           <div className="mt-2 flex justify-between text-xs text-white/40">
@@ -599,7 +646,10 @@ export default async function StatusPage({
           </div>
         </section>
 
-        <section className="rounded-xl border border-white/10 bg-[#140b08] p-5">
+        <section
+          className="status-fade rounded-xl border border-white/10 bg-[#140b08] p-5"
+          style={{ animationDelay: "280ms" }}
+        >
           <div className="mb-4 flex items-center justify-between gap-2">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-white/40">
               Incidents
