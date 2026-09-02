@@ -353,15 +353,18 @@ function enrichDaysFromMonitors(
     const isCurrent = dayStartMs <= now && now < dayEndFull;
     const hadOutage = downMs > 0;
 
-    if (!hadOutage && !isCurrent) {
-      return { ...d, status: "nodata" as const, uptimePct: undefined };
-    }
-
-    if (!hadOutage && isCurrent) {
+    if (!hadOutage) {
+      if (isCurrent) {
+        return {
+          ...d,
+          status: statusFromPct(overallUptimePct, currentStatus, true),
+          uptimePct: overallUptimePct,
+        };
+      }
       return {
         ...d,
-        status: statusFromPct(overallUptimePct, currentStatus, true),
-        uptimePct: overallUptimePct,
+        status: "up" as const,
+        uptimePct: 100,
       };
     }
 
