@@ -39,6 +39,8 @@ export interface StatusPayload {
   days: StatusDay[];
   incidents: Incident[];
   range: RangeKey;
+  heartbeatAts: string[];
+  currentStatus: "up" | "down" | "degraded" | "unknown";
 }
 
 export function formatRelative(iso: string | null | undefined): string {

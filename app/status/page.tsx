@@ -119,21 +119,26 @@ async function loadIncidents(
 ): Promise<Incident[]> {
   try {
     const list = unwrapList(await (vanta as any).uptime.getIncidents(monitorId));
-    const cutoff = Date.now() - RANGE_MS[range];
+    const now = Date.now();
+    const cutoff = now - RANGE_MS[range];
 
     return list
       .map((inc: any) => {
         const startedAt = inc.startedAt ?? inc.started_at ?? "";
         const endedAt = inc.endedAt ?? inc.ended_at ?? undefined;
         const statusRaw = String(inc.status ?? "resolved").toLowerCase();
-        const isActive = statusRaw === "active" || statusRaw === "open";
+        const isActive =
+          statusRaw === "active" ||
+          statusRaw === "open" ||
+          (!endedAt && statusRaw !== "resolved");
+
         const durationMs =
           typeof inc.durationMs === "number"
             ? inc.durationMs
             : endedAt
               ? new Date(endedAt).getTime() - new Date(startedAt).getTime()
               : isActive && startedAt
-                ? Date.now() - new Date(startedAt).getTime()
+                ? now - new Date(startedAt).getTime()
                 : 0;
 
         const data =
@@ -167,8 +172,13 @@ async function loadIncidents(
       })
       .filter((inc) => {
         if (!inc.startedAt) return false;
-        const t = new Date(inc.startedAt).getTime();
-        return !Number.isNaN(t) && t >= cutoff;
+        const start = new Date(inc.startedAt).getTime();
+        if (Number.isNaN(start)) return false;
+        const end = inc.resolvedAt
+          ? new Date(inc.resolvedAt).getTime()
+          : now;
+        if (Number.isNaN(end)) return false;
+        return end > cutoff && start <= now;
       })
       .sort(
         (a, b) =>
@@ -179,7 +189,6 @@ async function loadIncidents(
     return [];
   }
 }
-
 async function queryMetricAvg(
   name: string,
   range: RangeKey
@@ -390,12 +399,16 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
     days: fallbackDays,
     incidents: [],
     range,
+    heartbeatAts: [],
+    currentStatus: "up",
   };
 
   try {
     const monitorId = await resolveBotMonitorId();
-
-    const [gateway, database, memory, uptime, incidents] =
+    const fromISO = new Date(Date.now() - RANGE_MS[range]).toISOString();
+    const toISO = new Date().toISOString();
+    
+    const [gateway, database, memory, uptime, incidents, heartbeats] =
       await Promise.allSettled([
         queryMetricAvg("ping.gateway", range),
         queryMetricAvg("ping.db", range),
@@ -407,18 +420,33 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
               );
               return {
                 uptimePct:
-                  typeof s.uptimePercentage === "number"
-                    ? s.uptimePercentage
-                    : 100,
+                  typeof s.uptimePercentage === "number" ? s.uptimePercentage : 100,
                 currentStatus: (s.currentStatus as string) ?? "up",
                 lastHeartbeat:
                   (s.lastHeartbeat as string) ??
                   (s.lastHeartbeatAt as string) ??
                   null,
+                totalHeartbeats:
+                  typeof s.totalHeartbeats === "number" ? s.totalHeartbeats : 0,
               };
             })()
           : Promise.resolve(null),
         monitorId ? loadIncidents(monitorId, range) : Promise.resolve([]),
+        monitorId
+          ? (async () => {
+              try {
+                const raw = await (vanta as any).uptime.getHeartbeats(monitorId, {
+                  from: fromISO,
+                  to: toISO,
+                });
+                return unwrapList(raw)
+                  .map((h: any) => (h.at ?? h.timestamp ?? h.createdAt) as string)
+                  .filter(Boolean);
+              } catch {
+                return [] as string[];
+              }
+            })()
+          : Promise.resolve([] as string[]),
       ]);
 
     if (gateway.status === "fulfilled") base.gatewayPing = gateway.value;
@@ -627,6 +655,7 @@ export default async function StatusPage({
               startedAt: i.startedAt,
               resolvedAt: i.resolvedAt,
             }))}
+            heartbeatAts={data.heartbeatAts ?? []}
             overallUptimePct={data.uptimePct}
             currentStatus={
               data.overall === "outage"
