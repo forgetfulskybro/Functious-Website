@@ -620,7 +620,22 @@ export default async function StatusPage({
             </div>
           </div>
 
-          <StatusBars days={data.days} range24h={range === "24h"} />
+          <StatusBars
+            range={range}
+            range24h={range === "24h"}
+            incidents={data.incidents.map((i) => ({
+              startedAt: i.startedAt,
+              resolvedAt: i.resolvedAt,
+            }))}
+            overallUptimePct={data.uptimePct}
+            currentStatus={
+              data.overall === "outage"
+                ? "down"
+                : data.overall === "degraded"
+                  ? "degraded"
+                  : "up"
+            }
+          />
           
           <div className="mt-2 flex justify-between text-xs text-white/40">
             <span>{rangeLabel} ago</span>
