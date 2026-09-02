@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { BOT_INVITE_URL } from '@/lib/constants';
-import InviteButton from '@/components/ui/InviteButton';
 import type { FluxerUser } from '@/lib/types';
 import { usePathname } from 'next/navigation';
 
@@ -150,6 +149,113 @@ function SupportMenu() {
                 </Link>
               );
             })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GuestMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        aria-haspopup="true"
+        aria-label="Account menu"
+        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/8 border border-white/10 hover:bg-white/12 hover:border-white/20 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange group"
+      >
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 text-white/50 group-hover:ring-orange/40 transition-all">
+          <svg
+            className="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </span>
+        <span className="text-white/80 group-hover:text-white text-sm font-medium transition-colors">
+          Account
+        </span>
+        <Chevron open={open} />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-white/10 bg-[#1a0e0e]/95 backdrop-blur-md shadow-2xl shadow-black/60 py-1.5 z-50"
+        >
+          <div className="py-1">
+            <a
+              href="/api/auth/login"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/6 transition-colors focus-visible:outline-none focus-visible:bg-white/6"
+            >
+              <svg
+                className="w-4 h-4 text-white/40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden="true"
+              >
+                <path
+                  d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Log in
+            </a>
+
+            <a
+              href={BOT_INVITE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/6 transition-colors focus-visible:outline-none focus-visible:bg-white/6"
+            >
+              <svg
+                className="w-4 h-4 text-white/40"
+                viewBox="0 0 512 512"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M256 0C397.385 0 512 114.615 512 256C512 397.385 397.385 512 256 512C114.615 512 0 397.385 0 256C0 114.615 114.615 0 256 0ZM187.53 266.057C171.987 266.057 157.206 269.562 143.187 276.571C129.321 283.581 118.044 294.781 109.359 310.171C103.743 320.3 100.041 332.574 98.2529 346.993C96.5986 360.334 107.829 371.2 121.271 371.2C135.049 371.2 145.336 359.626 148.673 346.259C150.564 338.68 153.612 332.67 157.815 328.229C165.891 319.695 176.101 315.429 188.444 315.429C196.673 315.429 204.216 317.486 211.073 321.6C217.93 325.562 226.844 332.343 237.815 341.943C254.577 356.724 269.359 367.467 282.159 374.171C294.959 380.724 309.13 384 324.673 384C340.216 384 354.997 380.495 369.016 373.486C383.035 366.476 394.387 355.276 403.073 339.886C408.811 329.718 412.521 317.389 414.202 302.899C415.745 289.597 404.498 278.857 391.106 278.857C377.243 278.858 366.904 290.561 363.218 303.927C361.421 310.442 358.706 315.952 355.073 320.457C347.454 329.905 337.016 334.629 323.759 334.629C315.53 334.629 308.063 332.647 301.359 328.686C294.806 324.571 285.816 332.343 274.387 308.114C257.473 293.943 242.615 283.429 229.815 276.571C217.168 269.562 203.073 266.057 187.53 266.057ZM187.53 128C171.987 128 157.206 131.505 143.187 138.514C129.321 145.524 118.044 156.724 109.359 172.114C103.743 182.243 100.041 194.517 98.2529 208.935C96.5985 222.276 107.829 233.142 121.271 233.143C135.049 233.143 145.336 221.569 148.673 208.202C150.564 200.623 153.612 194.613 157.815 190.171C165.891 181.638 176.101 177.371 188.444 177.371C196.673 177.371 204.216 179.429 211.073 183.543C217.93 187.505 226.844 194.286 237.815 203.886C254.577 218.667 269.359 229.41 282.159 236.114C294.959 242.667 309.13 245.943 324.673 245.943C340.216 245.943 354.997 242.438 369.016 235.429C383.035 228.419 394.387 217.219 403.073 201.829C408.811 191.661 412.521 179.332 414.202 164.842C415.745 151.539 404.498 140.8 391.106 140.8C377.243 140.8 366.904 152.504 363.218 165.87C361.421 172.385 358.706 177.895 355.073 182.4C347.454 191.848 337.016 196.571 323.759 196.571C315.53 196.571 308.063 194.59 301.359 190.629C294.806 186.514 285.816 179.657 274.387 170.057C257.473 155.886 242.615 145.371 229.815 138.514C217.168 131.505 203.073 128 187.53 128Z" />
+              </svg>
+              Invite bot
+            </a>
           </div>
         </div>
       )}
@@ -391,9 +497,9 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {authLoaded && user ? (
               <UserMenu user={user} />
-            ) : (
-              <InviteButton size="esm" />
-            )}
+            ) : authLoaded ? (
+              <GuestMenu />
+            ) : null}
           </div>
 
           <button
@@ -487,18 +593,29 @@ export default function Navbar() {
                 </ul>
               </li>
 
-              {(!authLoaded || !user) && (
-                <li className="pt-1">
-                  <a
-                    href={BOT_INVITE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setMobileOpen(false)}
-                    className="inline-block bg-orange text-white text-sm font-semibold px-5 py-2 rounded-lg hover:bg-orange-bright transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
-                  >
-                    Invite Bot
-                  </a>
-                </li>
+              {authLoaded && !user && (
+                <>
+                  <li className="border-t border-white/10 pt-4">
+                    <a
+                      href="/api/auth/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="inline-flex w-full items-center justify-center rounded-lg bg-orange px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+                    >
+                      Log in
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href={BOT_INVITE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setMobileOpen(false)}
+                      className="inline-flex w-full items-center justify-center rounded-lg border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-medium text-white/80 transition-colors hover:border-white/25 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+                    >
+                      Invite bot
+                    </a>
+                  </li>
+                </>
               )}
 
               {authLoaded && user && (
@@ -549,18 +666,6 @@ export default function Navbar() {
                     </form>
                   </li>
                 </>
-              )}
-
-              {authLoaded && !user && (
-                <li>
-                  <a
-                    href="/api/auth/login"
-                    onClick={() => setMobileOpen(false)}
-                    className="text-sm text-white/50 hover:text-white/80 transition-colors focus-visible:outline-none"
-                  >
-                    Sign in with Fluxer
-                  </a>
-                </li>
               )}
             </ul>
           </nav>
