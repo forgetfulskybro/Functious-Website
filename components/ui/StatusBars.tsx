@@ -96,8 +96,8 @@ function enrich(
 ): StatusDay[] {
   const windowStart = now - RANGE_MS[range];
   const outages = buildOutages(incidents, now);
-  let dataFrom = Number.POSITIVE_INFINITY;
 
+  let dataFrom = Number.POSITIVE_INFINITY;
   for (const at of heartbeatAts) {
     const t = new Date(at).getTime();
     if (Number.isFinite(t) && t < dataFrom) dataFrom = t;
@@ -105,13 +105,11 @@ function enrich(
   for (const o of outages) {
     if (o.start < dataFrom) dataFrom = o.start;
   }
-
-  if (!Number.isFinite(dataFrom)) {
-    if (currentStatus === "down" || currentStatus === "degraded") {
-      dataFrom = windowStart;
-    }
-  } else {
-    dataFrom = Math.min(dataFrom, windowStart);
+  if (
+    !Number.isFinite(dataFrom) &&
+    (currentStatus === "down" || currentStatus === "degraded")
+  ) {
+    dataFrom = windowStart;
   }
 
   const buckets = buildBuckets(range, now);
@@ -131,27 +129,25 @@ function enrich(
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
-    const bStart = Math.max(
-      start,
-      windowStart,
-      Number.isFinite(dataFrom) ? dataFrom : windowStart
-    );
+    const bStart = Math.max(start, windowStart, Number.isFinite(dataFrom) ? dataFrom : windowStart);
     const bEnd = Math.min(end, now);
     const span = Math.max(0, bEnd - bStart);
-
     if (span <= 0) {
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
     const down = downtimeMs(bStart, bEnd, outages);
     const isCurrent = start <= now && now < end;
-
+    
     if (down <= 0) {
-      return {
-        date,
-        status: statusFromPct(100, currentStatus, isCurrent),
-        uptimePct: 100,
-      };
+      if (isCurrent) {
+        return {
+          date,
+          status: statusFromPct(overallUptimePct, currentStatus, true),
+          uptimePct: overallUptimePct,
+        };
+      }
+      return { date, status: "up" as const, uptimePct: 100 };
     }
 
     const pct = Math.round(((span - down) / span) * 1000) / 10;
