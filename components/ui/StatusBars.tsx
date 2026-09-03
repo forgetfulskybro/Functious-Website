@@ -112,8 +112,12 @@ function enrich(
     dataFrom = windowStart;
   }
 
-  const buckets = buildBuckets(range, now);
+  if (range === "24h" && Number.isFinite(dataFrom)) {
+      dataFrom = windowStart;
+    }
 
+  const buckets = buildBuckets(range, now);
+  
   return buckets.map(({ start, end }) => {
     const date = new Date(start).toISOString();
 
