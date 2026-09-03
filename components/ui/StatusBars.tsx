@@ -102,20 +102,15 @@ function enrich(
     const t = new Date(at).getTime();
     if (Number.isFinite(t) && t < dataFrom) dataFrom = t;
   }
-
   for (const o of outages) {
-    const isOpen = o.end >= now;
-    if (!isOpen && o.start < dataFrom) {
-      dataFrom = o.start;
-    }
+    if (o.start < dataFrom) dataFrom = o.start;
   }
 
   if (!Number.isFinite(dataFrom)) {
-    if (currentStatus === "down" || currentStatus === "degraded") {
-      dataFrom = windowStart;
-    }
+    dataFrom = windowStart;
   }
 
+  dataFrom = Math.min(dataFrom, windowStart);
   const buckets = buildBuckets(range, now);
 
   return buckets.map(({ start, end }) => {
@@ -125,7 +120,7 @@ function enrich(
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
-    if (Number.isFinite(dataFrom) && end <= dataFrom) {
+    if (end <= dataFrom) {
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
@@ -133,11 +128,7 @@ function enrich(
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
-    const bStart = Math.max(
-      start,
-      windowStart,
-      Number.isFinite(dataFrom) ? dataFrom : windowStart
-    );
+    const bStart = Math.max(start, windowStart, dataFrom);
     const bEnd = Math.min(end, now);
     const span = Math.max(0, bEnd - bStart);
 
@@ -149,14 +140,11 @@ function enrich(
     const isCurrent = start <= now && now < end;
 
     if (down <= 0) {
-      if (isCurrent) {
-        return {
-          date,
-          status: statusFromPct(100, currentStatus, isCurrent),
-          uptimePct: 100,
-        };
-      }
-      return { date, status: "up" as const, uptimePct: 100 };
+      return {
+        date,
+        status: statusFromPct(100, currentStatus, isCurrent),
+        uptimePct: 100,
+      };
     }
 
     const pct = Math.round(((span - down) / span) * 1000) / 10;
