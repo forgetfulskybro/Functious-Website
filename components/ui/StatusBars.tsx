@@ -138,13 +138,13 @@ function enrich(
 
     const down = downtimeMs(bStart, bEnd, outages);
     const isCurrent = start <= now && now < end;
-
+    
     if (down <= 0) {
       if (isCurrent) {
         return {
           date,
-          status: statusFromPct(overallUptimePct, currentStatus, true),
-          uptimePct: overallUptimePct,
+          status: statusFromPct(100, currentStatus, isCurrent),
+          uptimePct: 100,
         };
       }
       return { date, status: "up" as const, uptimePct: 100 };
