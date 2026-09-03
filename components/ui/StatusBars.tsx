@@ -96,21 +96,21 @@ function enrich(
 ): StatusDay[] {
   const windowStart = now - RANGE_MS[range];
   const outages = buildOutages(incidents, now);
-  let dataFrom = Number.POSITIVE_INFINITY;
-
+  const evidence: number[] = [];
+  
   for (const at of heartbeatAts) {
     const t = new Date(at).getTime();
-    if (Number.isFinite(t) && t < dataFrom) dataFrom = t;
+    if (Number.isFinite(t)) evidence.push(t);
   }
   for (const o of outages) {
-    if (o.start < dataFrom) dataFrom = o.start;
+    evidence.push(o.start);
+    if (o.end < now) evidence.push(o.end);
   }
+  evidence.sort((a, b) => a - b);
 
-  if (!Number.isFinite(dataFrom)) {
-    dataFrom = windowStart;
-  }
+  const hasAnyEvidence = evidence.length > 0;
+  const earliestEvidence = hasAnyEvidence ? evidence[0] : Number.POSITIVE_INFINITY;
 
-  dataFrom = Math.min(dataFrom, windowStart);
   const buckets = buildBuckets(range, now);
 
   return buckets.map(({ start, end }) => {
@@ -120,24 +120,32 @@ function enrich(
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
-    if (end <= dataFrom) {
-      return { date, status: "nodata" as const, uptimePct: undefined };
-    }
-
     if (end <= windowStart) {
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
-    const bStart = Math.max(start, windowStart, dataFrom);
+    const bStart = Math.max(start, windowStart);
     const bEnd = Math.min(end, now);
     const span = Math.max(0, bEnd - bStart);
-
     if (span <= 0) {
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
-    const down = downtimeMs(bStart, bEnd, outages);
     const isCurrent = start <= now && now < end;
+    const bucketHasEvidence =
+      isCurrent ||
+      outages.some((o) => o.start < bEnd && o.end > bStart) ||
+      evidence.some((t) => t >= bStart && t < bEnd);
+
+    if (hasAnyEvidence && end <= earliestEvidence && !isCurrent) {
+      return { date, status: "nodata" as const, uptimePct: undefined };
+    }
+
+    if (!bucketHasEvidence && !isCurrent) {
+      return { date, status: "nodata" as const, uptimePct: undefined };
+    }
+
+    const down = downtimeMs(bStart, bEnd, outages);
 
     if (down <= 0) {
       return {
