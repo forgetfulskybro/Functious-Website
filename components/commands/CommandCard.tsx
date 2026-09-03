@@ -10,44 +10,69 @@ interface CommandCardProps {
   onToggleAction: () => void;
 }
 
-export default function CommandCard({ command, isOpen, onToggleAction }: CommandCardProps) {
+export default function CommandCard({
+  command,
+  isOpen,
+  onToggleAction,
+}: CommandCardProps) {
   const { name, description, usage, aliases, cooldown, permissions } = command;
 
   return (
     <div
-      className={[
-        'rounded-xl border-l-4 border-l-orange/60 bg-[#141414] transition-colors duration-200',
-      ].join(' ')}
+      className={`
+        overflow-hidden rounded-xl border transition-colors duration-200
+        ${isOpen
+          ? 'border-orange/30 bg-[#140b08]'
+          : 'border-white/10 bg-[#140b08] hover:border-white/15'
+        }
+      `}
     >
       <button
         type="button"
         onClick={onToggleAction}
         aria-expanded={isOpen}
-        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange rounded-xl"
+        className="flex w-full items-center gap-4 px-5 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/40 focus-visible:ring-inset"
       >
+        <span
+          className={`
+            mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full transition-colors
+            ${isOpen
+              ? 'bg-orange shadow-[0_0_10px_rgba(249,115,22,0.45)]'
+              : 'bg-white/20'
+            }
+          `}
+        />
+
         <div className="min-w-0 flex-1">
-          <span className="text-sm font-bold text-white">
-            <span className="text-orange-light">f!</span>{name}
-          </span>
-          <p className="mt-0.5 truncate text-xs text-white/55">{description}</p>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <span className="font-mono text-[15px] font-semibold tracking-tight text-white">
+              <span className="text-orange-light/90">f!</span>
+              {name}
+            </span>
+            <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white/40">
+              {formatCooldown(cooldown)}
+            </span>
+          </div>
+          <p className="mt-1 truncate text-[13px] text-white/45">
+            {description}
+          </p>
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-2">
-          <span
-            className="rounded-full bg-orange/20 px-2.5 py-0.5 text-xs font-semibold text-orange"
-            aria-label={`Cooldown: ${formatCooldown(cooldown)}`}
-          >
-            {formatCooldown(cooldown)}
-          </span>
-          <motion.span
-            animate={{ rotate: isOpen ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-            className="text-white/40 text-xs select-none"
-            aria-hidden="true"
-          >
-            ▼
-          </motion.span>
-        </div>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex h-7 w-7 shrink-0 items-center justify-center text-white/30"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path
+              d="M3.5 5.25L7 8.75L10.5 5.25"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </motion.div>
       </button>
 
       <AnimatePresence initial={false}>
@@ -57,37 +82,52 @@ export default function CommandCard({ command, isOpen, onToggleAction }: Command
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            transition={{ duration: 0.22, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="flex flex-col gap-4 border-t border-gray-600 px-5 pb-5 pt-4">
-              <p className="text-sm leading-relaxed text-white/80">{description}</p>
+            <div className="space-y-4 border-t border-white/10 px-5 pb-5 pt-4">
+              <p className="text-[13.5px] leading-relaxed text-white/65">
+                {description}
+              </p>
 
-              <div>
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">Usage</span>
-                <code className="block rounded bg-black/30 px-3 py-2 text-xs leading-relaxed text-orange-light break-all">
+              <div className="rounded-lg border border-white/5 bg-black/25 px-3.5 py-3">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                  Usage
+                </p>
+                <code className="font-mono text-[13px] text-orange-light">
                   f!{usage}
                 </code>
               </div>
 
-              <div>
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">Aliases</span>
-                {aliases.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {aliases.map((alias) => (
-                      <span key={alias} className="rounded-full border border-white/20 bg-white/5 px-2.5 py-0.5 text-xs text-white/80">
-                        {alias}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-xs text-white/40">None</span>
-                )}
-              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                    Aliases
+                  </p>
+                  {aliases.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {aliases.map((alias) => (
+                        <span
+                          key={alias}
+                          className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 font-mono text-[12px] text-white/60"
+                        >
+                          {alias}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-[13px] text-white/30">None</span>
+                  )}
+                </div>
 
-              <div>
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">Permissions</span>
-                <span className="text-xs text-white/80">{permissions ?? 'None required'}</span>
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                    Permissions
+                  </p>
+                  <span className="text-[13px] text-white/60">
+                    {permissions ?? 'None required'}
+                  </span>
+                </div>
               </div>
             </div>
           </motion.div>

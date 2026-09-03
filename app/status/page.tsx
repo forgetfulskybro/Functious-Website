@@ -98,7 +98,7 @@ function extractMetricValue(res: unknown): number | null {
 
 async function resolveBotMonitorId(): Promise<string | null> {
   try {
-    const list = unwrapList(await (vanta as any).uptime.listMonitors());
+    const list = unwrapList(await vanta.uptime.listMonitors());
     const bot =
       list.find(
         (m: any) =>
@@ -118,7 +118,7 @@ async function loadIncidents(
   range: RangeKey
 ): Promise<Incident[]> {
   try {
-    const list = unwrapList(await (vanta as any).uptime.getIncidents(monitorId));
+    const list = unwrapList(await vanta.uptime.getIncidents(monitorId));
     const now = Date.now();
     const cutoff = now - RANGE_MS[range];
 
@@ -197,7 +197,7 @@ async function queryMetricAvg(
   const start = new Date(end.getTime() - RANGE_MS[range]);
 
   try {
-    const metrics = (vanta as any).metrics;
+    const metrics = vanta.metrics;
     if (!metrics) return null;
 
     if (typeof metrics.query === "function") {
@@ -218,11 +218,6 @@ async function queryMetricAvg(
   return null;
 }
 
-/**
- * Absolute UTC-aligned buckets. No setHours / setMinutes — those use
- * the server's local zone (UTC on Vercel), which is what skewed labels.
- * Never creates a bucket that starts in the future.
- */
  function buildPlaceholderDays(range: RangeKey): StatusDay[] {
    const count =
      range === "24h" ? 24 : range === "7d" ? 7 : range === "30d" ? 30 : 90;
@@ -230,7 +225,6 @@ async function queryMetricAvg(
    const days: StatusDay[] = [];
 
    if (range === "24h") {
-     // Start of the current UTC hour (always ≤ now)
      const hourStart = Math.floor(now / HOUR_MS) * HOUR_MS;
      for (let i = count - 1; i >= 0; i--) {
        days.push({
@@ -416,7 +410,7 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
         monitorId
           ? (async () => {
               const s = unwrapStats(
-                await (vanta as any).uptime.getStats(monitorId, range)
+                await vanta.uptime.getStats(monitorId, range)
               );
               return {
                 uptimePct:
@@ -435,7 +429,7 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
         monitorId
           ? (async () => {
               try {
-                const raw = await (vanta as any).uptime.getHeartbeats(monitorId, {
+                const raw = await vanta.uptime.getHeartbeats(monitorId, {
                   from: fromISO,
                   to: toISO,
                 });

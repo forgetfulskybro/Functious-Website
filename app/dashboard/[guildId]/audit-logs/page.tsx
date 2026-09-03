@@ -74,7 +74,7 @@ async function loadAuditLogs(guildId: string): Promise<AuditLogEvent[]> {
     const end = new Date();
     const start = new Date(end.getTime() - 90 * 24 * 60 * 60 * 1000);
 
-    const res = await (vanta as any).queryEvents({
+    const res = await vanta.queryEvents({
       filters: and(
         filter('type', 'equals', 'setting.updated'),
         filter('groupId', 'equals', guildId)

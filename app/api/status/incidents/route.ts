@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest) {
   if (typeof description === "string") data.description = description.trim();
 
   try {
-    await (vanta as any).uptime.updateIncident({
+    await vanta.uptime.updateIncident({
       incidentId,
       data,
     });
