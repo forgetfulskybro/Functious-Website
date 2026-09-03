@@ -206,6 +206,7 @@ async function queryMetricAvg(
         time: timeRange(start.toISOString(), end.toISOString()),
         aggregation: "avg",
       });
+      console.log(q)
       const fromQuery = extractMetricValue(q);
       if (fromQuery != null) return fromQuery;
     }
@@ -291,6 +292,7 @@ function statusFromPct(
   isCurrentBucket: boolean
 ): DayStatus {
   if (isCurrentBucket && currentStatus === "down") return "down";
+  if (isCurrentBucket && currentStatus === "degraded") return "degraded";
   if (pct >= 95) return "up";
   if (pct >= 25) return "degraded";
   return "down";
@@ -433,6 +435,8 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
                   from: fromISO,
                   to: toISO,
                 });
+
+                
                 return unwrapList(raw)
                   .map((h: any) => (h.at ?? h.timestamp ?? h.createdAt) as string)
                   .filter(Boolean);
@@ -464,12 +468,15 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
       }
     }
 
+    const heartbeatList = heartbeats.status === "fulfilled" ? heartbeats.value : [];
+    base.heartbeatAts = heartbeatList;
+    
     base.incidents = incidentList;
     if (incidentList.some((i) => i.status !== "resolved")) {
       base.overall = "outage";
       base.overallMessage = "An active incident is in progress";
     }
-
+    
     base.days = enrichDaysFromMonitors(
       fallbackDays,
       base.uptimePct,
