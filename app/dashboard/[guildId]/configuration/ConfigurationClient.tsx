@@ -4,10 +4,11 @@ import { showToast, showErrorToast } from '@/components/ui/Toast';
 import { SettingRowSkeleton } from '@/components/ui/Skeletons';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { useGuildData } from '@/hooks/useGuildData';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toggle } from '@/components/ui/Toggle';
 import Image from 'next/image';
+import { ThemeModal } from './Modals';
 
 const LANGUAGES = [
   { value: 'en_EN', label: 'English' },
@@ -87,6 +88,10 @@ export default function ConfigurationClient({
   const shownLoading = useRef(false);
   const shownError   = useRef<string | null>(null);
 
+  const [themeModalOpen, setThemeModalOpen] = useState(false);
+  const [themeCooldownUntil, setThemeCooldownUntil] = useState(0);
+  const [cooldownLeft, setCooldownLeft] = useState(0);
+
   useEffect(() => {
     if (loading && !shownLoading.current) {
       shownLoading.current = true;
@@ -102,6 +107,21 @@ export default function ConfigurationClient({
     if (!error) shownError.current = null;
   }, [error]);
 
+  useEffect(() => {
+    if (themeCooldownUntil <= Date.now()) {
+      setCooldownLeft(0);
+      return;
+    }
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((themeCooldownUntil - Date.now()) / 1000));
+      setCooldownLeft(left);
+      if (left <= 0) setThemeCooldownUntil(0);
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [themeCooldownUntil]);
+
   async function handleSave(updates: Partial<GuildData>) {
     try {
       await save(updates);
@@ -111,9 +131,17 @@ export default function ConfigurationClient({
     }
   }
 
+  const handleThemeSaved = useCallback((hex: string) => {
+    setThemeCooldownUntil(Date.now() + 15_000);
+    showToast('Theme updated', { description: `Bot theme set to ${hex}` });
+  }, []);
+
   const iconUrl = userGuild.icon
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
     : null;
+
+  const currentTheme = (data as any).theme || '#A52F05';
+  const isOnCooldown = cooldownLeft > 0;
 
   return (
     <div className="min-h-screen bg-bg-dark flex">
@@ -140,6 +168,7 @@ export default function ConfigurationClient({
               <SettingRowSkeleton controlWidth="w-24" />
               <SettingRowSkeleton controlWidth="w-44" />
               <SettingRowSkeleton controlWidth="w-10" />
+              <SettingRowSkeleton controlWidth="w-28" />
             </>
           ) : (
             <>
@@ -164,11 +193,41 @@ export default function ConfigurationClient({
               <SettingRow label="Timezone Conversion" description="Automatically convert times mentioned in chat.">
                 <Toggle value={data.timezoneConvert} onChangeAction={v => handleSave({ timezoneConvert: v })} />
               </SettingRow>
+
+              <SettingRow
+                label="Theme"
+                description="Customize the bot's avatar, banner and accent color for this server."
+              >
+                <button
+                  type="button"
+                  onClick={() => setThemeModalOpen(true)}
+                  disabled={isOnCooldown}
+                  className={[
+                    'px-4 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                    isOnCooldown
+                      ? 'bg-white/5 text-white/40 cursor-not-allowed'
+                      : 'bg-orange/15 text-orange-warm hover:bg-orange/25',
+                  ].join(' ')}
+                >
+                  {isOnCooldown ? `Cooldown (${cooldownLeft}s)` : 'Configure'}
+                </button>
+              </SettingRow>
             </>
           )}
         </section>
-
       </main>
+
+      {themeModalOpen && (
+        <ThemeModal
+          guildId={activeGuildId}
+          currentTheme={currentTheme}
+          onClose={() => setThemeModalOpen(false)}
+          onSaved={(hex) => {
+            handleThemeSaved(hex);
+            setThemeModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

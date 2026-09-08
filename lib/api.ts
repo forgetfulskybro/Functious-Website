@@ -256,6 +256,25 @@ export async function createReactionRoles(guildId: string, data: any, userId?: s
   return result;
 }
 
+export async function updateBotTheme(guildId: string, color: string, userId?: string) {
+  const res = await safeFetch(
+    `${BOT_API_URL}/api/guilds/${guildId}/theme`,
+    {
+      method: 'POST',
+      headers: botHeaders(userId),
+      body: JSON.stringify({ color, userId }),
+      cache: 'no-store',
+    },
+  );
+  
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Bot API responded ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function setupTempChannels(
   guildId: string,
   options: {
