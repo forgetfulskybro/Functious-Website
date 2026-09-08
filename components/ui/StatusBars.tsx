@@ -113,11 +113,11 @@ function enrich(
   }
 
   if (range === "24h" && Number.isFinite(dataFrom)) {
-      dataFrom = windowStart;
-    }
+    dataFrom = windowStart;
+  }
 
   const buckets = buildBuckets(range, now);
-  
+
   return buckets.map(({ start, end }) => {
     const date = new Date(start).toISOString();
 
@@ -133,7 +133,11 @@ function enrich(
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
-    const bStart = Math.max(start, windowStart, Number.isFinite(dataFrom) ? dataFrom : windowStart);
+    const bStart = Math.max(
+      start,
+      windowStart,
+      Number.isFinite(dataFrom) ? dataFrom : windowStart
+    );
     const bEnd = Math.min(end, now);
     const span = Math.max(0, bEnd - bStart);
     if (span <= 0) {
@@ -142,7 +146,7 @@ function enrich(
 
     const down = downtimeMs(bStart, bEnd, outages);
     const isCurrent = start <= now && now < end;
-    
+
     if (down <= 0) {
       if (isCurrent) {
         return {
@@ -227,32 +231,41 @@ export function StatusBars({
 
   const n =
     range === "24h" ? 24 : range === "7d" ? 7 : range === "30d" ? 30 : 90;
+
+  const allNoData =
+    days.length > 0 && days.every((d) => d.status === "nodata");
+
   const render =
-    days.length > 0
-      ? days
-      : Array.from({ length: n }, (_, i) => ({
-          date: `p-${i}`,
+    now == null || days.length === 0 || allNoData
+      ? Array.from({ length: n }, (_, i) => ({
+          date: `skel-${i}`,
           status: "nodata" as const,
           uptimePct: undefined,
-        }));
+          skeleton: true as const,
+        }))
+      : days.map((d) => ({ ...d, skeleton: false as const }));
 
   return (
     <div className="flex h-10 w-full gap-[2px]">
       {render.map((day, i) => (
         <div
           key={`${day.date}-${i}`}
-          className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${statusColor(
-            day.status
-          )}`}
+          className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${
+            day.skeleton
+              ? "animate-pulse bg-white/10"
+              : statusColor(day.status)
+          }`}
           style={{ animationDelay: `${220 + i * 12}ms` }}
         >
-          <div
-            role="tooltip"
-            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
-          >
-            {now != null ? exactTitle(day, range24h) : "…"}
-            <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
-          </div>
+          {!day.skeleton && (
+            <div
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+            >
+              {exactTitle(day, range24h)}
+              <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
+            </div>
+          )}
         </div>
       ))}
     </div>

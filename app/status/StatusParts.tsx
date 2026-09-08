@@ -71,8 +71,7 @@ export function formatMemory(n: number | null): string {
 
 export function dayTitle(day: StatusDay): string {
   const d = new Date(day.date);
-  const hasTime =
-    day.date.includes("T") && d.getUTCHours() !== 0;
+  const hasTime = day.date.includes("T") && d.getUTCHours() !== 0;
 
   const when = d.toLocaleString("en-US", {
     month: "short",
@@ -111,13 +110,45 @@ export function statusColor(
   }
 }
 
-export function StatCard({ label, value }: { label: string; value: string }) {
+export function Skeleton({
+  className = "",
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <span
+      className={`inline-block animate-pulse rounded bg-white/10 ${className}`}
+      style={style}
+      aria-hidden
+    />
+  );
+}
+
+export function StatCard({
+  label,
+  value,
+  skeleton = false,
+}: {
+  label: string;
+  value: string;
+  skeleton?: boolean;
+}) {
+  const showSkeleton = skeleton || value === "—";
+
   return (
     <div className="rounded-xl border border-white/10 bg-[#140b08] px-5 py-4 transition-colors hover:border-orange/40">
       <p className="text-xs text-white/40">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-white tabular-nums">
-        {value}
-      </p>
+      {showSkeleton ? (
+        <div className="mt-2">
+          <Skeleton className="h-7 w-16" />
+        </div>
+      ) : (
+        <p className="mt-1 text-2xl font-semibold tracking-tight text-white tabular-nums">
+          {value}
+        </p>
+      )}
     </div>
   );
 }

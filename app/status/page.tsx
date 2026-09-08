@@ -206,7 +206,7 @@ async function queryMetricAvg(
         time: timeRange(start.toISOString(), end.toISOString()),
         aggregation: "avg",
       });
-      console.log(q)
+
       const fromQuery = extractMetricValue(q);
       if (fromQuery != null) return fromQuery;
     }
@@ -530,6 +530,12 @@ export default async function StatusPage({
           ? "30 days"
           : "90 days";
 
+  const hasAnyMetric =
+    data.gatewayPing != null ||
+    data.databasePing != null ||
+    data.memory != null ||
+    data.heartbeatAts.length > 0;
+
   return (
     <main className="min-h-screen bg-bg-dark">
       <style>{`
@@ -607,18 +613,22 @@ export default async function StatusPage({
                 ? data.uptimePct
                 : data.uptimePct.toFixed(2)
             }%`}
+            skeleton={!hasAnyMetric && data.uptimePct === 100}
           />
           <StatCard
             label={`Gateway · ${RANGE_LABELS[range]}`}
             value={formatMs(data.gatewayPing)}
+            skeleton={data.gatewayPing == null}
           />
           <StatCard
             label={`Database · ${RANGE_LABELS[range]}`}
             value={formatMs(data.databasePing)}
+            skeleton={data.databasePing == null}
           />
           <StatCard
             label={`Memory · ${RANGE_LABELS[range]}`}
             value={formatMemory(data.memory)}
+            skeleton={data.memory == null}
           />
         </section>
 
@@ -666,7 +676,7 @@ export default async function StatusPage({
                   : "up"
             }
           />
-          
+
           <div className="mt-2 flex justify-between text-xs text-white/40">
             <span>{rangeLabel} ago</span>
             <span>now</span>
@@ -687,7 +697,26 @@ export default async function StatusPage({
               </span>
             )}
           </div>
-          <IncidentsList incidents={data.incidents} />
+
+          {data.incidents.length === 0 ? (
+            <div className="space-y-3">
+              {[1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="flex gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-4"
+                >
+                  <div className="mt-1 h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-white/15" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-2/5 animate-pulse rounded bg-white/10" />
+                    <div className="h-3 w-4/5 animate-pulse rounded bg-white/10" />
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-white/10" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <IncidentsList incidents={data.incidents} />
+          )}
         </section>
       </div>
     </main>
