@@ -13,7 +13,6 @@ import {
   formatRelative,
   formatMs,
   formatMemory,
-  statusColor,
   StatCard,
   RangeTabs,
 } from "./StatusParts";
@@ -396,15 +395,15 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
     incidents: [],
     range,
     heartbeatAts: [],
+    monitorStartedAt: null,
     currentStatus: "up",
   };
 
   try {
     const monitorId = await resolveBotMonitorId();
-    const fromISO = new Date(Date.now() - RANGE_MS[range]).toISOString();
     const toISO = new Date().toISOString();
-    
-    const [gateway, database, memory, uptime, incidents, heartbeats] =
+
+    const [gateway, database, memory, uptime, incidents, monitor] =
       await Promise.allSettled([
         queryMetricAvg("ping.gateway", range),
         queryMetricAvg("ping.db", range),
@@ -422,8 +421,6 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
                   (s.lastHeartbeat as string) ??
                   (s.lastHeartbeatAt as string) ??
                   null,
-                totalHeartbeats:
-                  typeof s.totalHeartbeats === "number" ? s.totalHeartbeats : 0,
               };
             })()
           : Promise.resolve(null),
@@ -431,20 +428,19 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
         monitorId
           ? (async () => {
               try {
-                const raw = await vanta.uptime.getHeartbeats(monitorId, {
-                  from: fromISO,
-                  to: toISO,
-                });
-
-                
-                return unwrapList(raw)
-                  .map((h: any) => (h.at ?? h.timestamp ?? h.createdAt) as string)
-                  .filter(Boolean);
+                const m = await vanta.uptime.getMonitor(monitorId);
+                const raw = m && typeof m === "object"
+                  ? ((m as any).data ?? m) as Record<string, unknown>
+                  : null;
+                return {
+                  timeUp: typeof raw?.timeUp === "number" ? raw.timeUp : null,
+                  createdAt: typeof raw?.createdAt === "string" ? raw.createdAt : null,
+                };
               } catch {
-                return [] as string[];
+                return { timeUp: null, createdAt: null };
               }
             })()
-          : Promise.resolve([] as string[]),
+          : Promise.resolve({ timeUp: null, createdAt: null }),
       ]);
 
     if (gateway.status === "fulfilled") base.gatewayPing = gateway.value;
@@ -452,8 +448,8 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
     if (memory.status === "fulfilled") base.memory = memory.value;
 
     const uptimeData = uptime.status === "fulfilled" ? uptime.value : null;
-    const incidentList =
-      incidents.status === "fulfilled" ? incidents.value : [];
+    const incidentList = incidents.status === "fulfilled" ? incidents.value : [];
+    const monitorData = monitor.status === "fulfilled" ? monitor.value : null;
 
     if (uptimeData) {
       base.uptimePct = uptimeData.uptimePct;
@@ -466,17 +462,33 @@ async function loadStatus(range: RangeKey): Promise<StatusPayload> {
         base.overall = "degraded";
         base.overallMessage = "Primary monitor is degraded";
       }
+
+      if (uptimeData.lastHeartbeat && monitorData?.timeUp) {
+        const lastBeat = new Date(uptimeData.lastHeartbeat).getTime();
+        if (Number.isFinite(lastBeat)) {
+          base.monitorStartedAt = new Date(lastBeat - monitorData.timeUp).toISOString();
+        }
+      }
     }
 
-    const heartbeatList = heartbeats.status === "fulfilled" ? heartbeats.value : [];
-    base.heartbeatAts = heartbeatList;
-    
+    if (!base.monitorStartedAt && monitorData?.createdAt) {
+      base.monitorStartedAt = monitorData.createdAt;
+    }
+
+    if (!base.monitorStartedAt && incidentList.length > 0) {
+      const oldest = incidentList
+        .map((i) => new Date(i.startedAt).getTime())
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b)[0];
+      if (oldest) base.monitorStartedAt = new Date(oldest).toISOString();
+    }
+
     base.incidents = incidentList;
     if (incidentList.some((i) => i.status !== "resolved")) {
       base.overall = "outage";
       base.overallMessage = "An active incident is in progress";
     }
-    
+
     base.days = enrichDaysFromMonitors(
       fallbackDays,
       base.uptimePct,
@@ -534,7 +546,7 @@ export default async function StatusPage({
     data.gatewayPing != null ||
     data.databasePing != null ||
     data.memory != null ||
-    data.heartbeatAts.length > 0;
+    data.monitorStartedAt != null;
 
   return (
     <main className="min-h-screen bg-bg-dark">
@@ -666,7 +678,7 @@ export default async function StatusPage({
               startedAt: i.startedAt,
               resolvedAt: i.resolvedAt,
             }))}
-            heartbeatAts={data.heartbeatAts ?? []}
+            monitorStartedAt={data.monitorStartedAt}
             overallUptimePct={data.uptimePct}
             currentStatus={
               data.overall === "outage"

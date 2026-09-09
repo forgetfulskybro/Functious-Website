@@ -89,30 +89,25 @@ function statusFromPct(
 function enrich(
   range: RangeKey,
   incidents: IncidentLite[],
-  heartbeatAts: string[],
+  monitorStartedAt: string | null,
   overallUptimePct: number,
   currentStatus: string,
   now: number
 ): StatusDay[] {
   const windowStart = now - RANGE_MS[range];
   const outages = buildOutages(incidents, now);
-
   let dataFrom = Number.POSITIVE_INFINITY;
-  for (const at of heartbeatAts) {
-    const t = new Date(at).getTime();
-    if (Number.isFinite(t) && t < dataFrom) dataFrom = t;
+
+  if (monitorStartedAt) {
+    const t = new Date(monitorStartedAt).getTime();
+    if (Number.isFinite(t)) dataFrom = t;
   }
+
   for (const o of outages) {
     if (o.start < dataFrom) dataFrom = o.start;
   }
-  if (
-    !Number.isFinite(dataFrom) &&
-    (currentStatus === "down" || currentStatus === "degraded")
-  ) {
-    dataFrom = windowStart;
-  }
 
-  if (range === "24h" && Number.isFinite(dataFrom)) {
+  if (!Number.isFinite(dataFrom) && currentStatus !== "unknown") {
     dataFrom = windowStart;
   }
 
@@ -125,19 +120,15 @@ function enrich(
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
-    if (Number.isFinite(dataFrom) && end <= dataFrom) {
-      return { date, status: "nodata" as const, uptimePct: undefined };
-    }
-
     if (end <= windowStart) {
       return { date, status: "nodata" as const, uptimePct: undefined };
     }
 
-    const bStart = Math.max(
-      start,
-      windowStart,
-      Number.isFinite(dataFrom) ? dataFrom : windowStart
-    );
+    if (Number.isFinite(dataFrom) && end < dataFrom) {
+      return { date, status: "nodata" as const, uptimePct: undefined };
+    }
+
+    const bStart = Math.max(start, windowStart);
     const bEnd = Math.min(end, now);
     const span = Math.max(0, bEnd - bStart);
     if (span <= 0) {
@@ -203,14 +194,14 @@ export function StatusBars({
   range,
   range24h,
   incidents,
-  heartbeatAts = [],
+  monitorStartedAt = null,
   overallUptimePct,
   currentStatus = "up",
 }: {
   range: RangeKey;
   range24h: boolean;
   incidents: IncidentLite[];
-  heartbeatAts?: string[];
+  monitorStartedAt?: string | null;
   overallUptimePct: number;
   currentStatus?: string;
 }) {
@@ -222,50 +213,41 @@ export function StatusBars({
     return enrich(
       range,
       incidents,
-      heartbeatAts,
+      monitorStartedAt,
       overallUptimePct,
       currentStatus,
       now
     );
-  }, [now, range, incidents, heartbeatAts, overallUptimePct, currentStatus]);
+  }, [now, range, incidents, monitorStartedAt, overallUptimePct, currentStatus]);
 
   const n =
     range === "24h" ? 24 : range === "7d" ? 7 : range === "30d" ? 30 : 90;
-
-  const allNoData =
-    days.length > 0 && days.every((d) => d.status === "nodata");
-
   const render =
-    now == null || days.length === 0 || allNoData
-      ? Array.from({ length: n }, (_, i) => ({
-          date: `skel-${i}`,
+    days.length > 0
+      ? days
+      : Array.from({ length: n }, (_, i) => ({
+          date: `p-${i}`,
           status: "nodata" as const,
           uptimePct: undefined,
-          skeleton: true as const,
-        }))
-      : days.map((d) => ({ ...d, skeleton: false as const }));
+        }));
 
   return (
     <div className="flex h-10 w-full gap-[2px]">
       {render.map((day, i) => (
         <div
           key={`${day.date}-${i}`}
-          className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${
-            day.skeleton
-              ? "animate-pulse bg-white/10"
-              : statusColor(day.status)
-          }`}
+          className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${statusColor(
+            day.status
+          )}`}
           style={{ animationDelay: `${220 + i * 12}ms` }}
         >
-          {!day.skeleton && (
-            <div
-              role="tooltip"
-              className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
-            >
-              {exactTitle(day, range24h)}
-              <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
-            </div>
-          )}
+          <div
+            role="tooltip"
+            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+          >
+            {now != null ? exactTitle(day, range24h) : "…"}
+            <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
+          </div>
         </div>
       ))}
     </div>

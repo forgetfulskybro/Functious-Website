@@ -40,6 +40,7 @@ export interface StatusPayload {
   incidents: Incident[];
   range: RangeKey;
   heartbeatAts: string[];
+  monitorStartedAt: string | null;
   currentStatus: "up" | "down" | "degraded" | "unknown";
 }
 
