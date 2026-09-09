@@ -422,7 +422,6 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<FluxerUser | null>(null);
-  const [authLoaded, setAuthLoaded] = useState(false);
 
   const pathname = usePathname();
   const isActiveLink = (href: string) =>
@@ -441,8 +440,7 @@ export default function Navbar() {
       .then((data) => {
         if (data?.user) setUser(data.user);
       })
-      .catch(() => {})
-      .finally(() => setAuthLoaded(true));
+      .catch(() => {});
   }, []);
 
   return (
@@ -495,11 +493,11 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            {authLoaded && user ? (
+            {user ? (
               <UserMenu user={user} />
-            ) : authLoaded ? (
+            ) : (
               <GuestMenu />
-            ) : null}
+            )}
           </div>
 
           <button
@@ -593,7 +591,7 @@ export default function Navbar() {
                 </ul>
               </li>
 
-              {authLoaded && !user && (
+              {!user && (
                 <>
                   <li className="border-t border-white/10 pt-4">
                     <a
@@ -618,7 +616,7 @@ export default function Navbar() {
                 </>
               )}
 
-              {authLoaded && user && (
+              {user && (
                 <>
                   <li className="flex items-center gap-3 py-1 border-t border-white/10 pt-4">
                     <Image
