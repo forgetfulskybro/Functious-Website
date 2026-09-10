@@ -167,7 +167,7 @@ async function recolorImage(
 }
 
 const DEFAULT_HEX = '#A52F05';
-const GRAY_AVATAR = '/functious grayscale.png';
+const GRAY_AVATAR = '/Functious grayscale.png';
 const GRAY_BANNER = '/functious-banner-grayscale.png';
 const DEFAULT_AVATAR = '/Functious.png';
 const DEFAULT_BANNER = '/functious-banner.png';
@@ -197,7 +197,6 @@ export function ThemeModal({ guildId, currentTheme, onClose, onSaved }: Props) {
     const load = (src: string) =>
       new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = reject;
         img.src = src;
