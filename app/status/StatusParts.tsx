@@ -131,15 +131,17 @@ export function StatCard({
   label,
   value,
   skeleton = false,
+  href,
 }: {
   label: string;
   value: string;
   skeleton?: boolean;
+  href?: string;
 }) {
   const showSkeleton = skeleton || value === "—";
 
-  return (
-    <div className="rounded-xl border border-white/10 bg-[#140b08] px-5 py-4 transition-colors hover:border-orange/40">
+  const inner = (
+    <>
       <p className="text-xs text-white/40">{label}</p>
       {showSkeleton ? (
         <div className="mt-2">
@@ -150,6 +152,28 @@ export function StatCard({
           {value}
         </p>
       )}
+      {href && (
+        <p className="mt-2 text-[11px] text-white/20 group-hover:text-orange/60 transition-colors">
+          View history →
+        </p>
+      )}
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="group rounded-xl border border-white/10 bg-[#140b08] px-5 py-4 transition-colors hover:border-orange/40 block"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#140b08] px-5 py-4 transition-colors hover:border-orange/40">
+      {inner}
     </div>
   );
 }

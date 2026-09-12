@@ -631,16 +631,19 @@ export default async function StatusPage({
             label={`Gateway · ${RANGE_LABELS[range]}`}
             value={formatMs(data.gatewayPing)}
             skeleton={data.gatewayPing == null}
+            href="/status/metrics"
           />
           <StatCard
             label={`Database · ${RANGE_LABELS[range]}`}
             value={formatMs(data.databasePing)}
             skeleton={data.databasePing == null}
+            href="/status/metrics"
           />
           <StatCard
             label={`Memory · ${RANGE_LABELS[range]}`}
             value={formatMemory(data.memory)}
             skeleton={data.memory == null}
+            href="/status/metrics"
           />
         </section>
 
