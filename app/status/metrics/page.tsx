@@ -51,7 +51,6 @@ export default function MetricsPage() {
       `}</style>
 
       <div className="mx-auto max-w-3xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="status-fade mb-10" style={{ animationDelay: "0ms" }}>
           <Link
             href="/status"
