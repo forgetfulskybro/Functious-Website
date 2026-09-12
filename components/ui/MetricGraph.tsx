@@ -79,23 +79,27 @@ export function MetricGraph({
   const [lineLength, setLineLength] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const lineRef = useRef<SVGPolylineElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const fetchData = useCallback(async (r: RangeKey) => {
-    setLoading(true);
-    setError(null);
-    setLineLength(null);
-    try {
-      const res = await fetch(`/api/status/metrics/${metric}?range=${r}`);
-      const json = await res.json();
-      setBuckets(Array.isArray(json.buckets) ? json.buckets : []);
-      setAnimKey((k) => k + 1);
-    } catch {
-      setError("Failed to load data");
-      setBuckets([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [metric]);
+  const fetchData = useCallback(
+    async (r: RangeKey) => {
+      setLoading(true);
+      setError(null);
+      setLineLength(null);
+      try {
+        const res = await fetch(`/api/status/metrics/${metric}?range=${r}`);
+        const json = await res.json();
+        setBuckets(Array.isArray(json.buckets) ? json.buckets : []);
+        setAnimKey((k) => k + 1);
+      } catch {
+        setError("Failed to load data");
+        setBuckets([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [metric]
+  );
 
   useEffect(() => {
     fetchData(range);
@@ -112,11 +116,12 @@ export function MetricGraph({
     }
   }, [animKey, buckets]);
 
-  const W = 800;
-  const H = 200;
-  const PAD = { top: 16, right: 16, bottom: 32, left: 52 };
+  const W = 600;
+  const H = 300;
+  const PAD = { top: 20, right: 16, bottom: 40, left: 60 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top - PAD.bottom;
+
   const hasBuckets = buckets.length >= 2;
   const values = buckets.map((b) => b.value);
   const rawMin = hasBuckets ? Math.min(...values) : 0;
@@ -125,8 +130,8 @@ export function MetricGraph({
   const yMin = Math.max(0, rawMin - padding);
   const yMax = rawMax + padding;
   const yRange = yMax - yMin || 1;
-  const toX = (i: number) =>
-    PAD.left + (i / (buckets.length - 1)) * chartW;
+
+  const toX = (i: number) => PAD.left + (i / (buckets.length - 1)) * chartW;
   const toY = (v: number) =>
     PAD.top + chartH - ((v - yMin) / yRange) * chartH;
 
@@ -139,8 +144,9 @@ export function MetricGraph({
     : "";
 
   const yTicks = 4;
-  const yTickValues = Array.from({ length: yTicks + 1 }, (_, i) =>
-    yMin + (yRange * i) / yTicks
+  const yTickValues = Array.from(
+    { length: yTicks + 1 },
+    (_, i) => yMin + (yRange * i) / yTicks
   );
 
   const strokeColors: Record<string, string> = {
@@ -158,29 +164,54 @@ export function MetricGraph({
   const stroke = strokeColors[color] ?? strokeColors.emerald;
   const area = areaColors[color] ?? areaColors.emerald;
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      if (!hasBuckets || !svgRef.current) return;
+  const resolvePointer = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!hasBuckets || !svgRef.current || !containerRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();
       const scaleX = W / rect.width;
-      const mouseX = (e.clientX - rect.left) * scaleX;
+      const mouseX = (clientX - rect.left) * scaleX;
       const chartMouseX = mouseX - PAD.left;
       const idx = Math.round((chartMouseX / chartW) * (buckets.length - 1));
       const clamped = Math.max(0, Math.min(buckets.length - 1, idx));
       const b = buckets[clamped];
       const svgX = toX(clamped);
+      const cRect = containerRef.current.getBoundingClientRect();
       setTooltip({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
+        x: clientX - cRect.left,
+        y: clientY - cRect.top,
         bucket: b,
         svgX,
       });
     },
-    [hasBuckets, buckets, chartW]
+    [hasBuckets, buckets, chartW, toX]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => resolvePointer(e.clientX, e.clientY),
+    [resolvePointer]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent<SVGSVGElement>) => {
+      const t = e.touches[0];
+      if (t) resolvePointer(t.clientX, t.clientY);
+    },
+    [resolvePointer]
   );
 
   const handleMouseLeave = () => setTooltip(null);
+  const handleTouchEnd = () => setTooltip(null);
+
   const animId = `metric-draw-${metric}-${animKey}`;
+
+  const tooltipWidth = 140;
+  const containerWidth = containerRef.current?.clientWidth ?? 400;
+  const tooltipLeft = tooltip
+    ? Math.max(
+        tooltipWidth / 2,
+        Math.min(tooltip.x, containerWidth - tooltipWidth / 2)
+      )
+    : 0;
 
   return (
     <div className="w-full">
@@ -193,7 +224,7 @@ export function MetricGraph({
                 key={r}
                 type="button"
                 onClick={() => setInternalRange(r)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   r === range
                     ? "bg-orange/20 text-orange-light"
                     : "text-white/40 hover:text-white/70"
@@ -209,7 +240,7 @@ export function MetricGraph({
         <h2 className="text-sm font-medium text-white/60 mb-4">{label}</h2>
       )}
 
-      <div className="relative rounded-xl border border-white/10 bg-[#140b08] p-4">
+      <div ref={containerRef} className="relative rounded-xl border border-white/10 bg-[#140b08] p-4">
         {lineLength != null && (
           <style>{`
             @keyframes ${animId} {
@@ -250,10 +281,12 @@ export function MetricGraph({
         <svg
           ref={svgRef}
           viewBox={`0 0 ${W} ${H}`}
-          className="w-full select-none"
-          style={{ height: "200px" }}
+          className="w-full select-none touch-none"
+          style={{ aspectRatio: `${W} / ${H}` }}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           {yTickValues.map((v, i) => {
             const y = toY(v);
@@ -268,11 +301,11 @@ export function MetricGraph({
                   strokeWidth="1"
                 />
                 <text
-                  x={PAD.left - 6}
-                  y={y + 4}
+                  x={PAD.left - 8}
+                  y={y + 5}
                   textAnchor="end"
-                  fill="rgba(255,255,255,0.25)"
-                  fontSize="11"
+                  fill="rgba(255,255,255,0.3)"
+                  fontSize="13"
                 >
                   {formatValue(v, unit)}
                 </text>
@@ -303,7 +336,7 @@ export function MetricGraph({
                 points={points}
                 fill="none"
                 stroke={stroke}
-                strokeWidth="1.5"
+                strokeWidth="2"
                 strokeLinejoin="round"
                 strokeLinecap="round"
                 className={lineLength != null ? `${animId}-line` : undefined}
@@ -325,10 +358,10 @@ export function MetricGraph({
                 <circle
                   cx={tooltip.svgX}
                   cy={toY(tooltip.bucket.value)}
-                  r="4"
+                  r="5"
                   fill={stroke}
                   stroke="#140b08"
-                  strokeWidth="2"
+                  strokeWidth="2.5"
                 />
               )}
             </>
@@ -337,15 +370,15 @@ export function MetricGraph({
 
         {tooltip && hasBuckets && (
           <div
-            className="pointer-events-none absolute z-20 rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 shadow-lg"
+            className="pointer-events-none absolute z-20 rounded-md border border-white/10 bg-[#1c100c] px-3 py-2 text-xs text-white/90 shadow-lg"
             style={{
-              left: `${tooltip.x}px`,
-              top: `${tooltip.y - 56}px`,
+              left: `${tooltipLeft}px`,
+              top: `${tooltip.y - 64}px`,
               transform: "translateX(-50%)",
               whiteSpace: "nowrap",
             }}
           >
-            <div className="font-medium" style={{ color: stroke }}>
+            <div className="font-medium text-sm" style={{ color: stroke }}>
               {formatValue(tooltip.bucket.value, unit)}
             </div>
             <div className="text-white/40 mt-0.5">
@@ -355,7 +388,7 @@ export function MetricGraph({
         )}
 
         {hasBuckets && (
-          <div className="flex justify-between mt-1 px-0.5">
+          <div className="flex justify-between mt-2 px-0.5">
             <span className="text-[11px] text-white/25">
               {formatTimestamp(buckets[0].timestamp, range)}
             </span>

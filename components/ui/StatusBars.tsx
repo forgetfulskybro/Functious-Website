@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DayStatus, StatusDay } from "../../app/status/StatusParts";
 import { statusColor } from "../../app/status/StatusParts";
 
@@ -206,7 +206,27 @@ export function StatusBars({
   currentStatus?: string;
 }) {
   const [now, setNow] = useState<number | null>(null);
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => setNow(Date.now()), []);
+
+  useEffect(() => {
+    if (activeIdx === null) return;
+    function onOutside(e: MouseEvent | TouchEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setActiveIdx(null);
+      }
+    }
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("touchstart", onOutside);
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("touchstart", onOutside);
+    };
+  }, [activeIdx]);
 
   const days = useMemo(() => {
     if (now == null) return [];
@@ -232,24 +252,47 @@ export function StatusBars({
         }));
 
   return (
-    <div className="flex h-10 w-full gap-[2px]">
-      {render.map((day, i) => (
-        <div
-          key={`${day.date}-${i}`}
-          className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${statusColor(
-            day.status
-          )}`}
-          style={{ animationDelay: `${220 + i * 12}ms` }}
-        >
+    <div ref={containerRef} className="relative flex h-10 w-full gap-[2px]">
+      {render.map((day, i) => {
+        const isActive = activeIdx === i;
+        const total = render.length;
+
+        let tooltipStyle: React.CSSProperties;
+        if (i < total / 3) {
+          tooltipStyle = { left: 0, transform: "none" };
+        } else if (i > (total * 2) / 3) {
+          tooltipStyle = { right: 0, left: "auto", transform: "none" };
+        } else {
+          tooltipStyle = { left: "50%", transform: "translateX(-50%)" };
+        }
+
+        return (
           <div
-            role="tooltip"
-            className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100"
+            key={`${day.date}-${i}`}
+            className={`status-bar group relative min-w-0 flex-1 rounded-[2px] transition-opacity hover:opacity-80 ${statusColor(
+              day.status
+            )}`}
+            style={{ animationDelay: `${220 + i * 12}ms` }}
+            onClick={() => setActiveIdx(isActive ? null : i)}
           >
-            {now != null ? exactTitle(day, range24h) : "…"}
-            <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
+            <div
+              role="tooltip"
+              className={[
+                "pointer-events-none absolute bottom-full z-20 mb-2 whitespace-nowrap rounded-md border border-white/10 bg-[#1c100c] px-2.5 py-1.5 text-xs text-white/90 shadow-lg transition-opacity duration-150",
+                isActive
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100",
+              ].join(" ")}
+              style={tooltipStyle}
+            >
+              {now != null ? exactTitle(day, range24h) : "…"}
+              {!isActive || i >= total / 3 && i <= (total * 2) / 3 ? (
+                <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1c100c]" />
+              ) : null}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
