@@ -74,12 +74,14 @@ export default function ChannelDropdown({
   onChangeAction,
   placeholder = "Select a channel…",
   types = [0],
+  excludeIds = [],
 }: {
   channels: Channel[];
   value: string;
   onChangeAction: (id: string) => void;
   placeholder?: string;
   types?: number[];
+  excludeIds?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -131,9 +133,14 @@ export default function ChannelDropdown({
   const groups = useMemo(() => buildGroups(channels, types), [channels, types]);
 
   const filteredGroups = useMemo(() => {
-    if (!search.trim()) return groups;
+    const excludeSet = new Set(excludeIds);
+    const baseGroups = buildGroups(
+      channels.filter((c) => !excludeSet.has(c.id) || c.id === value),
+      types,
+    );
+    if (!search.trim()) return baseGroups;
     const q = search.toLowerCase();
-    return groups
+    return baseGroups
       .map((g) => ({
         ...g,
         channels: g.channels.filter(
@@ -141,7 +148,7 @@ export default function ChannelDropdown({
         ),
       }))
       .filter((g) => g.channels.length > 0);
-  }, [groups, search]);
+  }, [channels, types, excludeIds, value, search]);
 
   const selected = channels.find((c) => c.id === value);
 

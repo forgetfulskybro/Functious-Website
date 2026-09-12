@@ -48,6 +48,7 @@ export interface GuildData {
   timedRoles: unknown[];
   tags: unknown[];
   scheduledMessages: unknown[];
+  mediaChannels: unknown[];
   userTimezones: unknown[];
   parentChannel: string | null;
   childChannel: string | null;

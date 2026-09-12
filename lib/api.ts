@@ -71,6 +71,7 @@ export function emptyGuildData(guildId: string) {
     timedRoles: [],
     tags: [],
     scheduledMessages: [],
+    mediaChannels: [],
     userTimezones: [],
     parentChannel: null,
     childChannel: null,

@@ -44,6 +44,10 @@ const GUILD_NAV_LINKS: { label: string; href: string; icon: React.ReactNode }[] 
     icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round"/></svg>,
   },
   {
+    label: 'Media Channels', href: 'media-channels',
+    icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M10 8l5 3-5 3V8z" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 21h8M12 17v4" strokeLinecap="round"/></svg>,
+  },
+  {
     label: 'Tags', href: 'tags',
     icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" strokeLinecap="round" strokeLinejoin="round"/><line x1="7" y1="7" x2="7.01" y2="7" strokeLinecap="round"/></svg>,
   },
