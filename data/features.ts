@@ -32,6 +32,7 @@ export const FEATURES: FeatureData[] = [
       'f!roles edit <messageId>',
     ],
     relatedCommands: ['roles'],
+    relatedGuides: ['reaction-roles'],
     category: 'roles',
   },
   {
@@ -51,6 +52,7 @@ export const FEATURES: FeatureData[] = [
       'f!giveaway reroll <messageId> | 2',
     ],
     relatedCommands: ['giveaway'],
+    relatedGuides: ['giveaways'],
     category: 'giveaways-polls',
   },
   {
@@ -69,6 +71,7 @@ export const FEATURES: FeatureData[] = [
       'f!polls 1h | Best feature? | Giveaways | Polls | Roles | Tags',
     ],
     relatedCommands: ['polls'],
+    relatedGuides: ['general/polls'],
     category: 'giveaways-polls',
   },
   {
@@ -114,6 +117,7 @@ export const FEATURES: FeatureData[] = [
       'f!schedule delete 2',
     ],
     relatedCommands: ['schedule'],
+    relatedGuides: ['schedule'],
     category: 'scheduling',
   },
   {
@@ -135,6 +139,7 @@ export const FEATURES: FeatureData[] = [
       'f!remind delete 1',
     ],
     relatedCommands: ['remind'],
+    relatedGuides: ['general/remind'],
     category: 'scheduling',
   },
   {
@@ -156,6 +161,7 @@ export const FEATURES: FeatureData[] = [
       'f!tempchannels reset default',
     ],
     relatedCommands: ['tempchannels'],
+    relatedGuides: ['temp-channels'],
     category: 'server-management',
   },
   {
@@ -200,6 +206,7 @@ export const FEATURES: FeatureData[] = [
       'f!autoroles view',
     ],
     relatedCommands: ['autoroles'],
+    relatedGuides: ['general/autoroles'],
     category: 'server-management',
   },
   {
@@ -220,6 +227,7 @@ export const FEATURES: FeatureData[] = [
       'f!bypass remove Moderator',
     ],
     relatedCommands: ['bypass'],
+    relatedGuides: ['general/bypass'],
     category: 'server-management',
   },
 ];

@@ -83,7 +83,7 @@ export function dayTitle(day: StatusDay): string {
   });
 
   if (day.status === "nodata" || day.uptimePct == null) {
-    return `${when} — no data`;
+    return `${when} - no data`;
   }
 
   const pct =
@@ -91,7 +91,7 @@ export function dayTitle(day: StatusDay): string {
       ? `${day.uptimePct}%`
       : `${day.uptimePct.toFixed(1)}%`;
 
-  return `${when} — ${day.status} · ${pct} uptime`;
+  return `${when} - ${day.status} · ${pct} uptime`;
 }
 
 export function statusColor(

@@ -578,7 +578,7 @@ export function TagModal({
       setChatMessages((p) => [
         ...p,
         userMsg,
-        { id: `s-${Date.now()}`, kind: 'system', content: 'Script is empty — write some Rune first.' },
+        { id: `s-${Date.now()}`, kind: 'system', content: 'Script is empty - write some Rune first.' },
       ]);
       return;
     }

@@ -33,7 +33,19 @@ export default function FeatureDetailContent({ feature }: FeatureDetailContentPr
         href="/#features"
         className="mb-8 inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-orange-light transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange rounded"
       >
-        ← Back to Features
+        <svg
+          className="w-3.5 h-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M19 12H5M12 5l-7 7 7 7" />
+        </svg>  
+      Back to features
       </Link>
 
       <MotionWrapper>
