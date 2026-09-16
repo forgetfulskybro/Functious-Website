@@ -43,6 +43,10 @@ function avatarUrl(user: FluxerUser): string {
   return `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.${ext}?size=64`;
 }
 
+function isGif(src: string): boolean {
+  return src.includes('.gif') || src.endsWith('.gif');
+}
+
 function Chevron({ open }: { open: boolean }) {
   return (
     <svg
@@ -286,6 +290,7 @@ function UserMenu({ user }: { user: FluxerUser }) {
   }, []);
 
   const displayName = user.global_name ?? user.username;
+  const src = avatarUrl(user);
 
   return (
     <div ref={ref} className="relative">
@@ -298,11 +303,12 @@ function UserMenu({ user }: { user: FluxerUser }) {
         className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/8 border border-white/10 hover:bg-white/12 hover:border-white/20 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange group"
       >
         <Image
-          src={avatarUrl(user)}
+          src={src}
           alt={displayName}
           width={24}
           height={24}
           className="rounded-full ring-1 ring-white/20 group-hover:ring-orange/50 transition-all"
+          unoptimized={isGif(src)}
         />
         <span className="text-white/80 group-hover:text-white text-sm font-medium transition-colors max-w-[100px] truncate">
           {displayName}
@@ -625,6 +631,7 @@ export default function Navbar() {
                       width={28}
                       height={28}
                       className="rounded-full ring-1 ring-white/20"
+                      unoptimized={isGif(avatarUrl(user))}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-white/90 text-sm font-medium truncate">

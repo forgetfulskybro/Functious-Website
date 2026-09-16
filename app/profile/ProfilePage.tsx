@@ -24,9 +24,15 @@ interface ProfilePageProps {
 }
 
 function avatarSrc(user: FluxerUser): string {
-  if (user.avatar)
-    return `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.png?size=256`;
+  if (user.avatar) {
+    const ext = user.avatar.startsWith('a_') ? 'gif' : 'png';
+    return `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.${ext}?size=256`;
+  }
   return `https://fluxerstatic.com/avatars/${Number(BigInt(user.id) >> BigInt(22)) % 6}.png`;
+}
+
+function isGif(src: string): boolean {
+  return src.includes('.gif') || src.endsWith('.gif');
 }
 
 function formatTimestamp(ts: number): string {
@@ -671,6 +677,7 @@ export default function ProfilePage({
   }, []);
 
   const displayName = user.global_name ?? user.username;
+  const avatarUrl = avatarSrc(user);
 
   return (
     <div className="min-h-screen bg-bg-dark flex">
@@ -690,11 +697,12 @@ export default function ProfilePage({
           <section className="rounded-2xl bg-bg-card border border-white/[0.04] px-4 py-3.5 flex items-center gap-3.5">
             <div className="relative shrink-0">
               <Image
-                src={avatarSrc(user)}
+                src={avatarUrl}
                 alt={displayName}
                 width={52}
                 height={52}
                 className="rounded-xl ring-2 ring-orange/20"
+                unoptimized={isGif(avatarUrl)}
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-bg-card" />
             </div>
