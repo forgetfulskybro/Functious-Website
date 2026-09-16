@@ -13,6 +13,10 @@ function guildIconUrl(id: string, icon: string | null): string | null {
   return `https://fluxerusercontent.com/icons/${id}/${icon}.${ext}?size=64`;
 }
 
+function isGif(src: string | null): boolean {
+  return !!src && (src.includes('.gif') || src.endsWith('.gif'));
+}
+
 function initials(name: string): string {
   return name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
@@ -169,7 +173,14 @@ export default function Sidebar({ user, guilds, activeGuildId, currentPage }: Si
               {activeGuild ? (
                 <span className="flex items-center gap-2 min-w-0">
                   {guildIconUrl(activeGuild.id, activeGuild.icon) ? (
-                    <Image src={guildIconUrl(activeGuild.id, activeGuild.icon)!} alt={activeGuild.name} width={18} height={18} className="rounded-full flex-shrink-0" />
+                    <Image
+                      src={guildIconUrl(activeGuild.id, activeGuild.icon)!}
+                      alt={activeGuild.name}
+                      width={18}
+                      height={18}
+                      className="rounded-full flex-shrink-0"
+                      unoptimized={isGif(guildIconUrl(activeGuild.id, activeGuild.icon))}
+                    />
                   ) : (
                     <div className="w-4.5 h-4.5 rounded-full bg-orange/20 flex items-center justify-center text-orange-warm text-[9px] font-bold flex-shrink-0">
                       {initials(activeGuild.name)}
@@ -202,7 +213,14 @@ export default function Sidebar({ user, guilds, activeGuildId, currentPage }: Si
                     className="flex items-center gap-2.5 px-3 py-2 text-xs text-white/65 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:bg-white/5"
                   >
                     {guildIconUrl(guild.id, guild.icon) ? (
-                      <Image src={guildIconUrl(guild.id, guild.icon)!} alt={guild.name} width={18} height={18} className="rounded-full flex-shrink-0" />
+                      <Image
+                        src={guildIconUrl(guild.id, guild.icon)!}
+                        alt={guild.name}
+                        width={18}
+                        height={18}
+                        className="rounded-full flex-shrink-0"
+                        unoptimized={isGif(guildIconUrl(guild.id, guild.icon))}
+                      />
                     ) : (
                       <div className="w-4 h-4 rounded-full bg-orange/20 flex items-center justify-center text-orange-warm text-[9px] font-bold flex-shrink-0">
                         {initials(guild.name)}
@@ -272,12 +290,13 @@ export default function Sidebar({ user, guilds, activeGuildId, currentPage }: Si
           >
             <Image
               src={user.avatar
-                ? `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.png?size=64`
+                ? `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.${user.avatar.startsWith('a_') ? 'gif' : 'png'}?size=64`
                 : `https://fluxerstatic.com/avatars/${Number(BigInt(user.id) >> BigInt(22)) % 6}.png`}
               alt={user.username}
               width={26}
               height={26}
               className="rounded-full flex-shrink-0"
+              unoptimized={!!user.avatar?.startsWith('a_')}
             />
             <div className="flex-1 min-w-0">
               <p className="text-white/75 group-hover:text-orange-warm text-xs font-medium truncate transition-colors">
