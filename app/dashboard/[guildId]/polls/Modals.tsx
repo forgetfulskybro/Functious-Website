@@ -2,6 +2,8 @@ import { useState, useRef, useMemo } from 'react';
 import { DateTimePicker, formatDt } from '@/components/ui/DateTimerPicker';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import { showErrorToast } from '@/components/ui/Toast';
+import UserBadge from '@/components/ui/UserBadge';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
 
 export interface PollEntry {
   id: string;
@@ -37,6 +39,12 @@ export function PollResultsModal({ poll, onClose }: { poll: PollEntry; onClose: 
   const [page, setPage] = useState(0);
   const USERS_PER_PAGE = 5;
 
+  const voterIds = useMemo(
+    () => [...new Set((poll.users ?? []).map((u) => String(u.user ?? '')))],
+    [poll.users],
+  );
+  const profiles = useUserProfiles(voterIds);
+
   const usersByOption = useMemo(() => {
     const map: Record<number, string[]> = {};
     names.forEach((_, i) => { map[i] = []; });
@@ -70,9 +78,13 @@ export function PollResultsModal({ poll, onClose }: { poll: PollEntry; onClose: 
               {poll.owner && (
                 <>
                   <span className="text-white/15 text-xs">·</span>
-                  <p className="text-white/30 text-xs font-mono truncate max-w-[120px]" title={`Created by ${poll.owner}`}>
-                    by {poll.owner}
-                  </p>
+                  <UserBadge
+                    userId={poll.owner}
+                    profile={profiles[poll.owner]}
+                    inline
+                    size="sm"
+                    className="max-w-[140px]"
+                  />
                 </>
               )}
             </div>
@@ -136,7 +148,13 @@ export function PollResultsModal({ poll, onClose }: { poll: PollEntry; onClose: 
                   <div className="w-5 h-5 rounded-full bg-orange/15 flex items-center justify-center text-orange/60 text-[10px] font-bold flex-shrink-0">
                     {((page * USERS_PER_PAGE) + i + 1)}
                   </div>
-                  <p className="text-white/60 text-xs font-mono truncate">{userId}</p>
+                  <UserBadge
+                    userId={userId}
+                    profile={profiles[userId]}
+                    inline
+                    size="sm"
+                    className="flex-1 min-w-0"
+                  />
                 </li>
               ))}
             </ul>

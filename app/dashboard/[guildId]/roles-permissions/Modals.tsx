@@ -2,6 +2,8 @@ import { useState } from 'react';
 import SelectDropdown from '@/components/ui/SelectDropdown';
 import RolesDropdown from '@/components/ui/RolesDropdown';
 import NumberInput from '@/components/ui/NumberInput';
+import UserBadge from '@/components/ui/UserBadge';
+import type { UserProfile } from '@/lib/types';
 
 export interface BypassEntry {
   role: string;
@@ -170,11 +172,13 @@ export function JoinRoleModal({
 
 export function StickyEditModal({
   entry,
+  profile,
   guildRoles,
   onSave,
   onClose,
 }: {
   entry: StickyEntry;
+  profile?: UserProfile | null;
   guildRoles: { id: string; name: string; color?: number }[];
   onSave: (updated: StickyEntry) => void;
   onClose: () => void;
@@ -188,7 +192,13 @@ export function StickyEditModal({
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-base">Edit saved roles</h2>
-            <p className="text-white/30 text-xs mt-0.5 font-mono">{entry.user}</p>
+            <UserBadge
+              userId={entry.user}
+              profile={profile}
+              inline
+              size="sm"
+              className="mt-1.5"
+            />
           </div>
           <button type="button" onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useHealthWs } from '@/hooks/useHealthWs';
 import type { FluxerUser, DashboardGuild } from '@/lib/types';
 
@@ -34,6 +34,10 @@ const GUILD_NAV_LINKS: { label: string; href: string; icon: React.ReactNode }[] 
   {
     label: 'Configuration', href: 'configuration',
     icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" strokeLinecap="round"/></svg>,
+  },
+  {
+    label: 'Birthdays', href: 'birthdays',
+    icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
   },
   {
     label: 'Roles & Permissions', href: 'roles-permissions',
@@ -69,6 +73,17 @@ const GUILD_NAV_LINKS: { label: string; href: string; icon: React.ReactNode }[] 
   },
 ];
 
+const PROFILE_NAV_LINKS: { id: 'information' | 'birthdays'; label: string; icon: React.ReactNode }[] = [
+  {
+    id: 'information', label: 'Information',
+    icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>,
+  },
+  {
+    id: 'birthdays', label: 'Birthdays',
+    icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  },
+];
+
 interface SidebarProps {
   user: FluxerUser;
   guilds?: DashboardGuild[];
@@ -79,6 +94,7 @@ interface SidebarProps {
 export default function Sidebar({ user, guilds, activeGuildId, currentPage }: SidebarProps) {
   const { status } = useHealthWs();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -126,6 +142,9 @@ export default function Sidebar({ user, guilds, activeGuildId, currentPage }: Si
   }, [mobileOpen]);
 
   const activeGuild = guilds?.find(g => g.id === activeGuildId);
+
+  const profileTab: 'information' | 'birthdays' =
+    searchParams.get('tab') === 'birthdays' ? 'birthdays' : 'information';
 
   const backHref = currentPage === 'profile' ? '/dashboard' : activeGuildId ? '/dashboard' : '/';
   const backLabel = currentPage === 'profile' ? 'Dashboard' : activeGuildId ? 'All servers' : 'Homepage';
@@ -262,6 +281,34 @@ export default function Sidebar({ user, guilds, activeGuildId, currentPage }: Si
                   <li key={link.label}>
                     <Link
                       href={href}
+                      onClick={() => setMobileOpen(false)}
+                      className={[
+                        'flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange',
+                        isActive
+                          ? 'bg-orange/12 text-orange-warm font-semibold border border-orange/20'
+                          : 'text-white/50 hover:text-white/80 hover:bg-white/5',
+                      ].join(' ')}
+                    >
+                      <span className="text-white/30">{link.icon}</span>
+                      {link.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        {currentPage === 'profile' && (
+          <div className="mt-3 border-t border-white/5 pt-3">
+            <p className="text-white/25 text-[10px] px-3 mb-1.5 uppercase tracking-widest font-semibold">Profile</p>
+            <ul className="flex flex-col gap-0.5">
+              {PROFILE_NAV_LINKS.map(link => {
+                const isActive = link.id === profileTab;
+                return (
+                  <li key={link.id}>
+                    <Link
+                      href={`/profile?tab=${link.id}`}
                       onClick={() => setMobileOpen(false)}
                       className={[
                         'flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange',

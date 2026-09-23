@@ -20,6 +20,8 @@ import { RoleRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
+import UserBadge from '@/components/ui/UserBadge';
 import { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toggle } from '@/components/ui/Toggle';
@@ -107,6 +109,7 @@ function StickyRolesPanel({
   const [editEntry, setEditEntry] = useState<StickyEntry | null>(null);
   const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
   const paginated = entries.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+  const profiles = useUserProfiles(entries.map((e) => e.user));
 
   function roleName(id: string) {
     return guildRoles.find((r) => r.id === id)?.name ?? id;
@@ -156,7 +159,12 @@ function StickyRolesPanel({
                 <li key={entry.user} className="rounded-xl px-3 py-2.5 bg-white/[0.03] group">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-white/70 text-xs font-mono truncate">{entry.user}</p>
+                      <UserBadge
+                        userId={entry.user}
+                        profile={profiles[entry.user]}
+                        inline
+                        size="sm"
+                      />
                       <p className="text-white/30 text-[10px] mt-0.5 truncate">
                         {entry.roles.length === 0
                           ? 'No roles saved'
@@ -279,6 +287,7 @@ function StickyRolesPanel({
       {editEntry && (
         <StickyEditModal
           entry={editEntry}
+          profile={profiles[editEntry.user]}
           guildRoles={guildRoles}
           onSave={handleEdit}
           onClose={() => setEditEntry(null)}

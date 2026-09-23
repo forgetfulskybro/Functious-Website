@@ -5,6 +5,8 @@ import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import RolesDropdown from '@/components/ui/RolesDropdown';
 import NumberInput from '@/components/ui/NumberInput';
 import { Pagination } from '@/components/ui/Pagination';
+import UserBadge from '@/components/ui/UserBadge';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
 
 export interface GiveawayEntry {
   id: string;
@@ -465,6 +467,7 @@ export function GiveawayDetailsModal({
   channelName?: string;
   onClose: () => void;
 }) {
+  const profiles = useUserProfiles(giveaway.owner ? [giveaway.owner] : []);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -493,7 +496,11 @@ export function GiveawayDetailsModal({
           {giveaway.owner && (
             <div>
               <p className="text-xs text-white/40">Hosted by</p>
-              <p className="font-mono text-sm text-orange-warm">{giveaway.owner}</p>
+              <UserBadge
+                userId={giveaway.owner}
+                profile={profiles[giveaway.owner]}
+                className="mt-1"
+              />
             </div>
           )}
 

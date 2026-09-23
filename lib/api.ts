@@ -88,6 +88,12 @@ export function emptyGuildData(guildId: string) {
     guildRoles: [],
     activePolls: [],
     activeGiveaways: [],
+    birthdayChannel: null,
+    birthdayRole: null,
+    birthdayPing: true,
+    birthdayBlacklist: [],
+    birthdayMessageWithAge: null,
+    birthdayMessageNoAge: null,
   };
 }
 
@@ -338,6 +344,65 @@ export async function getBotHealth() {
 export async function getUserReminders() {
   const res = await safeFetch(`${BOT_API_URL}/api/reminders`, {
     headers: botHeaders(),
+    cache: "no-store",
+  });
+  return res.json();
+}
+
+export async function getBotGuildBirthdays(guildId: string) {
+  const res = await safeFetch(`${BOT_API_URL}/api/guilds/${guildId}/birthdays`, {
+    headers: botHeaders(),
+    cache: "no-store",
+  });
+  return res.json();
+}
+
+export async function forceBotBirthday(guildId: string, userId: string, actorUserId?: string) {
+  const res = await safeFetch(`${BOT_API_URL}/api/guilds/${guildId}/birthdays/force`, {
+    method: "POST",
+    headers: botHeaders(actorUserId),
+    body: JSON.stringify({ userId }),
+    cache: "no-store",
+  });
+  return res.json();
+}
+
+export async function addBirthdayBlacklist(guildId: string, userId: string) {
+  const res = await safeFetch(`${BOT_API_URL}/api/guilds/${guildId}/birthdays/blacklist`, {
+    method: "POST",
+    headers: botHeaders(),
+    body: JSON.stringify({ userId }),
+    cache: "no-store",
+  });
+  return res.json();
+}
+
+export async function removeBirthdayBlacklist(guildId: string, userId: string) {
+  const res = await safeFetch(
+    `${BOT_API_URL}/api/guilds/${guildId}/birthdays/blacklist/${encodeURIComponent(userId)}`,
+    {
+      method: "DELETE",
+      headers: botHeaders(),
+      cache: "no-store",
+    },
+  );
+  return res.json();
+}
+
+export async function searchBotGuildMembers(guildId: string, query?: string) {
+  const qs = query ? `?query=${encodeURIComponent(query)}` : "";
+  const res = await safeFetch(`${BOT_API_URL}/api/guilds/${guildId}/members${qs}`, {
+    headers: botHeaders(),
+    cache: "no-store",
+  });
+  return res.json();
+}
+
+export async function getBotUserProfiles(ids: string[]) {
+  const res = await safeFetch(`${BOT_API_URL}/api/users/profiles`, {
+    method: "POST",
+    headers: botHeaders(),
+    body: JSON.stringify({ ids }),
     cache: "no-store",
   });
   return res.json();

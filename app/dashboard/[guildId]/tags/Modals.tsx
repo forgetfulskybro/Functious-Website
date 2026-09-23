@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import SelectDropdown from '@/components/ui/SelectDropdown';
-import type { FluxerUser, FluxerGuild } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, UserProfile } from '@/lib/types';
 import { Markdown } from '@/components/guide/CodeBlock';
 import { showErrorToast } from '@/components/ui/Toast';
 import GetCoords from '@/components/ui/GetCoords';
 import { runTagSafe } from '@/app/interpreter';
+import UserBadge from '@/components/ui/UserBadge';
 import Image from 'next/image';
 
 export interface TagEntry {
@@ -1211,7 +1212,15 @@ export function DeleteTagModal({
   );
 }
 
-export function TagViewModal({ tag, onClose }: { tag: TagEntry; onClose: () => void }) {
+export function TagViewModal({
+  tag,
+  profile,
+  onClose,
+}: {
+  tag: TagEntry;
+  profile?: UserProfile | null;
+  onClose: () => void;
+}) {
   const content =
     tag.type === 'text' || tag.type === 'script'
       ? tag.content
@@ -1347,7 +1356,13 @@ export function TagViewModal({ tag, onClose }: { tag: TagEntry; onClose: () => v
             <div className="flex items-center gap-4 pt-1">
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-white/30">Created by</p>
-                <p className="mt-0.5 font-mono text-xs text-white/60">{tag.createdBy}</p>
+                <UserBadge
+                  userId={tag.createdBy}
+                  profile={profile}
+                  inline
+                  size="sm"
+                  className="mt-1"
+                />
               </div>
               {tag.createdAt && (
                 <div>

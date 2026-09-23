@@ -5,6 +5,8 @@ import { showErrorToast, showToast } from '@/components/ui/Toast';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { TagRowSkeleton } from '@/components/ui/Skeletons';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
+import UserBadge from '@/components/ui/UserBadge';
 import Sidebar from '@/components/layout/Sidebar';
 import Image from 'next/image';
 
@@ -75,6 +77,9 @@ export default function TagsClient({
   const [modal, setModal] = useState<'create' | TagEntry | null>(null);
   const [viewTag, setViewTag] = useState<TagEntry | null>(null);
   const [deleteTag, setDeleteTag] = useState<TagEntry | null>(null);
+  const profiles = useUserProfiles(
+    tags.map((t) => t.createdBy ?? '').filter((id): id is string => !!id),
+  );
 
   useEffect(() => {
     if (saving) return;
@@ -200,10 +205,21 @@ export default function TagsClient({
                       {tag.name}{' '}
                       <span className="text-xs text-white/40">({typeLabel(tag.type)})</span>
                     </p>
-                    <p className="mt-0.5 text-xs text-white/30">
-                      {tag.uses || 0} uses
-                      {tag.createdBy ? ` • Created by ${tag.createdBy}` : ''}
-                    </p>
+                    <div className="mt-0.5 text-xs text-white/30 flex items-center gap-1.5 flex-wrap">
+                      <span>{tag.uses || 0} uses</span>
+                      {tag.createdBy && (
+                        <>
+                          <span className="text-white/15">·</span>
+                          <span>Created by</span>
+                          <UserBadge
+                            userId={tag.createdBy}
+                            profile={profiles[tag.createdBy]}
+                            inline
+                            size="sm"
+                          />
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <IconBtn title="View" onClick={() => setViewTag(tag)}>
@@ -266,7 +282,13 @@ export default function TagsClient({
         />
       )}
 
-      {viewTag && <TagViewModal tag={viewTag} onClose={() => setViewTag(null)} />}
+      {viewTag && (
+        <TagViewModal
+          tag={viewTag}
+          profile={viewTag.createdBy ? profiles[viewTag.createdBy] : undefined}
+          onClose={() => setViewTag(null)}
+        />
+      )}
 
       {deleteTag && (
         <DeleteTagModal

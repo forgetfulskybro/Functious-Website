@@ -3,10 +3,12 @@
 import Sidebar from '@/components/layout/Sidebar';
 import type { FluxerUser, DashboardGuild } from '@/lib/types';
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showToast, showErrorToast } from '@/components/ui/Toast';
 import TimezonePicker from '@/components/ui/TimezonePicker';
 import { ReminderModal, Reminder } from './Modals';
+import BirthdaySettings from './BirthdaySettings';
 import Image from 'next/image';
 
 interface CommandStat {
@@ -84,65 +86,6 @@ function formatDt(y: number, mo: number, d: number, h: number, mi: number) {
 
 function daysInMonth(y: number, mo: number) {
   return new Date(y, mo + 1, 0).getDate();
-}
-
-function ScrollWheel({
-  items,
-  selected,
-  onSelect,
-}: {
-  items: { value: number; label: string }[];
-  selected: number;
-  onSelect: (v: number) => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const ITEM_H = 32;
-
-  useEffect(() => {
-    const idx = items.findIndex((i) => i.value === selected);
-    if (ref.current && idx >= 0) {
-      ref.current.scrollTo({ top: idx * ITEM_H, behavior: 'smooth' });
-    }
-  }, [selected, items]);
-
-  function handleWheel(e: React.WheelEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    const dir = e.deltaY > 0 ? 1 : -1;
-    const currentIdx = items.findIndex((i) => i.value === selected);
-    const nextIdx = Math.max(0, Math.min(currentIdx + dir, items.length - 1));
-    if (nextIdx !== currentIdx) onSelect(items[nextIdx].value);
-  }
-
-  return (
-    <div
-      ref={ref}
-      onWheel={handleWheel}
-      className="h-[128px] overflow-y-hidden scrollbar-none relative"
-    >
-      <div
-        className="pointer-events-none absolute left-0 right-0 top-[48px] h-8 bg-orange/10 rounded-lg z-10"
-        aria-hidden="true"
-      />
-      <div className="h-12" />
-      {items.map((item) => (
-        <div
-          key={item.value}
-          onClick={() => onSelect(item.value)}
-          style={{ height: ITEM_H }}
-          className={[
-            'flex items-center justify-center text-sm cursor-pointer transition-all duration-150 select-none',
-            item.value === selected
-              ? 'text-orange-warm font-bold'
-              : 'text-white/35 hover:text-white/70',
-          ].join(' ')}
-        >
-          {item.label}
-        </div>
-      ))}
-      <div className="h-12" />
-    </div>
-  );
 }
 
 function RemindersSection({ userId }: { userId: string }) {
@@ -664,6 +607,9 @@ export default function ProfilePage({
   const [user, setUser] = useState<FluxerUser>(initialUser);
   const [timezone, setTimezone] = useState(initialUser.timezone ?? 'America/New_York');
   const [copied, setCopied] = useState(false);
+  const searchParams = useSearchParams();
+  const tab: 'information' | 'birthdays' =
+    searchParams.get('tab') === 'birthdays' ? 'birthdays' : 'information';
 
   useEffect(() => {
     fetch('/api/auth/me', { credentials: 'include' })
@@ -684,99 +630,115 @@ export default function ProfilePage({
       <Sidebar user={user as FluxerUser} guilds={guilds} currentPage="profile" />
 
       <main className="flex-1 px-4 sm:px-6 py-8 sm:py-10 max-w-3xl mx-auto w-full">
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Profile Settings
           </h1>
           <p className="text-white/35 text-sm mt-1.5">
-            Manage your preferences, reminders, and command activity.
+            Manage your preferences, reminders, and birthday announcements.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-          <section className="rounded-2xl bg-bg-card border border-white/[0.04] px-4 py-3.5 flex items-center gap-3.5">
-            <div className="relative shrink-0">
-              <Image
-                src={avatarUrl}
-                alt={displayName}
-                width={52}
-                height={52}
-                className="rounded-xl ring-2 ring-orange/20"
-                unoptimized={isGif(avatarUrl)}
-              />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-bg-card" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-white font-semibold text-sm truncate leading-tight">
-                {displayName}
-              </p>
-              {user.global_name && (
-                <p className="text-white/40 text-xs truncate mt-0.5">@{user.username}</p>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(user.id);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
-                title="Click to copy user ID"
-                className="mt-1.5 inline-flex items-center gap-1.5 max-w-full rounded-md bg-white/[0.04] hover:bg-white/[0.07] border border-white/5 px-2 py-1 transition-colors group"
-              >
-                <span className="text-white/30 group-hover:text-white/50 text-[10px] font-mono truncate transition-colors">
-                  {copied ? 'Copied!' : user.id}
-                </span>
-                {!copied && (
-                  <svg
-                    className="w-2.5 h-2.5 text-white/20 group-hover:text-white/40 shrink-0 transition-colors"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    aria-hidden="true"
+        {tab === 'birthdays' ? (
+          <BirthdaySettings user={user as FluxerUser} guilds={guilds ?? []} />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+              <section className="rounded-2xl bg-bg-card border border-white/[0.04] px-4 py-3.5 flex items-center gap-3.5">
+                <div className="relative shrink-0">
+                  <Image
+                    src={avatarUrl}
+                    alt={displayName}
+                    width={52}
+                    height={52}
+                    className="rounded-xl ring-2 ring-orange/20"
+                    unoptimized={isGif(avatarUrl)}
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-bg-card" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-white font-semibold text-sm truncate leading-tight">
+                    {displayName}
+                  </p>
+                  {user.global_name && (
+                    <p className="text-white/40 text-xs truncate mt-0.5">@{user.username}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(user.id);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    }}
+                    title="Click to copy user ID"
+                    className="mt-1.5 inline-flex items-center gap-1.5 max-w-full rounded-md bg-white/[0.04] hover:bg-white/[0.07] border border-white/5 px-2 py-1 transition-colors group"
                   >
-                    <rect x="9" y="9" width="13" height="13" rx="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </section>
+                    <span className="text-white/30 group-hover:text-white/50 text-[10px] font-mono truncate transition-colors">
+                      {copied ? 'Copied!' : user.id}
+                    </span>
+                    {!copied && (
+                      <svg
+                        className="w-2.5 h-2.5 text-white/20 group-hover:text-white/40 shrink-0 transition-colors"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        aria-hidden="true"
+                      >
+                        <rect x="9" y="9" width="13" height="13" rx="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </section>
 
-          <section className="rounded-2xl bg-bg-card border border-white/[0.04] px-4 py-3.5 flex flex-col justify-center gap-2">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-white/50 text-[10px] font-semibold uppercase tracking-widest">
-                Timezone
-              </h2>
-              <p className="text-white/20 text-[10px] hidden sm:block truncate">
-                Reminders & server times
-              </p>
+              <section className="rounded-2xl bg-bg-card border border-white/[0.04] px-4 py-3.5 flex flex-col justify-center gap-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 className="text-white/50 text-[10px] font-semibold uppercase tracking-widest">
+                    Timezone
+                  </h2>
+                  <p className="text-white/20 text-[10px] hidden sm:block truncate">
+                    Reminders & server times
+                  </p>
+                </div>
+                <TimezonePicker
+                  value={timezone}
+                  onChangeAction={async (v) => {
+                    const prev = timezone;
+                    setTimezone(v);
+                    try {
+                      const res = await fetch('/api/users/profile', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ timezone: v }),
+                      });
+                      if (res.ok) {
+                        showToast('Timezone saved');
+                      } else {
+                        const data = await res.json().catch(() => ({}));
+                        setTimezone(prev);
+                        showErrorToast('Failed to save timezone', {
+                          description: data?.error ?? 'Please try again.',
+                        });
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      setTimezone(prev);
+                      showErrorToast('Failed to save timezone');
+                    }
+                  }}
+                />
+              </section>
             </div>
-            <TimezonePicker
-              value={timezone}
-              onChangeAction={async (v) => {
-                setTimezone(v);
-                try {
-                  await fetch('/api/users/profile', {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ timezone: v }),
-                  });
-                  showToast('Timezone saved');
-                } catch (err) {
-                  console.error(err);
-                  showErrorToast('Failed to save timezone');
-                }
-              }}
-            />
-          </section>
-        </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          <RemindersSection userId={user.id} />
-          <CommandUsageSection commands={commands} total={commandsTotal} />
-        </div>
+            <div className="grid grid-cols-1 gap-4">
+              <RemindersSection userId={user.id} />
+              <CommandUsageSection commands={commands} total={commandsTotal} />
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

@@ -1,7 +1,9 @@
 'use client';
 
 import Sidebar from '@/components/layout/Sidebar';
-import type { FluxerUser, DashboardGuild } from '@/lib/types';
+import type { FluxerUser, DashboardGuild, UserProfile } from '@/lib/types';
+import UserBadge from '@/components/ui/UserBadge';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
 import { useMemo, useState } from 'react';
 
 export type AuditLogEvent = {
@@ -193,9 +195,11 @@ function JsonViewer({
 
 function DetailModal({
   event,
+  profile,
   onCloseAction,
 }: {
   event: AuditLogEvent;
+  profile?: UserProfile | null;
   onCloseAction: () => void;
 }) {
   const data = event.data ?? {};
@@ -253,11 +257,11 @@ function DetailModal({
               <p className="text-[10px] uppercase tracking-widest font-semibold text-white/35 mb-1.5">
                 Executor
               </p>
-              <p className="text-white font-mono text-sm break-all">
-                {event.userId ?? (
-                  <span className="text-white/30 italic">Unknown</span>
-                )}
-              </p>
+              {event.userId ? (
+                <UserBadge userId={event.userId} profile={profile} />
+              ) : (
+                <p className="text-white/30 italic text-sm">Unknown</p>
+              )}
             </div>
             <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
               <p className="text-[10px] uppercase tracking-widest font-semibold text-white/35 mb-1.5">
@@ -308,6 +312,13 @@ export default function AuditLogsClient({
     if (!q) return sorted;
     return sorted.filter((ev) => eventMatchesQuery(ev, q));
   }, [sorted, query]);
+
+  const executorIds = useMemo(
+    () =>
+      [...new Set(events.map((e) => e.userId).filter((id): id is string => !!id))],
+    [events],
+  );
+  const profiles = useUserProfiles(executorIds);
 
   const visible = expanded ? filtered : filtered.slice(0, PAGE_SIZE);
   const hiddenCount = Math.max(0, filtered.length - PAGE_SIZE);
@@ -497,12 +508,13 @@ export default function AuditLogsClient({
                                   {ev.userId && (
                                     <>
                                       <span className="text-white/15">·</span>
-                                      <span
-                                        className="font-mono truncate max-w-[10rem]"
-                                        title={ev.userId}
-                                      >
-                                        {ev.userId}
-                                      </span>
+                                      <UserBadge
+                                        userId={ev.userId}
+                                        profile={profiles[ev.userId]}
+                                        inline
+                                        size="sm"
+                                        className="max-w-[14rem]"
+                                      />
                                     </>
                                   )}
                                 </div>
@@ -548,6 +560,7 @@ export default function AuditLogsClient({
       {selected && (
         <DetailModal
           event={selected}
+          profile={selected.userId ? profiles[selected.userId] : undefined}
           onCloseAction={() => setSelected(null)}
         />
       )}

@@ -35,6 +35,17 @@ export default function SelectDropdown(props: SelectDropdownProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  function measure() {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }
+
+  function toggleOpen() {
+    if (!open) measure();
+    setOpen((o) => !o);
+  }
+
   useEffect(() => {
     function onOut(e: MouseEvent) {
       const menu = document.getElementById("select-dropdown-portal");
@@ -56,7 +67,7 @@ export default function SelectDropdown(props: SelectDropdownProps) {
       const rect = buttonRef.current!.getBoundingClientRect();
       setCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
     };
-    update();
+    measure();
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
@@ -132,14 +143,37 @@ export default function SelectDropdown(props: SelectDropdownProps) {
         >
           {(multiple || options.length > 6) && (
             <div className="px-3 pt-3 pb-2">
-              <input
-                type="text"
-                placeholder="Search…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                autoFocus
-                className="w-full bg-white/5 rounded-lg px-3 py-2 text-xs text-white placeholder-white/25 focus:outline-none focus:ring-1 focus:ring-orange"
-              />
+              <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2">
+                <svg
+                  className="w-3.5 h-3.5 text-white/25 flex-shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  autoFocus
+                  className="flex-1 bg-transparent text-white text-xs placeholder-white/25 focus:outline-none"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="text-white/25 hover:text-white/60 text-sm leading-none flex-shrink-0"
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -208,7 +242,7 @@ export default function SelectDropdown(props: SelectDropdownProps) {
       <button
         ref={buttonRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleOpen}
         className="w-full flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2.5 text-left hover:bg-white/8 transition-colors"
       >
         <span className="flex-1 min-w-0">{triggerLabel()}</span>

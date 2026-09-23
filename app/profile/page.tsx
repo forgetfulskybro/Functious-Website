@@ -94,25 +94,10 @@ export default async function Profile() {
   const botGuildIds = await filterBotGuilds(guilds.map((g) => g.id));
   const botGuildSet = new Set(botGuildIds);
 
-  const dashboardGuilds = guilds
-    .filter((g) => {
-      const userPermissions = BigInt(g.permissions);
-      const MANAGE_GUILD = 1n << 5n;
-      const ADMINISTRATOR = 1n << 3n;
-
-      if (g.owner_id === session.user.id) {
-        g.owner = true;
-        return true;
-      }
-      return (
-        (userPermissions & MANAGE_GUILD) === MANAGE_GUILD ||
-        (userPermissions & ADMINISTRATOR) === ADMINISTRATOR
-      );
-    })
-    .map((g) => ({
-      ...g,
-      botPresent: botGuildSet.has(g.id),
-    }));
+  const allGuilds = guilds.map((g) => ({
+    ...g,
+    botPresent: botGuildSet.has(g.id),
+  }));
 
   const { commands, total: commandsTotal } = await loadCommandUsage(
     String(session.user.id)
@@ -121,7 +106,7 @@ export default async function Profile() {
   return (
     <ProfilePage
       user={session.user}
-      guilds={dashboardGuilds}
+      guilds={allGuilds}
       currentPage="profile"
       commands={commands}
       commandsTotal={commandsTotal}

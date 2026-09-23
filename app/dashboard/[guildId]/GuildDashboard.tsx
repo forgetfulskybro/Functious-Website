@@ -4,9 +4,45 @@ import { showErrorToast, showToast } from '@/components/ui/Toast';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useBotPresence } from '@/hooks/useBotPresence';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
 import Sidebar from '@/components/layout/Sidebar';
 import Image from 'next/image';
 import Link from 'next/link';
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function orderDay(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
+}
+
+function formatRelative(ts: number): string {
+  const diff = ts - Math.floor(Date.now() / 1000);
+  const abs = Math.abs(diff);
+  if (abs < 3600) return diff >= 0 ? `in ${Math.floor(abs / 60)}m` : `${Math.floor(abs / 60)}m ago`;
+  if (abs < 86400) {
+    const h = Math.floor(abs / 3600);
+    return diff >= 0 ? `in ${h}h` : `${h}h ago`;
+  }
+  const d = Math.floor(abs / 86400);
+  if (d < 62) return diff >= 0 ? `in ${d}d` : `${d}d ago`;
+  const mo = Math.floor(d / 30);
+  return diff >= 0 ? `in ${mo}mo` : `${mo}mo ago`;
+}
+
+function avatarCdn(userId: string, avatar: string | null): string | null {
+  if (!avatar) return null;
+  const ext = avatar.startsWith('a_') ? 'gif' : 'png';
+  return `https://fluxerusercontent.com/avatars/${userId}/${avatar}.${ext}?size=64`;
+}
+
+function isGif(src: string | null): boolean {
+  return !!src && (src.includes('.gif') || src.endsWith('.gif'));
+}
 
 const syncCooldowns = new Map<string, { channels: number; roles: number }>();
 const SYNC_COOLDOWN_MS = 30_000;
@@ -141,6 +177,27 @@ export default function GuildDashboard({
   const liveGuilds = useBotPresence(guilds);
   const data = guild ?? initialData;
 
+  const [birthdayList, setBirthdayList] = useState<{ userId: string; username: string | null; globalName: string | null; avatar: string | null; month: number; day: number; nextTs: number }[]>([]);
+  const [birthdayLoading, setBirthdayLoading] = useState(true);
+  const birthdayProfiles = useUserProfiles(birthdayList.map((e) => e.userId));
+
+  useEffect(() => {
+    let cancelled = false;
+    setBirthdayLoading(true);
+    fetch(`/api/bot/guilds/${activeGuildId}/birthdays`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled) setBirthdayList((d?.list ?? []).slice(0, 3));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setBirthdayLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeGuildId]);
+
   const [, rerender] = useState(0);
 
   const handleSyncChannels = useCallback(() => {
@@ -238,6 +295,91 @@ export default function GuildDashboard({
               <StatCard label="Tags" value={totalTags} />
             </>
           )}
+        </div>
+
+        <div className="mb-8">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <p className="text-white/35 text-[10px] font-semibold uppercase tracking-widest">
+                Birthdays
+              </p>
+              <p className="text-white/25 text-xs mt-1">
+                Upcoming birthday announcements in this server
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white/[0.03] px-6 py-5">
+            {birthdayLoading ? (
+              <div className="space-y-2.5">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Sk className="w-8 h-8 rounded-full flex-shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Sk className="h-3.5 w-32" />
+                      <Sk className="h-3 w-24" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : birthdayList.length === 0 ? (
+              <p className="text-white/35 text-sm text-center py-6">
+                No upcoming birthdays yet - members opt in on their profile or with{' '}
+                <span className="font-mono text-white/50">f!bday enable</span>.
+              </p>
+            ) : (
+              <>
+                <ul className="space-y-2.5">
+                  {birthdayList.map((entry) => {
+                    const profile = birthdayProfiles[entry.userId];
+                    const name =
+                      profile?.globalName ?? profile?.username ?? entry.globalName ?? entry.username ?? entry.userId;
+                    const avatarSrc =
+                      profile?.avatarUrl ?? avatarCdn(entry.userId, profile?.avatar ?? entry.avatar);
+                    return (
+                      <li key={entry.userId} className="flex items-center gap-3">
+                        {avatarSrc ? (
+                          <Image
+                            src={avatarSrc}
+                            alt={name}
+                            width={32}
+                            height={32}
+                            unoptimized={isGif(avatarSrc)}
+                            className="rounded-full flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-orange/20 flex items-center justify-center text-orange-warm text-[10px] font-bold flex-shrink-0">
+                            {(name ?? '?').slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white/85 text-sm font-medium truncate">{name}</p>
+                          <p className="text-xs text-white/35">
+                            {MONTHS[entry.month - 1]} {orderDay(entry.day)}
+                            <span className="text-white/20"> · </span>
+                            <span className="text-orange-light/60">{formatRelative(entry.nextTs)}</span>
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between gap-4">
+                  <p className="text-xs text-white/35">
+                    {((data as any).birthdayChannel)
+                      ? 'Announcements enabled'
+                      : 'No announcement channel set'}
+                  </p>
+                  <Link
+                    href={`${base}/birthdays`}
+                    className="text-orange-warm/80 hover:text-orange-warm text-xs font-medium transition-colors flex-shrink-0"
+                  >
+                    View all →
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="mb-8">

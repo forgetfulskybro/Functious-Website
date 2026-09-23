@@ -5,7 +5,43 @@ export interface FluxerUser {
   global_name: string | null;
   avatar: string | null;
   timezone: string | null;
-  
+  birthday?: BirthdayData | null;
+}
+
+export interface BirthdayData {
+  day: number | null;
+  month: number | null;
+  age: number | null;
+  lastBirthday: number | null;
+  ping: boolean;
+  enabledGuilds: string[];
+}
+
+export interface GuildBirthdayEntry {
+  userId: string;
+  username: string | null;
+  globalName: string | null;
+  avatar: string | null;
+  month: number;
+  day: number;
+  age: number | null;
+  nextTs: number;
+}
+
+export interface GuildMember {
+  id: string;
+  username: string;
+  globalName: string | null;
+  avatar: string | null;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string | null;
+  globalName: string | null;
+  avatar: string | null;
+  avatarUrl: string | null;
+  pending?: boolean;
 }
 
 export interface FluxerGuild {
@@ -54,6 +90,12 @@ export interface GuildData {
   childChannel: string | null;
   tempChannels: unknown[];
   config: GuildConfig;
+  birthdayChannel: string | null;
+  birthdayRole: string | null;
+  birthdayPing: boolean;
+  birthdayBlacklist: string[];
+  birthdayMessageWithAge: string | null;
+  birthdayMessageNoAge: string | null;
 }
 
 export interface Roles {

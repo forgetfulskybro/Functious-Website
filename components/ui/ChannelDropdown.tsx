@@ -205,17 +205,19 @@ export default function ChannelDropdown({
         ref={buttonRef}
         type="button"
         onClick={toggleOpen}
-        className="w-full flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2.5 text-left hover:bg-white/8 transition-colors"
+        className="w-full flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2.5 text-left hover:bg-white/8 transition-colors min-h-[42px]"
       >
         <span
           className={
-            selected ? "text-white text-sm truncate" : "text-white/30 text-sm"
+            selected
+              ? "flex-1 min-w-0 text-white text-sm truncate"
+              : "flex-1 min-w-0 text-white/30 text-sm"
           }
         >
           {selected ? (
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 min-w-0">
               {channelIcon(selected.type)}
-              <span className="truncate">{selected.name}</span>
+              <span className="truncate min-w-0">{selected.name}</span>
             </span>
           ) : (
             placeholder
