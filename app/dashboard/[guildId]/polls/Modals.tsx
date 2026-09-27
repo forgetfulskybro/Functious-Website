@@ -3,7 +3,9 @@ import { DateTimePicker, formatDt } from '@/components/ui/DateTimerPicker';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import { showErrorToast } from '@/components/ui/Toast';
 import UserBadge from '@/components/ui/UserBadge';
+import ChannelBadge from '@/components/ui/ChannelBadge';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
+import { useChannelProfiles, KnownChannel } from '@/hooks/useChannelProfiles';
 
 export interface PollEntry {
   id: string;
@@ -39,11 +41,16 @@ export function PollResultsModal({ poll, onClose }: { poll: PollEntry; onClose: 
   const [page, setPage] = useState(0);
   const USERS_PER_PAGE = 5;
 
-  const voterIds = useMemo(
-    () => [...new Set((poll.users ?? []).map((u) => String(u.user ?? '')))],
-    [poll.users],
+  const profileIds = useMemo(
+    () => [
+      ...new Set([
+        ...(poll.owner ? [poll.owner] : []),
+        ...(poll.users ?? []).map((u) => String(u.user ?? '')),
+      ]),
+    ],
+    [poll.owner, poll.users],
   );
-  const profiles = useUserProfiles(voterIds);
+  const profiles = useUserProfiles(profileIds);
 
   const usersByOption = useMemo(() => {
     const map: Record<number, string[]> = {};
@@ -83,8 +90,12 @@ export function PollResultsModal({ poll, onClose }: { poll: PollEntry; onClose: 
                     profile={profiles[poll.owner]}
                     inline
                     size="sm"
+                    showId={false}
                     className="max-w-[140px]"
                   />
+                  <span className="text-white/25 text-[10px] font-mono shrink-0 truncate">
+                    {poll.owner}
+                  </span>
                 </>
               )}
             </div>
@@ -188,15 +199,20 @@ export function PollResultsModal({ poll, onClose }: { poll: PollEntry; onClose: 
 }
 
 
-export function DeletePollModal({ poll, channelName, busy, onConfirm, onClose }: {
+export function DeletePollModal({ poll, guildChannels = [], busy, onConfirm, onClose }: {
   poll: PollEntry;
-  channelName?: string;
+  guildChannels?: KnownChannel[];
   busy?: boolean;
   onConfirm: () => Promise<void>;
   onClose: () => void;
 }) {
   const [deleting, setDeleting] = useState(false);
   const isBusy = deleting || !!busy;
+
+  const channelProfiles = useChannelProfiles(
+    poll.channelId ? [poll.channelId] : [],
+    guildChannels
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -211,7 +227,16 @@ export function DeletePollModal({ poll, channelName, busy, onConfirm, onClose }:
             <p className="text-white/80 font-medium text-sm truncate">{poll.desc}</p>
             <p className="text-white/30 text-xs mt-0.5">
               {poll.options.name.length} options
-              {channelName ? ` • #${channelName}` : ''}
+              {poll.channelId && (
+                <>
+                  {' • '}
+                  <ChannelBadge
+                    channelId={poll.channelId}
+                    profile={channelProfiles[poll.channelId]}
+                    inline
+                  />
+                </>
+              )}
             </p>
           </div>
         </div>

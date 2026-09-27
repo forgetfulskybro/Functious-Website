@@ -81,6 +81,13 @@ export default function TagsClient({
     tags.map((t) => t.createdBy ?? '').filter((id): id is string => !!id),
   );
 
+  const liveViewTag = viewTag
+    ? tags.find((t) => t.id === viewTag.id) ?? viewTag
+    : null;
+  const liveDeleteTag = deleteTag
+    ? tags.find((t) => t.id === deleteTag.id) ?? deleteTag
+    : null;
+
   useEffect(() => {
     if (saving) return;
     const raw = (data as any).tags;
@@ -282,20 +289,20 @@ export default function TagsClient({
         />
       )}
 
-      {viewTag && (
+      {liveViewTag && (
         <TagViewModal
-          tag={viewTag}
-          profile={viewTag.createdBy ? profiles[viewTag.createdBy] : undefined}
+          tag={liveViewTag}
+          profile={liveViewTag.createdBy ? profiles[liveViewTag.createdBy] : undefined}
           onClose={() => setViewTag(null)}
         />
       )}
 
-      {deleteTag && (
+      {liveDeleteTag && (
         <DeleteTagModal
-          tag={deleteTag}
+          tag={liveDeleteTag}
           saving={saving}
           onConfirm={async () => {
-            if (await handleSave(tags.filter((t) => t.id !== deleteTag.id))) {
+            if (await handleSave(tags.filter((t) => t.id !== liveDeleteTag.id))) {
               setDeleteTag(null);
             }
           }}

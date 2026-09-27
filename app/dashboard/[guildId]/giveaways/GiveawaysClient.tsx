@@ -1,6 +1,8 @@
 'use client';
 import { GiveawayEntry, GiveawayDetailsModal, CreateGiveawayModal, DeleteGiveawayModal } from './Modals';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
+import { useChannelProfiles } from '@/hooks/useChannelProfiles';
+import ChannelBadge from '@/components/ui/ChannelBadge';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { GiveawayRowSkeleton } from '@/components/ui/Skeletons';
@@ -73,8 +75,17 @@ export default function GiveawaysClient({
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
     : null;
 
-  const channelName = (id: string) =>
-    guildChannels.find((c: Channels) => c.id === id)?.name ?? id;
+  const liveViewGiveaway = viewGiveaway
+    ? giveaways.find((g) => (g.messageId || g.id) === (viewGiveaway.messageId || viewGiveaway.id)) ?? viewGiveaway
+    : null;
+  const liveDeleteItem = deleteItem
+    ? giveaways.find((g) => (g.messageId || g.id) === (deleteItem.messageId || deleteItem.id)) ?? deleteItem
+    : null;
+
+  const channelProfiles = useChannelProfiles(
+    giveaways.map((g) => g.channelId).filter((id): id is string => !!id),
+    guildChannels
+  );
 
   const createGiveaway = useCallback(
     async (payload: {
@@ -240,10 +251,19 @@ export default function GiveawaysClient({
                   <div className="flex-1 min-w-0">
                     <p className="text-white/80 font-medium truncate">{gw.prize}</p>
                     <p className="text-white/30 text-xs mt-0.5">
-                      {gw.winners} winner{gw.winners > 1 ? 's' : ''} •{' '}
+                      {gw.winners} winner{gw.winners > 1 ? 's' : ''}•{' '}
                       {gw.users?.length ?? 0} participant
                       {(gw.users?.length ?? 0) !== 1 ? 's' : ''}
-                      {gw.channelId && ` • #${channelName(gw.channelId)}`}
+                      {gw.channelId && (
+                        <>
+                          {' • '}
+                          <ChannelBadge
+                            channelId={gw.channelId}
+                            profile={channelProfiles[gw.channelId]}
+                            inline
+                          />
+                        </>
+                      )}
                       {gw.ended && ' • Ended'}
                     </p>
                   </div>
@@ -293,27 +313,21 @@ export default function GiveawaysClient({
         />
       )}
 
-      {viewGiveaway && (
+      {liveViewGiveaway && (
         <GiveawayDetailsModal
-          giveaway={viewGiveaway}
-          channelName={
-            viewGiveaway.channelId
-              ? channelName(viewGiveaway.channelId)
-              : undefined
-          }
+          giveaway={liveViewGiveaway}
+          guildChannels={guildChannels}
           onClose={() => setViewGiveaway(null)}
         />
       )}
 
-      {deleteItem && (
+      {liveDeleteItem && (
         <DeleteGiveawayModal
-          giveaway={deleteItem}
-          channelName={
-            deleteItem.channelId ? channelName(deleteItem.channelId) : undefined
-          }
+          giveaway={liveDeleteItem}
+          guildChannels={guildChannels}
           busy={busy}
           onConfirm={async () => {
-            const ok = await removeGiveaway(deleteItem);
+            const ok = await removeGiveaway(liveDeleteItem);
             if (ok) setDeleteItem(null);
           }}
           onClose={() => setDeleteItem(null)}

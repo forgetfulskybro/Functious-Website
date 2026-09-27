@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!SNOWFLAKE_RE.test(userId)) {
       return NextResponse.json({ error: "A valid Discord user ID is required" }, { status: 400 });
     }
-    const result = await addBirthdayBlacklist(guildId, userId);
+    const result = await addBirthdayBlacklist(guildId, userId, session!.user.id);
     return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? "Failed to update blacklist" }, { status: 500 });
@@ -54,7 +54,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     if (!SNOWFLAKE_RE.test(userId)) {
       return NextResponse.json({ error: "A valid Discord user ID is required" }, { status: 400 });
     }
-    const result = await removeBirthdayBlacklist(guildId, userId);
+    const result = await removeBirthdayBlacklist(guildId, userId, session!.user.id);
     return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? "Failed to update blacklist" }, { status: 500 });

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import type { Channels } from '@/lib/types';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import NumberInput from '@/components/ui/NumberInput';
+import ChannelBadge from '@/components/ui/ChannelBadge';
+import { useChannelProfiles, KnownChannel } from '@/hooks/useChannelProfiles';
 
 export interface MediaChannelEntry {
   channelId: string;
@@ -242,19 +244,24 @@ export function MediaChannelModal({
 
 export function DeleteMediaChannelModal({
   entry,
-  channelName,
+  guildChannels = [],
   saving,
   onConfirmAction,
   onCloseAction,
 }: {
   entry: MediaChannelEntry;
-  channelName: string;
+  guildChannels?: KnownChannel[];
   saving?: boolean;
   onConfirmAction: () => void | Promise<void>;
   onCloseAction: () => void;
 }) {
   const [deleting, setDeleting] = useState(false);
   const busy = deleting || !!saving;
+
+  const channelProfiles = useChannelProfiles(
+    entry.channelId ? [entry.channelId] : [],
+    guildChannels
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -266,8 +273,10 @@ export function DeleteMediaChannelModal({
         </div>
         <div className="px-6 py-5">
           <div className="rounded-xl bg-white/[0.03] px-4 py-3">
-            <p className="font-medium text-white/80">#{channelName}</p>
-            <p className="mt-0.5 text-xs text-white/30">{entry.channelId}</p>
+            <ChannelBadge
+              channelId={entry.channelId}
+              profile={channelProfiles[entry.channelId]}
+            />
           </div>
         </div>
         <div className="flex gap-3 px-6 pb-6">

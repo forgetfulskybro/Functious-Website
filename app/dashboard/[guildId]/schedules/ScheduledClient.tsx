@@ -1,8 +1,10 @@
 'use client';
 import { ScheduleModal, ViewModal, ScheduledEntry, DeleteConfirmModal } from './Modals';
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
 import { formatTimestamp } from '@/components/ui/DateTimerPicker';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
+import ChannelBadge from '@/components/ui/ChannelBadge';
+import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ScheduleRowSkeleton } from '@/components/ui/Skeletons';
 
@@ -64,6 +66,13 @@ export default function ScheduledClient({
   const [viewItem, setViewItem] = useState<ScheduledEntry | null>(null);
   const [deleteItem, setDeleteItem] = useState<ScheduledEntry | null>(null);
 
+  const liveViewItem = viewItem
+    ? scheduled.find((s) => s.id === viewItem.id) ?? viewItem
+    : null;
+  const liveDeleteItem = deleteItem
+    ? scheduled.find((s) => s.id === deleteItem.id) ?? deleteItem
+    : null;
+
   const iconUrl = userGuild.icon
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
     : null;
@@ -90,8 +99,10 @@ export default function ScheduledClient({
     [scheduled, save]
   );
 
-  const channelName = (id: string) =>
-    guildChannels.find((c: Channels) => c.id === id)?.name ?? id;
+  const channelProfiles = useChannelProfiles(
+    scheduled.map((s) => s.channelId).filter((id): id is string => !!id),
+    guildChannels
+  );
 
   const shownLoading = useRef(false);
   const shownError = useRef<string | null>(null);
@@ -191,7 +202,12 @@ export default function ScheduledClient({
                         : item.type.toUpperCase()}
                     </p>
                     <p className="text-white/30 text-xs mt-0.5">
-                      {formatTimestamp(item.timestamp)} • #{channelName(item.channelId)}
+                      {formatTimestamp(item.timestamp)} •{' '}
+                      <ChannelBadge
+                        channelId={item.channelId}
+                        profile={channelProfiles[item.channelId]}
+                        inline
+                      />
                       {item.recurring && item.recurring !== 'none' && ` • ${item.recurring}`}
                     </p>
                   </div>
@@ -258,23 +274,23 @@ export default function ScheduledClient({
         />
       )}
 
-      {viewItem && (
+      {liveViewItem && (
         <ViewModal
-          item={viewItem}
-          channelName={channelName(viewItem.channelId)}
+          item={liveViewItem}
           prefix={(data as any).prefix || 'f!'}
+          guildChannels={guildChannels}
           onClose={() => setViewItem(null)}
         />
       )}
 
-      {deleteItem && (
+      {liveDeleteItem && (
         <DeleteConfirmModal
-          item={deleteItem}
-          channelName={channelName(deleteItem.channelId)}
+          item={liveDeleteItem}
+          guildChannels={guildChannels}
           saving={saving}
           onConfirm={async () => {
             const ok = await handleSave(
-              scheduled.filter((s) => s.id !== deleteItem.id)
+              scheduled.filter((s) => s.id !== liveDeleteItem.id)
             );
             if (ok) setDeleteItem(null);
           }}

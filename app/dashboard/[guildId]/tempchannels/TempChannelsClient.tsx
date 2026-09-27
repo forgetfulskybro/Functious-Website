@@ -1,8 +1,10 @@
 'use client';
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
 import { FieldSkeleton, Skeleton } from '@/components/ui/Skeletons';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
+import ChannelBadge from '@/components/ui/ChannelBadge';
+import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import { useState, useEffect, useRef } from 'react';
 import { useGuildData } from '@/hooks/useGuildData';
 import Sidebar from '@/components/layout/Sidebar';
@@ -58,11 +60,15 @@ export default function TempChannelsClient({
   const childChannel = data.childChannel || '';
   const isSetup = !!(parentChannel && childChannel);
 
+  const channelProfiles = useChannelProfiles(
+    [parentChannel, childChannel, config.manage]
+      .filter((id): id is string => !!id && id !== 'pending'),
+    guildChannels
+  );
+
   const iconUrl = userGuild.icon
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
     : null;
-
-  const channelName = (id: string) => guildChannels.find((c: Channels) => c.id === id)?.name ?? id;
 
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -295,7 +301,13 @@ export default function TempChannelsClient({
               <div className="rounded-2xl bg-white/[0.03] px-5 py-4">
                 <p className="text-white/35 text-[10px] uppercase tracking-widest font-semibold mb-1">Join-to-Create</p>
                 <p className="text-white/80 text-sm font-medium truncate">
-                  {childChannel ? `#${channelName(childChannel)}` : '-'}
+                  {childChannel ? (
+                    <ChannelBadge
+                      channelId={childChannel}
+                      profile={channelProfiles[childChannel]}
+                      inline
+                    />
+                  ) : '-'}
                 </p>
               </div>
               {isSetup && (
@@ -303,14 +315,26 @@ export default function TempChannelsClient({
                   <div className="rounded-2xl bg-white/[0.03] px-5 py-4">
                     <p className="text-white/35 text-[10px] uppercase tracking-widest font-semibold mb-1">Category</p>
                     <p className="text-white/80 text-sm font-medium truncate">
-                      {parentChannel ? `#${channelName(parentChannel)}` : '-'}
+                      {parentChannel ? (
+                        <ChannelBadge
+                          channelId={parentChannel}
+                          profile={channelProfiles[parentChannel]}
+                          inline
+                        />
+                      ) : '-'}
                       {config.customParent && <span className="text-white/30 ml-1 text-xs">(custom)</span>}
                     </p>
                   </div>
                   <div className="rounded-2xl bg-white/[0.03] px-5 py-4">
                     <p className="text-white/35 text-[10px] uppercase tracking-widest font-semibold mb-1">Manage Panel</p>
                     <p className="text-white/80 text-sm font-medium truncate">
-                      {config.manage && config.manage !== 'pending' ? `#${channelName(config.manage)}` : '-'}
+                      {config.manage && config.manage !== 'pending' ? (
+                        <ChannelBadge
+                          channelId={config.manage}
+                          profile={channelProfiles[config.manage]}
+                          inline
+                        />
+                      ) : '-'}
                     </p>
                   </div>
                 </>

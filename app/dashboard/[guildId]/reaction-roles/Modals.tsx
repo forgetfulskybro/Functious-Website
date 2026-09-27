@@ -7,6 +7,8 @@ import RolesDropdown from '@/components/ui/RolesDropdown';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import { Pagination } from '@/components/ui/Pagination';
 import { Toggle } from '@/components/ui/Toggle';
+import ChannelBadge from '@/components/ui/ChannelBadge';
+import { useChannelProfiles, KnownChannel } from '@/hooks/useChannelProfiles';
 
 const MESSAGE_CACHE_TTL_MS = 5 * 60_000;
 const VIEW_ROLES_PER_PAGE = 4;
@@ -632,19 +634,24 @@ function RoleAutocompleteTextarea({
 export function ViewModal({
   guildId,
   item,
-  channelName,
+  guildChannels = [],
   roleName,
   onToggleExclusive,
   onClose,
 }: {
   guildId: string;
   item: ReactionRoleEntry;
-  channelName: string;
+  guildChannels?: KnownChannel[];
   roleName: (id: string) => string;
   onToggleExclusive: () => void;
   onClose: () => void;
 }) {
   const [rolePage, setRolePage] = useState(0);
+
+  const channelProfiles = useChannelProfiles(
+    item.chanId ? [item.chanId] : [],
+    guildChannels
+  );
 
   const sortedRoles = item.roles
     .slice()
@@ -680,7 +687,10 @@ export function ViewModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
               <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Channel</p>
-              <p className="text-white font-medium">#{channelName}</p>
+              <ChannelBadge
+                channelId={item.chanId}
+                profile={channelProfiles[item.chanId]}
+              />
             </div>
             <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
               <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Message ID</p>
@@ -760,19 +770,24 @@ export function ViewModal({
 
 export function DeleteConfirmModal({
   item,
-  channelName,
+  guildChannels = [],
   saving,
   onConfirm,
   onClose,
 }: {
   item: ReactionRoleEntry;
-  channelName: string;
+  guildChannels?: KnownChannel[];
   saving?: boolean;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
 }) {
   const [deleting, setDeleting] = useState(false);
   const busy = deleting || !!saving;
+
+  const channelProfiles = useChannelProfiles(
+    item.chanId ? [item.chanId] : [],
+    guildChannels
+  );
 
   const handleConfirm = async () => {
     if (busy) return;
@@ -797,7 +812,13 @@ export function DeleteConfirmModal({
             <p className="text-white/80 font-medium text-sm">
               {item.roles.length} role{item.roles.length !== 1 ? 's' : ''}
             </p>
-            <p className="text-white/30 text-xs mt-0.5">#{channelName}</p>
+            <p className="text-white/30 text-xs mt-0.5">
+              <ChannelBadge
+                channelId={item.chanId}
+                profile={channelProfiles[item.chanId]}
+                inline
+              />
+            </p>
           </div>
         </div>
         <div className="flex gap-3 px-6 pb-6">

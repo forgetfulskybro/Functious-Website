@@ -367,22 +367,22 @@ export async function forceBotBirthday(guildId: string, userId: string, actorUse
   return res.json();
 }
 
-export async function addBirthdayBlacklist(guildId: string, userId: string) {
+export async function addBirthdayBlacklist(guildId: string, userId: string, actorUserId?: string) {
   const res = await safeFetch(`${BOT_API_URL}/api/guilds/${guildId}/birthdays/blacklist`, {
     method: "POST",
-    headers: botHeaders(),
+    headers: botHeaders(actorUserId),
     body: JSON.stringify({ userId }),
     cache: "no-store",
   });
   return res.json();
 }
 
-export async function removeBirthdayBlacklist(guildId: string, userId: string) {
+export async function removeBirthdayBlacklist(guildId: string, userId: string, actorUserId?: string) {
   const res = await safeFetch(
     `${BOT_API_URL}/api/guilds/${guildId}/birthdays/blacklist/${encodeURIComponent(userId)}`,
     {
       method: "DELETE",
-      headers: botHeaders(),
+      headers: botHeaders(actorUserId),
       cache: "no-store",
     },
   );

@@ -5,6 +5,8 @@ import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } fro
 import { MediaChannelEntry, MediaChannelModal, DeleteMediaChannelModal } from './Modals';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import { useGuildData } from '@/hooks/useGuildData';
+import ChannelBadge from '@/components/ui/ChannelBadge';
+import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import Sidebar from '@/components/layout/Sidebar';
 import Image from 'next/image';
 
@@ -81,6 +83,10 @@ export default function MediaChannelsClient({
   const [modal, setModal] = useState<'add' | MediaChannelEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<MediaChannelEntry | null>(null);
 
+  const liveDeleteEntry = deleteEntry
+    ? entries.find((e) => e.channelId === deleteEntry.channelId) ?? deleteEntry
+    : null;
+
   useEffect(() => {
     if (saving) return;
     const raw = (data as any).mediaChannels;
@@ -131,9 +137,10 @@ export default function MediaChannelsClient({
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
     : null;
 
-  function channelName(id: string): string {
-    return channels.find(c => c.id === id)?.name ?? id;
-  }
+  const channelProfiles = useChannelProfiles(
+    entries.map((e) => e.channelId).filter((id): id is string => !!id),
+    channels
+  );
 
   return (
     <div className="flex min-h-screen bg-bg-dark">
@@ -214,21 +221,21 @@ export default function MediaChannelsClient({
             </div>
           ) : (
             <ul className="space-y-2">
-              {entries.map(entry => {
-                const name = channelName(entry.channelId);
-                return (
-                  <li
-                    key={entry.channelId}
-                    className="group flex flex-col gap-2 rounded-xl bg-white/[0.03] px-4 py-3 sm:flex-row sm:items-center"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-white/80">
-                        <span className="text-white/35">#</span> {name}
-                      </p>
-                      <p className="mt-0.5 text-xs text-white/30">
-                        Allows: {allowedSummary(entry)}
-                      </p>
-                    </div>
+              {entries.map(entry => (
+                <li
+                  key={entry.channelId}
+                  className="group flex flex-col gap-2 rounded-xl bg-white/[0.03] px-4 py-3 sm:flex-row sm:items-center"
+                >
+                  <div className="min-w-0 flex-1">
+                    <ChannelBadge
+                      channelId={entry.channelId}
+                      profile={channelProfiles[entry.channelId]}
+                      className="text-white/80"
+                    />
+                    <p className="mt-0.5 text-xs text-white/30">
+                      Allows: {allowedSummary(entry)}
+                    </p>
+                  </div>
 
                     <div className="flex flex-wrap gap-1.5">
                       {entry.rating && (
@@ -292,8 +299,7 @@ export default function MediaChannelsClient({
                       </button>
                     </div>
                   </li>
-                );
-              })}
+                ))}
             </ul>
           )}
         </section>
@@ -320,14 +326,14 @@ export default function MediaChannelsClient({
         />
       )}
 
-      {deleteEntry && (
+      {liveDeleteEntry && (
         <DeleteMediaChannelModal
-          entry={deleteEntry}
-          channelName={channelName(deleteEntry.channelId)}
+          entry={liveDeleteEntry}
+          guildChannels={channels}
           saving={saving}
           onConfirmAction={async () => {
             if (
-              await handleSave(entries.filter(e => e.channelId !== deleteEntry.channelId))
+              await handleSave(entries.filter(e => e.channelId !== liveDeleteEntry.channelId))
             ) {
               setDeleteEntry(null);
             }

@@ -1,10 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { UserProfile, FluxerUser } from '@/lib/types';
+import type { ChannelProfile } from '@/lib/types';
+
+export type KnownChannel = {
+  id: string;
+  name?: string | null;
+  type?: number | null;
+};
 
 interface CacheEntry {
-  profile: UserProfile;
+  profile: ChannelProfile;
   at: number;
 }
 
@@ -12,10 +18,7 @@ const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const inFlight = new Map<string, Promise<void>>();
 
-let currentUserCache: { user: FluxerUser; at: number } | null = null;
-const CURRENT_USER_TTL_MS = 24 * 60 * 60 * 1000;
-
-function cachedProfile(id: string): UserProfile | null {
+function cachedProfile(id: string): ChannelProfile | null {
   const entry = cache.get(id);
   if (!entry) return null;
   if (Date.now() - entry.at > CACHE_TTL_MS) {
@@ -25,37 +28,9 @@ function cachedProfile(id: string): UserProfile | null {
   return entry.profile;
 }
 
-function sessionProfile(user: FluxerUser): UserProfile {
-  return {
-    id: user.id,
-    username: user.username,
-    globalName: user.global_name,
-    avatar: user.avatar,
-    avatarUrl: null,
-  };
-}
-
-async function getCurrentUser(): Promise<FluxerUser | null> {
-  if (currentUserCache && Date.now() - currentUserCache.at < CURRENT_USER_TTL_MS) {
-    return currentUserCache.user;
-  }
-  try {
-    const res = await fetch('/api/auth/me', { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      const user: FluxerUser | null = data?.user ?? null;
-      if (user) currentUserCache = { user, at: Date.now() };
-      return user;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 async function fetchBatch(ids: string[]): Promise<void> {
   try {
-    const res = await fetch('/api/users/profiles', {
+    const res = await fetch('/api/channels/profiles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -64,8 +39,8 @@ async function fetchBatch(ids: string[]): Promise<void> {
     if (!res.ok) return;
     const data = await res.json();
 
-    for (const [id, raw] of Object.entries(data.profiles ?? {})) {
-      const profile = raw as UserProfile;
+    for (const [id, raw] of Object.entries(data.channels ?? {})) {
+      const profile = raw as ChannelProfile;
       if (profile?.pending) continue;
       cache.set(id, { profile, at: Date.now() });
     }
@@ -94,8 +69,8 @@ function startFetch(ids: string[]): void {
   })();
 }
 
-function buildResult(ids: string[]): Record<string, UserProfile> {
-  const out: Record<string, UserProfile> = {};
+function buildResult(ids: string[]): Record<string, ChannelProfile> {
+  const out: Record<string, ChannelProfile> = {};
   for (const id of ids) {
     const profile = cachedProfile(id);
     if (profile) out[id] = profile;
@@ -103,14 +78,8 @@ function buildResult(ids: string[]): Record<string, UserProfile> {
   return out;
 }
 
-async function requestProfiles(ids: string[]): Promise<Record<string, UserProfile>> {
+async function requestProfiles(ids: string[]): Promise<Record<string, ChannelProfile>> {
   const unique = [...new Set(ids)];
-
-  const current = await getCurrentUser();
-  if (current) {
-    cache.set(current.id, { profile: sessionProfile(current), at: Date.now() });
-  }
-
   const missing = unique.filter((id) => !cachedProfile(id));
   if (missing.length === 0) return buildResult(unique);
 
@@ -124,17 +93,34 @@ async function requestProfiles(ids: string[]): Promise<Record<string, UserProfil
 const POLL_INTERVAL_MS = 4000;
 const MAX_ATTEMPTS = 20;
 
-export function useUserProfiles(ids: string[]): Record<string, UserProfile | undefined> {
-  const [profiles, setProfiles] = useState<Record<string, UserProfile | undefined>>({});
-  const key = ids.join(',');
+export function useChannelProfiles(
+  ids: string[],
+  knownChannels: KnownChannel[] = []
+): Record<string, ChannelProfile | undefined> {
+  const [profiles, setProfiles] = useState<Record<string, ChannelProfile | undefined>>({});
+  const key = [
+    JSON.stringify([...new Set(ids)].sort()),
+    knownChannels
+      .map((c) => `${c.id}:${c.name ?? ''}:${c.type ?? ''}`)
+      .sort()
+      .join('|'),
+  ].join('~');
 
   useEffect(() => {
+    for (const ch of knownChannels) {
+      if (!ch?.id || ch.name == null) continue;
+      cache.set(ch.id, {
+        profile: { id: ch.id, name: ch.name, type: ch.type ?? null },
+        at: Date.now(),
+      });
+    }
+
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
 
     const snapshot = () => {
-      const next: Record<string, UserProfile | undefined> = {};
+      const next: Record<string, ChannelProfile | undefined> = {};
       for (const id of ids) {
         const profile = cachedProfile(id);
         if (profile) next[id] = profile;

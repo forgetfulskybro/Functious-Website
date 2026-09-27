@@ -1,6 +1,8 @@
 'use client';
 import { PollEntry, totalVotes, CreatePollModal, PollResultsModal, DeletePollModal } from './Modals';
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
+import { useChannelProfiles } from '@/hooks/useChannelProfiles';
+import ChannelBadge from '@/components/ui/ChannelBadge';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { PollRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
@@ -161,7 +163,17 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
     }
   }, [activeGuildId]);
 
-  const channelName = (id: string) => guildChannels.find((c: Channels) => c.id === id)?.name ?? id;
+  const liveViewPoll = viewPoll
+    ? polls.find((p) => (p.messageId || p.id) === (viewPoll.messageId || viewPoll.id)) ?? viewPoll
+    : null;
+  const liveDeleteItem = deleteItem
+    ? polls.find((p) => (p.messageId || p.id) === (deleteItem.messageId || deleteItem.id)) ?? deleteItem
+    : null;
+
+  const channelProfiles = useChannelProfiles(
+    polls.map((p) => p.channelId).filter((id): id is string => !!id),
+    guildChannels
+  );
   const iconUrl = userGuild.icon ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64` : null;
 
   return (
@@ -236,7 +248,16 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
                       <p className="text-white/80 text-sm font-medium truncate">{poll.desc}</p>
                       <p className="text-white/30 text-xs mt-0.5">
                         {poll.options.name.length} options · {total} vote{total !== 1 ? 's' : ''}
-                        {poll.channelId && ` · #${channelName(poll.channelId)}`}
+                        {poll.channelId && (
+                          <>
+                            {' · '}
+                            <ChannelBadge
+                              channelId={poll.channelId}
+                              profile={channelProfiles[poll.channelId]}
+                              inline
+                            />
+                          </>
+                        )}
                         {poll.ended && ' · Ended'}
                       </p>
                     </div>
@@ -278,15 +299,15 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
         />
       )}
 
-      {viewPoll && <PollResultsModal poll={viewPoll} onClose={() => setViewPoll(null)} />}
+      {liveViewPoll && <PollResultsModal poll={liveViewPoll} onClose={() => setViewPoll(null)} />}
 
-      {deleteItem && (
+      {liveDeleteItem && (
         <DeletePollModal
-          poll={deleteItem}
-          channelName={deleteItem.channelId ? channelName(deleteItem.channelId) : undefined}
+          poll={liveDeleteItem}
+          guildChannels={guildChannels}
           busy={busy}
           onConfirm={async () => {
-            const ok = await removePoll(deleteItem);
+            const ok = await removePoll(liveDeleteItem);
             if (ok) setDeleteItem(null);
           }}
           onClose={() => setDeleteItem(null)}

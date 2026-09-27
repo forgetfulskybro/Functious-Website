@@ -94,8 +94,11 @@ export default function BirthdaysClient({
 
   useEffect(() => {
     setMsgWithAge(data.birthdayMessageWithAge ?? '');
+  }, [data.birthdayMessageWithAge]);
+
+  useEffect(() => {
     setMsgNoAge(data.birthdayMessageNoAge ?? '');
-  }, [data.birthdayMessageWithAge, data.birthdayMessageNoAge]);
+  }, [data.birthdayMessageNoAge]);
 
   function insertToken(ref: { current: HTMLTextAreaElement | null }, token: string, setter: (v: string) => void) {
     const el = ref.current;
@@ -684,13 +687,10 @@ export default function BirthdaysClient({
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="text-white/25 text-[10px]">{msgWithAge.length}/1000</span>
                     <div className="flex gap-2">
-                      {msgWithAge.trim() && (
+                      {msgWithAge.trim() !== (data.birthdayMessageWithAge ?? '') && (
                         <button
                           type="button"
-                          onClick={() => {
-                            setMsgWithAge('');
-                            handleSaveMessage('birthdayMessageWithAge', '');
-                          }}
+                          onClick={() => setMsgWithAge(data.birthdayMessageWithAge ?? '')}
                           disabled={saving}
                           className="px-3 py-1 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/50 hover:text-red-400 text-xs transition-colors disabled:opacity-40 focus-visible:outline-none"
                         >
@@ -732,13 +732,10 @@ export default function BirthdaysClient({
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="text-white/25 text-[10px]">{msgNoAge.length}/1000</span>
                     <div className="flex gap-2">
-                      {msgNoAge.trim() && (
+                      {msgNoAge.trim() !== (data.birthdayMessageNoAge ?? '') && (
                         <button
                           type="button"
-                          onClick={() => {
-                            setMsgNoAge('');
-                            handleSaveMessage('birthdayMessageNoAge', '');
-                          }}
+                          onClick={() => setMsgNoAge(data.birthdayMessageNoAge ?? '')}
                           disabled={saving}
                           className="px-3 py-1 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/50 hover:text-red-400 text-xs transition-colors disabled:opacity-40 focus-visible:outline-none"
                         >

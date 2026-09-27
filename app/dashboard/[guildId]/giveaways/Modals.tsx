@@ -6,7 +6,9 @@ import RolesDropdown from '@/components/ui/RolesDropdown';
 import NumberInput from '@/components/ui/NumberInput';
 import { Pagination } from '@/components/ui/Pagination';
 import UserBadge from '@/components/ui/UserBadge';
+import ChannelBadge from '@/components/ui/ChannelBadge';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
+import { useChannelProfiles, KnownChannel } from '@/hooks/useChannelProfiles';
 
 export interface GiveawayEntry {
   id: string;
@@ -386,19 +388,24 @@ export function CreateGiveawayModal({
 
 export function DeleteGiveawayModal({
   giveaway,
-  channelName,
+  guildChannels = [],
   busy,
   onConfirm,
   onClose,
 }: {
   giveaway: GiveawayEntry;
-  channelName?: string;
+  guildChannels?: KnownChannel[];
   busy?: boolean;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
 }) {
   const [deleting, setDeleting] = useState(false);
   const isBusy = deleting || !!busy;
+
+  const channelProfiles = useChannelProfiles(
+    giveaway.channelId ? [giveaway.channelId] : [],
+    guildChannels
+  );
 
   return (
     <div
@@ -424,7 +431,16 @@ export function DeleteGiveawayModal({
             </p>
             <p className="mt-0.5 text-xs text-white/30">
               {giveaway.winners} winner{giveaway.winners > 1 ? 's' : ''}
-              {channelName ? ` • #${channelName}` : ''}
+              {giveaway.channelId && (
+                <>
+                  {' • '}
+                  <ChannelBadge
+                    channelId={giveaway.channelId}
+                    profile={channelProfiles[giveaway.channelId]}
+                    inline
+                  />
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -460,14 +476,18 @@ export function DeleteGiveawayModal({
 
 export function GiveawayDetailsModal({
   giveaway,
-  channelName,
+  guildChannels = [],
   onClose,
 }: {
   giveaway: GiveawayEntry;
-  channelName?: string;
+  guildChannels?: KnownChannel[];
   onClose: () => void;
 }) {
   const profiles = useUserProfiles(giveaway.owner ? [giveaway.owner] : []);
+  const channelProfiles = useChannelProfiles(
+    giveaway.channelId ? [giveaway.channelId] : [],
+    guildChannels
+  );
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -522,10 +542,14 @@ export function GiveawayDetailsModal({
             </div>
           )}
 
-          {(channelName || giveaway.channelId) && (
+          {giveaway.channelId && (
             <div>
               <p className="text-xs text-white/40">Channel</p>
-              <p className="text-white">#{channelName || giveaway.channelId}</p>
+              <ChannelBadge
+                channelId={giveaway.channelId}
+                profile={channelProfiles[giveaway.channelId]}
+                className="mt-1"
+              />
             </div>
           )}
 

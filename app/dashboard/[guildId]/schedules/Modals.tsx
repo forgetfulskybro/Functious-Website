@@ -4,6 +4,8 @@ import { formatTimestamp, DateTimePicker, formatDt } from '@/components/ui/DateT
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import SelectDropdown from '@/components/ui/SelectDropdown';
 import { showErrorToast } from '@/components/ui/Toast';
+import ChannelBadge from '@/components/ui/ChannelBadge';
+import { useChannelProfiles, KnownChannel } from '@/hooks/useChannelProfiles';
 
 export interface ScheduledEntry {
   id: string;
@@ -27,19 +29,24 @@ function makeScheduleId() {
 
 export function DeleteConfirmModal({
   item,
-  channelName,
+  guildChannels = [],
   saving,
   onConfirm,
   onClose,
 }: {
   item: ScheduledEntry;
-  channelName: string;
+  guildChannels?: KnownChannel[];
   saving?: boolean;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
 }) {
   const [deleting, setDeleting] = useState(false);
   const busy = deleting || !!saving;
+
+  const channelProfiles = useChannelProfiles(
+    item.channelId ? [item.channelId] : [],
+    guildChannels
+  );
 
   const label =
     item.type === 'command' && item.commandName
@@ -74,7 +81,12 @@ export function DeleteConfirmModal({
           <div className="rounded-xl bg-white/[0.03] px-4 py-3">
             <p className="text-white/80 font-medium text-sm truncate">{label}</p>
             <p className="text-white/30 text-xs mt-0.5">
-              {formatTimestamp(item.timestamp)} • #{channelName}
+              {formatTimestamp(item.timestamp)} •{' '}
+              <ChannelBadge
+                channelId={item.channelId}
+                profile={channelProfiles[item.channelId]}
+                inline
+              />
               {item.recurring && item.recurring !== 'none' && ` • ${item.recurring}`}
             </p>
           </div>
@@ -667,15 +679,20 @@ export function ScheduleModal({
 
 export function ViewModal({
   item,
-  channelName,
   prefix,
+  guildChannels = [],
   onClose,
 }: {
   item: ScheduledEntry;
-  channelName: string;
   prefix: string;
+  guildChannels?: KnownChannel[];
   onClose: () => void;
 }) {
+  const channelProfiles = useChannelProfiles(
+    item.channelId ? [item.channelId] : [],
+    guildChannels
+  );
+
   function buildCommandPreview(): string | null {
     if (item.type !== 'command' || !item.commandName || !item.commandArgs) return null;
     const args = item.commandArgs;
@@ -762,7 +779,10 @@ export function ViewModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
               <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Channel</p>
-              <p className="text-white font-medium">#{channelName}</p>
+              <ChannelBadge
+                channelId={item.channelId}
+                profile={channelProfiles[item.channelId]}
+              />
             </div>
             <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
               <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Fires at</p>

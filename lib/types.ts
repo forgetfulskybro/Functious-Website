@@ -44,6 +44,13 @@ export interface UserProfile {
   pending?: boolean;
 }
 
+export interface ChannelProfile {
+  id: string;
+  name: string | null;
+  type?: number | null;
+  pending?: boolean;
+}
+
 export interface FluxerGuild {
   id: string;
   name: string;

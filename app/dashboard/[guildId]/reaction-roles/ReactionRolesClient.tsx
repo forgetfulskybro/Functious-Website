@@ -1,11 +1,13 @@
 'use client';
 
-import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels, Roles } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Roles } from '@/lib/types';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import { Skeleton, RowSkeleton } from '@/components/ui/Skeletons';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { useGuildData } from '@/hooks/useGuildData';
+import ChannelBadge from '@/components/ui/ChannelBadge';
+import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toggle } from '@/components/ui/Toggle';
 import Image from 'next/image';
@@ -58,12 +60,21 @@ export default function ReactionRolesClient({
   const [viewItem, setViewItem] = useState<ReactionRoleEntry | null>(null);
   const [deleteItem, setDeleteItem] = useState<ReactionRoleEntry | null>(null);
 
+  const liveViewItem = viewItem
+    ? entries.find((e) => e.msgId === viewItem.msgId) ?? viewItem
+    : null;
+  const liveDeleteItem = deleteItem
+    ? entries.find((e) => e.msgId === deleteItem.msgId) ?? deleteItem
+    : null;
+
   const iconUrl = userGuild.icon
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
     : null;
 
-  const channelName = (id: string) =>
-    guildChannels.find((c: Channels) => c.id === id)?.name ?? id;
+  const channelProfiles = useChannelProfiles(
+    entries.map((e) => e.chanId).filter((id): id is string => !!id),
+    guildChannels
+  );
 
   const roleName = (id: string) =>
     guildRoles.find((r: Roles) => r.id === id)?.name ?? id;
@@ -234,7 +245,12 @@ export default function ReactionRolesClient({
                         {item.exclusive ? ' • Exclusive' : ''}
                       </p>
                       <p className="text-white/30 text-xs mt-0.5 truncate">
-                        #{channelName(item.chanId)} •{' '}
+                        <ChannelBadge
+                          channelId={item.chanId}
+                          profile={channelProfiles[item.chanId]}
+                          inline
+                        />{' '}
+                        •{' '}
                         <a
                           href={`https://fluxer.app/channels/${activeGuildId}/${item.chanId}/${item.msgId}`}
                           target="_blank"
@@ -320,32 +336,32 @@ export default function ReactionRolesClient({
         />
       )}
 
-      {viewItem && (
+      {liveViewItem && (
         <ViewModal
           guildId={activeGuildId}
-          item={viewItem}
-          channelName={channelName(viewItem.chanId)}
+          item={liveViewItem}
+          guildChannels={guildChannels}
           roleName={roleName}
-          onToggleExclusive={() => toggleExclusive(viewItem)}
+          onToggleExclusive={() => toggleExclusive(liveViewItem)}
           onClose={() => setViewItem(null)}
         />
       )}
 
-      {deleteItem && (
+      {liveDeleteItem && (
         <DeleteConfirmModal
-          item={deleteItem}
-          channelName={channelName(deleteItem.chanId)}
+          item={liveDeleteItem}
+          guildChannels={guildChannels}
           saving={saving}
           onConfirm={async () => {
             try {
               const res = await fetch(
-                `/api/bot/guilds/${activeGuildId}/reactionroles/${deleteItem.msgId}/delete`,
+                `/api/bot/guilds/${activeGuildId}/reactionroles/${liveDeleteItem.msgId}/delete`,
                 { method: 'DELETE', credentials: 'include' }
               );
               if (!res.ok) throw new Error('Delete failed');
-              const ok = await handleSaveList(entries.filter((e) => e.msgId !== deleteItem.msgId));
+              const ok = await handleSaveList(entries.filter((e) => e.msgId !== liveDeleteItem.msgId));
               if (ok) setDeleteItem(null);
-              invalidateCachedMessage(activeGuildId, deleteItem.msgId);
+              invalidateCachedMessage(activeGuildId, liveDeleteItem.msgId);
             } catch {
               showErrorToast('Error', { description: 'Failed to delete reaction role message.' });
             }
