@@ -7,17 +7,17 @@ import { GENERAL_GUIDE, findChapter } from '@/data/guides';
 export default function ThemeGuide() {
   const chapter = findChapter(GENERAL_GUIDE, 'theme')!;
   return (
-    <GuidePage guide={GENERAL_GUIDE} chapter={chapter} description="Change the bot's embed color, avatar, and banner for your server.">
+    <GuidePage guide={GENERAL_GUIDE} chapter={chapter} description="Change the bot's embed color, avatar, and banner for your community.">
 
       <GuideSection title="How it works">
         <p>
           Running <code className="font-mono text-orange-light mr-1">f!theme</code> recolors the bot&apos;s avatar and
           banner using your chosen color, then saves it as the default embed color for all bot
-          replies in your server.
+          replies in your community.
         </p>
         <Callout title="Requires Manage Guild">
-          Only members with Manage Guild can change the theme. The change is per-server -other
-          servers are not affected.
+          Only members with Manage Guild can change the theme. The change is per-community - other
+          communities are not affected.
         </Callout>
       </GuideSection>
 
@@ -42,12 +42,12 @@ export default function ThemeGuide() {
         <ul className="list-disc space-y-1.5 pl-5">
           <li>The bot&apos;s <span className="font-semibold text-white">profile picture</span> (recolored to match your theme).</li>
           <li>The bot&apos;s <span className="font-semibold text-white">banner</span> (recolored to match your theme).</li>
-          <li>The <span className="font-semibold text-white">left-side accent color</span> on all bot embeds in your server.</li>
+          <li>The <span className="font-semibold text-white">left-side accent color</span> on all bot embeds in your community.</li>
         </ul>
         <Callout>
-          The bot&apos;s global profile is shared across all servers. Each server stores its own theme
-          color, but the avatar and banner update in Fluxer&apos;s server profile -visible only in
-          your server&apos;s member list and profile pop-ups.
+          The bot&apos;s global profile is shared across all communities. Each community stores its own theme
+          color, but the avatar and banner update in Fluxer&apos;s community profile -visible only in
+          your community&apos;s member list and profile pop-ups.
         </Callout>
       </GuideSection>
     </GuidePage>

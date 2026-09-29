@@ -220,7 +220,7 @@ export default function BirthdaySettings({
         ? [...new Set([...enabledGuilds, guildId])]
         : enabledGuilds.filter((id) => id !== guildId);
       await patch({ birthday: { enabledGuilds: next } });
-      showToast(enabled ? 'Announcements enabled in this server' : 'Announcements disabled in this server');
+      showToast(enabled ? 'Announcements enabled in this community' : 'Announcements disabled in this community');
     } catch (err: any) {
       showErrorToast('Failed to update', { description: err?.message });
     } finally {
@@ -327,7 +327,7 @@ export default function BirthdaySettings({
                   </svg>
                 </div>
                 <p className="text-white/40 text-sm font-medium">No birthday set</p>
-                <p className="text-white/25 text-xs mt-1">Set your birthday to get announced in servers</p>
+                <p className="text-white/25 text-xs mt-1">Set your birthday to get announced in communities</p>
                 <button
                   type="button"
                   onClick={() => setModalOpen(true)}
@@ -361,13 +361,13 @@ export default function BirthdaySettings({
                 Announce in
               </h2>
               <p className="text-white/25 text-[11px] mt-0.5">
-                Pick which servers your birthday is announced in
+                Pick which communities your birthday is announced in
               </p>
             </div>
 
             {botGuilds.length === 0 ? (
               <p className="text-white/30 text-sm py-6 text-center">
-                Invite Functious to a server to get started.
+                Invite Functious to a community to get started.
               </p>
             ) : (
               <>
@@ -391,7 +391,7 @@ export default function BirthdaySettings({
                         setSearch(e.target.value);
                         setExpandedGuilds(false);
                       }}
-                      placeholder="Search servers…"
+                      placeholder="Search communities…"
                       className="flex-1 bg-transparent text-white text-xs placeholder-white/25 focus:outline-none"
                     />
                     {search && (
@@ -410,14 +410,14 @@ export default function BirthdaySettings({
                   </div>
                   {filteredGuilds.length > 0 && (
                     <p className="text-white/30 text-xs shrink-0 tabular-nums">
-                      {filteredGuilds.length} server{filteredGuilds.length === 1 ? '' : 's'}
+                      {filteredGuilds.length} communit{filteredGuilds.length === 1 ? 'y' : 'ies'}
                     </p>
                   )}
                 </div>
 
                 {filteredGuilds.length === 0 ? (
                   <p className="text-white/30 text-sm py-6 text-center">
-                    No servers match “{search}”.
+                    No communities match “{search}”.
                   </p>
                 ) : (
                   <>
@@ -482,7 +482,7 @@ export default function BirthdaySettings({
                       >
                         {expandedGuilds
                           ? 'Show less'
-                          : `View ${filteredGuilds.length - 5} more server${filteredGuilds.length - 5 === 1 ? '' : 's'}`}
+                          : `View ${filteredGuilds.length - 5} more communit${filteredGuilds.length - 5 === 1 ? 'y' : 'ies'}`}
                       </button>
                     )}
                   </>
@@ -513,7 +513,7 @@ export default function BirthdaySettings({
           day={birthday!.day!}
           age={birthday!.age}
           ping={birthday?.ping ?? true}
-          guildName={previewGuild.name ?? 'server'}
+          guildName={previewGuild.name ?? 'community'}
           onClose={() => setPreviewGuildId(null)}
         />
       )}

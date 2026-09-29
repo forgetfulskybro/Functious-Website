@@ -29,7 +29,7 @@ export default function RemindGuide() {
         </p>
         <CodeBlock title="Fluxer" code="f!remind dm 1h Take a break" />
         <Callout>
-          DM reminders require that you have DMs from server members enabled in your Fluxer
+          DM reminders require that you have DMs from community members enabled in your Fluxer
           privacy settings.
         </Callout>
       </GuideSection>

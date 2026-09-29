@@ -118,7 +118,7 @@ export const GIVEAWAY_GUIDE: Guide = {
   slug: 'giveaways',
   title: 'Giveaways',
   tagline: 'Create, delete, and reroll giveaways.',
-  description: 'Run giveaways in your server with entry reactions, winner selection, and rerolls.',
+  description: 'Run giveaways in your community with entry reactions, winner selection, and rerolls.',
   chapters: [
     { slug: '', title: 'Overview', short: 'What giveaways are and how they work.' },
     { slug: 'creating', title: 'Creating a Giveaway', short: 'The command format and all available options.' },

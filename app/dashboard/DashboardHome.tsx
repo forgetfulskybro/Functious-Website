@@ -117,8 +117,8 @@ export default function DashboardHome({ user, guilds, currentPage }: Props) {
             </h1>
             <p className="text-white/50 text-sm mt-1">
               {botGuilds.length > 0
-                ? `Functious is active in ${botGuilds.length} of your servers.`
-                : "Add Functious to a server to get started."}
+                ? `Functious is active in ${botGuilds.length} of your communities.`
+                : "Add Functious to a community to get started."}
             </p>
           </div>
           <button
@@ -149,7 +149,7 @@ export default function DashboardHome({ user, guilds, currentPage }: Props) {
             {botGuilds.length > GUILDS_PER_PAGE && (
               <div className="flex items-center justify-end mb-3">
                 <p className="text-white/30 text-xs">
-                  {botGuilds.length} servers
+                  {botGuilds.length} communities
                 </p>
               </div>
             )}
@@ -230,11 +230,11 @@ export default function DashboardHome({ user, guilds, currentPage }: Props) {
           <section aria-label="Communities without Functious">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-white/40 text-xs font-semibold uppercase tracking-widest">
-                Add Functious to a server
+                Add Functious to a community
               </h2>
               {otherGuilds.length > GUILDS_PER_PAGE && (
                 <p className="text-white/30 text-xs">
-                  {otherGuilds.length} servers
+                  {otherGuilds.length} communities
                 </p>
               )}
             </div>
@@ -315,14 +315,14 @@ export default function DashboardHome({ user, guilds, currentPage }: Props) {
 
         {guilds.length === 0 && (
           <div className="text-center py-20">
-            <p className="text-white/40 text-sm">No servers found.</p>
+            <p className="text-white/40 text-sm">No communities found.</p>
             <a
               href={BOT_INVITE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block mt-4 px-6 py-2.5 rounded-xl bg-orange text-white font-semibold text-sm hover:bg-orange-bright transition-colors"
             >
-              Add Functious to a server
+              Add Functious to a community
             </a>
           </div>
         )}

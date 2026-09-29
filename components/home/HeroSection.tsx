@@ -42,7 +42,7 @@ export default function HeroSection() {
           variants={itemVariants}
           className="max-w-xl text-base font-medium text-white/80 sm:text-lg md:text-xl"
         >
-          A simple yet useful Fluxer companion.
+          A simple yet useful Fluxer companion for your community.
         </motion.p>
 
         <motion.div variants={itemVariants}>

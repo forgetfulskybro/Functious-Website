@@ -702,7 +702,7 @@ export function TagModal({
               {initial ? 'Edit Tag' : 'Create New Tag'}
             </h2>
             <p className="mt-0.5 text-xs text-white/30">
-              {isScript ? 'Rune script with live preview' : 'Custom server responses'}
+              {isScript ? 'Rune script with live preview' : 'Custom community responses'}
             </p>
           </div>
           <button type="button" onClick={onClose} disabled={busy} className="text-xl leading-none text-white/40 hover:text-white disabled:opacity-50">
@@ -811,7 +811,7 @@ export function TagModal({
                   rows={6}
                   spellCheck={false}
                   className="w-full resize-none rounded-lg bg-white/5 px-3 py-3 font-mono text-sm leading-relaxed text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
-                  placeholder={type === 'text' ? 'Hello!' : 'Welcome to the server!'}
+                  placeholder={type === 'text' ? 'Hello!' : 'Welcome to the community!'}
                   required
                 />
               </div>

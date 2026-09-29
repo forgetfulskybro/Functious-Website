@@ -19,7 +19,7 @@ export default function BypassGuide() {
         </p>
         <Callout title="Requires Administrator">
           Managing bypass roles requires the Administrator permission. Up to 15 bypass roles are
-          allowed per server.
+          allowed per community.
         </Callout>
       </GuideSection>
 

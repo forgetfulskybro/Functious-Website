@@ -23,7 +23,7 @@ export default function ScheduleOverview() {
       <GuideSection title="Permission required">
         <Callout title="Manage Guild">
           All <code className="font-mono text-orange-light">f!schedule</code> subcommands require
-          Manage Guild. Up to 10 scheduled messages are allowed per server.
+          Manage Guild. Up to 10 scheduled messages are allowed per community.
         </Callout>
       </GuideSection>
 

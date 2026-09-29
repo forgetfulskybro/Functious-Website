@@ -27,7 +27,7 @@ export default function TempChannelsManage() {
         </ul>
         <Callout>
           The bot sends a DM asking for the new value after the owner reacts. Members must have
-          DMs from server members enabled for this to work.
+          DMs from community members enabled for this to work.
         </Callout>
       </GuideSection>
 

@@ -339,7 +339,7 @@ export default function AuditLogsClient({
               Audit Logs
             </h1>
             <p className="text-white/35 text-sm mt-1.5">
-              Configuration changes for this server. Click a row for full
+              Configuration changes for this community. Click a row for full
               details.
             </p>
           </div>

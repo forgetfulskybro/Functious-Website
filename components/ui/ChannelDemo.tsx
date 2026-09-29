@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import type { FluxerUser } from '@/lib/types';
+import { useSessionUser } from '@/hooks/useSessionUser';
 
 export type Author = 'user' | 'bot';
 
@@ -136,6 +138,12 @@ export function ChannelDemo({
   className = '',
 }: ChannelDemoProps) {
   const TOTAL_MS = (timeline[timeline.length - 1]?.t ?? 0) + 800;
+
+  const sessionUser = useSessionUser();
+  const userName = sessionUser
+    ? sessionUser.global_name || sessionUser.username
+    : 'You';
+  const userAvatar = sessionUser ? avatarUrl(sessionUser) : null;
 
   const [elapsed, setElapsed] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -327,17 +335,17 @@ export function ChannelDemo({
                         transition={{ duration: 0.35, ease: 'easeOut' }}
                         className="flex gap-3"
                       >
-                        {msg.author === 'bot' ? <BotAvatar /> : <UserAvatar />}
-  
+                        {msg.author === 'bot' ? <BotAvatar /> : <UserAvatar src={userAvatar} name={userName} />}
+
                         {msg.typing ? (
                           <div className="flex items-center gap-2 pt-1.5 text-xs italic text-white/40">
                             <TypingDots />
-                            You are typing…
+                            {userName} {sessionUser ? 'is' : 'are'} typing…
                           </div>
                         ) : (
                           <div className="min-w-0 flex-1">
                             <MessageHeader
-                              name={msg.author === 'bot' ? 'Functious' : 'You'}
+                              name={msg.author === 'bot' ? 'Functious' : userName}
                               isBot={msg.author === 'bot'}
                             />
                             {msg.content && (
@@ -458,7 +466,32 @@ function BotAvatar() {
   );
 }
 
-function UserAvatar() {
+function avatarUrl(user: FluxerUser): string {
+  if (!user.avatar) {
+    const index = Number(BigInt(user.id) >> BigInt(22)) % 6;
+    return `https://fluxerstatic.com/avatars/${index}.png`;
+  }
+  const ext = user.avatar.startsWith('a_') ? 'gif' : 'png';
+  return `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.${ext}?size=64`;
+}
+
+function isGif(src: string): boolean {
+  return src.includes('.gif') || src.endsWith('.gif');
+}
+
+function UserAvatar({ src, name }: { src: string | null; name: string }) {
+  if (src) {
+    return (
+      <Image
+        src={src}
+        alt={name}
+        width={32}
+        height={32}
+        unoptimized={isGif(src)}
+        className="mt-0.5 h-8 w-8 flex-shrink-0 rounded-full"
+      />
+    );
+  }
   return (
     <Image
       src="/Functious_inverted.png"

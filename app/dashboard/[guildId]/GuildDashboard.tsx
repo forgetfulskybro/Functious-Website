@@ -245,7 +245,7 @@ export default function GuildDashboard({
       <main className="flex-1 px-6 py-10 w-full max-w-3xl mx-auto">
         <div className="flex items-center gap-5 mb-10 pb-7 border-b border-white/5">
           {iconUrl ? (
-            <Image src={iconUrl} alt={userGuild.name ?? 'Server'} width={52} height={52} className="rounded-2xl flex-shrink-0" />
+            <Image src={iconUrl} alt={userGuild.name ?? 'Community'} width={52} height={52} className="rounded-2xl flex-shrink-0" />
           ) : (
             <div className="w-[52px] h-[52px] rounded-2xl bg-orange/15 flex items-center justify-center text-orange-warm text-2xl font-bold flex-shrink-0">
               {(userGuild.name ?? 'S')[0]}
@@ -304,7 +304,7 @@ export default function GuildDashboard({
                 Birthdays
               </p>
               <p className="text-white/25 text-xs mt-1">
-                Upcoming birthday announcements in this server
+                Upcoming birthday announcements in this community
               </p>
             </div>
           </div>
@@ -401,7 +401,7 @@ export default function GuildDashboard({
               <NavCard href={`${base}/configuration`} label="Configuration" desc="Prefix, language, DM settings" icon={icons.config} />
               <NavCard href={`${base}/roles-permissions`} label="Roles & Permissions"  desc="Join roles, bypass, sticky roles" icon={icons.roles} />
               <NavCard href={`${base}/tempchannels`} label="Temp Channels"  desc="Voice channels that auto-create on join" icon={icons.channels} />
-              <NavCard href={`${base}/tags`} label="Tags" desc="Custom server shortcuts and commands" icon={icons.tags} />
+              <NavCard href={`${base}/tags`} label="Tags" desc="Custom community shortcuts and commands" icon={icons.tags} />
             </div>
           )}
         </div>

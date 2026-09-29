@@ -10,12 +10,13 @@ import { usePathname } from 'next/navigation';
 const NAV_LINKS = [
   { label: 'Features', href: '/#features' },
   { label: 'Commands', href: '/commands' },
+  { label: 'FAQ', href: '/faq' },
   { label: 'Guides', href: '/guides' },
 ] as const;
 
 const SUPPORT_LINKS = [
   {
-    label: 'Support Server',
+    label: 'Support Community',
     href: 'https://fluxer.gg/YnINU09E',
     external: true,
     description: 'Join the community',

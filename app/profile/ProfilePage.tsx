@@ -699,7 +699,7 @@ export default function ProfilePage({
                     Timezone
                   </h2>
                   <p className="text-white/20 text-[10px] hidden sm:block truncate">
-                    Reminders & server times
+                    Reminders & community times
                   </p>
                 </div>
                 <TimezonePicker

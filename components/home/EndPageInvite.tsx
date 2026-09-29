@@ -18,10 +18,10 @@ export default function FaqSection() {
         id="faq-heading"
         className="mb-5 text-center text-3xl font-bold tracking-tight text-white sm:text-4xl"
       >
-        Want a functional server?
+        Want a functional community?
         </h2>
         <h4 className="mb-10 text-center tracking-tight text-white/40">
-          Invite Functious to turn your server functional with ease.
+          Invite Functious to turn your community functional with ease.
         </h4>
         <div className="flex justify-center">
           <InviteButton size="lg" />

@@ -10,7 +10,7 @@ export default function ScheduleManaging() {
     <GuidePage guide={SCHEDULE_GUIDE} chapter={chapter} description="View, edit, and delete scheduled messages.">
 
       <GuideSection title="Viewing scheduled messages">
-        <p>List all pending schedules for the server:</p>
+        <p>List all pending schedules for the community:</p>
         <CodeBlock title="Fluxer" code="f!schedule view" />
         <p>View full details of a specific entry by its number:</p>
         <CodeBlock title="Fluxer" code="f!schedule view 2" />

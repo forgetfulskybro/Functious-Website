@@ -23,7 +23,7 @@ export default function RuneOverviewPage() {
     >
       <GuideSection title="What is Rune?">
         <p>
-          A tag is a small program a server can invoke any time. It can be a reusable message, a
+          A tag is a small program a community can invoke any time. It can be a reusable message, a
           minigame, a lookup. Rune is what you write inside it. The language uses braces
           for blocks and JS-style parentheses, so if you have written any scripting
           language before, it will feel immediately familiar.
@@ -95,7 +95,7 @@ export default function RuneOverviewPage() {
           <Link className="text-orange-light underline-offset-4 hover:underline" href="/dashboard">
             dashboard
           </Link>
-          . A tag can be plain text or a rich embed, reused across your server the moment you
+          . A tag can be plain text or a rich embed, reused across your community the moment you
           save it. This guide covers the language itself. Either place runs the same Rune.
         </p>
       </GuideSection>

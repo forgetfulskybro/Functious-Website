@@ -183,7 +183,7 @@ export default function ConfigurationClient({
                 />
               </SettingRow>
 
-              <SettingRow label="Language" description="Language used for bot responses in this server.">
+              <SettingRow label="Language" description="Language used for bot responses in this community.">
                 <LanguageSelect
                   value={data.language || 'en_EN'}
                   onChange={v => handleSave({ language: v })}
@@ -196,7 +196,7 @@ export default function ConfigurationClient({
 
               <SettingRow
                 label="Theme"
-                description="Customize the bot's avatar, banner and accent color for this server."
+                description="Customize the bot's avatar, banner and accent color for this community."
               >
                 <button
                   type="button"

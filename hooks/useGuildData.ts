@@ -68,7 +68,7 @@ export function useGuildData(guildId: string): UseGuildDataResult {
         });
         if (res.status === 401) { setError('Not authorised.'); return; }
         if (res.status === 404) { setError('Failed to load: 404'); return; }
-        if (!res.ok) { setError('Failed to load server settings.'); return; }
+        if (!res.ok) { setError('Failed to load community settings.'); return; }
 
         const data: GuildData = await res.json();
 

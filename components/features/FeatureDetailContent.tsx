@@ -99,7 +99,7 @@ export default function FeatureDetailContent({ feature }: FeatureDetailContentPr
           <ul className="space-y-2 pl-4">
             {capabilities.map((cap) => (
               <li key={cap} className="flex items-start gap-2 text-sm leading-relaxed text-white/70">
-                <span className="mt-1 text-orange" aria-hidden="true">✦</span>
+                <span className="leading-relaxed text-orange" aria-hidden="true">✦</span>
                 {cap}
               </li>
             ))}

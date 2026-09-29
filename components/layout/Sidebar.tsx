@@ -147,7 +147,7 @@ export default function Sidebar({ user, guilds, activeGuildId, currentPage }: Si
     searchParams.get('tab') === 'birthdays' ? 'birthdays' : 'information';
 
   const backHref = currentPage === 'profile' ? '/dashboard' : activeGuildId ? '/dashboard' : '/';
-  const backLabel = currentPage === 'profile' ? 'Dashboard' : activeGuildId ? 'All servers' : 'Homepage';
+  const backLabel = currentPage === 'profile' ? 'Dashboard' : activeGuildId ? 'All communities' : 'Homepage';
 
   const SidebarContent = (
     <>
@@ -272,7 +272,7 @@ export default function Sidebar({ user, guilds, activeGuildId, currentPage }: Si
 
         {activeGuildId && (
           <div className="mt-3 border-t border-white/5 pt-3">
-            <p className="text-white/25 text-[10px] px-3 mb-1.5 uppercase tracking-widest font-semibold">Server</p>
+            <p className="text-white/25 text-[10px] px-3 mb-1.5 uppercase tracking-widest font-semibold">Community</p>
             <ul className="flex flex-col gap-0.5">
               {GUILD_NAV_LINKS.map(link => {
                 const href = `/dashboard/${activeGuildId}${link.href ? `/${link.href}` : ''}`;

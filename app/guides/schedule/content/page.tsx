@@ -53,7 +53,7 @@ export default function ScheduleContent() {
 
       <GuideSection title="Dynamic variables">
         <p>Use these placeholders inside your message -they are replaced when the message is sent:</p>
-        <CodeBlock title="Variables" code={'{user} - mention of the creator\n{username} - name\n{server} - server name\n{members} - member count\n{channel} - target channel\n{time} - current timestamp\n{count} - how many times this recurring message has fired'} />
+        <CodeBlock title="Variables" code={'{user} - mention of the creator\n{username} - name\n{server} - community name\n{members} - member count\n{channel} - target channel\n{time} - current timestamp\n{count} - how many times this recurring message has fired'} />
         <p>You can also define custom variables:</p>
         <CodeBlock title="Custom variable" code={'{winner = "Alice"}\nCongrats {winner}!'} />
       </GuideSection>

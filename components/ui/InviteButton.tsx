@@ -19,7 +19,7 @@ export default function InviteButton({ size = 'md', className = '' }: InviteButt
       href={BOT_INVITE_URL}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Add Functious to your Fluxer server"
+      aria-label="Add Functious to your Fluxer community"
       className={[
         'group inline-flex items-center justify-center gap-3 rounded-2xl font-semibold',
         'bg-gradient-to-br from-orange-500 via-orange-600 to-rose-500',

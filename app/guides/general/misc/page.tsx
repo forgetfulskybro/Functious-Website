@@ -9,7 +9,7 @@ export default function MiscGuide() {
     <GuidePage guide={GENERAL_GUIDE} chapter={chapter} description="A quick reference for the remaining utility commands.">
 
       <GuideSection title="Prefix">
-        <p>Change the bot&apos;s command prefix for your server (max 8 characters):</p>
+        <p>Change the bot&apos;s command prefix for your community (max 8 characters):</p>
         <CodeBlock title="Fluxer" code="f!prefix !" />
         <p>Mention the bot at any time to find out the current prefix:</p>
         <CodeBlock title="Fluxer" code="@Functious" />
@@ -27,7 +27,7 @@ export default function MiscGuide() {
       </GuideSection>
 
       <GuideSection title="Info">
-        <p>Show overall bot statistics -server count, uptime, and active polls and giveaways:</p>
+        <p>Show overall bot statistics -community count, uptime, and active polls and giveaways:</p>
         <CodeBlock title="Fluxer" code="f!info" />
       </GuideSection>
     </GuidePage>

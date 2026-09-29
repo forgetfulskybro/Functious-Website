@@ -14,13 +14,13 @@ export default function AutorolesGuide() {
     >
       <GuideSection title="Join roles">
         <p>
-          Join roles are added to every member the moment they join the server. Add one or more
+          Join roles are added to every member the moment they join the community. Add one or more
           role names (or mentions) after the subcommand:
         </p>
         <CodeBlock title="Fluxer - add" code="f!autoroles joinroles add Member, Newcomer" />
         <CodeBlock title="Fluxer - remove" code="f!autoroles joinroles remove Member" />
         <Callout>
-          You can add up to 20 join roles per server. Duplicates are ignored automatically.
+          You can add up to 20 join roles per community. Duplicates are ignored automatically.
         </Callout>
       </GuideSection>
 
@@ -39,7 +39,7 @@ export default function AutorolesGuide() {
 
       <GuideSection title="Timed roles">
         <p>
-          Timed roles are assigned to a member after they have been in the server for a set
+          Timed roles are assigned to a member after they have been in the community for a set
           amount of time. Use the <code className="font-mono text-orange-light">{'{time:}'}</code> option to set the delay:
         </p>
         <CodeBlock title="Fluxer - add timed role" code="f!autoroles timedroles add Veteran {time:30d}" />

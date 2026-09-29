@@ -85,8 +85,7 @@ const setupEmbed = (
           3
         </span>
         <p className="text-[12px] leading-relaxed text-white/70">
-          React <span className="text-white/90">✅</span> on this message when you&apos;re done, or{' '}
-          <span className="text-white/90">❌</span> to cancel.
+          Once every emoji is paired, the message goes live and this notice is removed.
         </p>
       </div>
 
@@ -142,10 +141,6 @@ const TIMELINE: TimelineStep[] = [
           id: 'setup',
           author: 'bot',
           embed: setupEmbed,
-          reactions: [
-            { emoji: '✅', count: 1, highlighted: false },
-            { emoji: '❌', count: 1, highlighted: false },
-          ],
         },
       },
     ],
@@ -267,27 +262,25 @@ const TIMELINE: TimelineStep[] = [
   },
 
   {
-    id: 'check-react',
-    label: '✅ Done',
+    id: 'remove-user-reaction',
+    label: 'Yours removed',
     t: 15600,
-    actions: [
-      {
-        type: 'editReaction',
-        messageId: 'setup',
-        emoji: '✅',
-        patch: { count: 2, highlighted: true },
-      },
-    ],
+    actions: ROLES.map(role => ({
+      type: 'editReaction' as const,
+      messageId: 'bot-roles',
+      emoji: role.emoji,
+      patch: { count: 1, highlighted: false },
+    })),
   },
 
   {
     id: 'delete-bot-embed',
     label: 'Delete Bot Embed',
-    t: 17000,
+    t: 16600,
     actions: [{ type: 'deleteMessage', id: 'setup' }],
   },
 
-  { id: 'done', label: 'Complete', t: 17300 },
+  { id: 'done', label: 'Complete', t: 16900 },
 ];
 
 const EXPLANATIONS: StepExplanation[] = [
@@ -295,7 +288,7 @@ const EXPLANATIONS: StepExplanation[] = [
     id: 'bot-embed',
     label: 'Run the command',
     detail:
-      'Type f!roles create. Functious sends a setup embed showing the {role:Name} format, with ✅ and ❌ reactions.',
+      'Type f!roles create. Functious sends a setup embed showing the {role:Name} format and the steps to pair each role.',
   },
   {
     id: 'user-types1',
@@ -315,12 +308,6 @@ const EXPLANATIONS: StepExplanation[] = [
     detail:
       'Each emoji you add is immediately paired to the matching {role:X} tag. The tag flips to the emoji + role name right away.',
   },
-  {
-    id: 'check-react',
-    label: 'React ✅ to finish',
-    detail:
-      "Once all emojis are added, react ✅ on the bot's message. The reaction role message is now live.",
-  },
 ];
 
 export default function ReactionRolesDemo() {
@@ -328,7 +315,7 @@ export default function ReactionRolesDemo() {
     <ChannelDemo
       channelName="roles"
       title="See Reaction Roles in Action"
-      subtitle="The full setup flow - exactly how it works in your server"
+      subtitle="The full setup flow - exactly how it works in your community"
       timeline={TIMELINE}
       explanations={EXPLANATIONS}
     />

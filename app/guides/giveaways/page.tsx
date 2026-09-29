@@ -21,7 +21,7 @@ export default function GiveawayOverview() {
           option is on.
         </p>
         <ul className="list-disc space-y-2 pl-5">
-          <li><span className="font-semibold text-white">Up to 15 active giveaways</span> per server at a time.</li>
+          <li><span className="font-semibold text-white">Up to 15 active giveaways</span> per community at a time.</li>
           <li><span className="font-semibold text-white">Up to 50 winners</span> per giveaway.</li>
           <li><span className="font-semibold text-white">Optional flags</span> - channel redirect, DM winners, ping winners, entry requirement, image, and more.</li>
         </ul>

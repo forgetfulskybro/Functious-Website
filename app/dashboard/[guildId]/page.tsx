@@ -10,7 +10,7 @@ type Props = { params: Promise<{ guildId: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { guildId } = await params;
-  return { title: 'Server Dashboard' };
+  return { title: 'Community Dashboard' };
 }
 
 export default async function GuildPage({ params }: Props) {

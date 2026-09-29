@@ -18,12 +18,21 @@ export interface CommandEntry {
 export const COMMANDS: CommandEntry[] = [
   {
     name: 'autoroles',
-    description: 'Setup autoroles in your server such as join roles or sticky roles.',
+    description: 'Setup autoroles in your community such as join roles or sticky roles.',
     usage: 'autoroles <help|view|sticky|join add/remove [roles]|timed add/remove [roles] {time:X}>',
     aliases: ['autorole', 'ar'],
     cooldown: 2000,
     permissions: 'Manage Guild',
     category: 'server-management',
+  },
+  {
+    name: 'birthday',
+    description: "Store birthdays and announce them at midnight in each member's own timezone.",
+    usage: 'birthday <help|set <date>|edit <date>|age <number|remove>|view|remove|preview|ping|enable|disable|servers|settings|channel <#channel>|role <@role>|annping|list|force <@user>|blacklist [@user|remove|clear]|message [withage <text>|noage <text>|reset]>',
+    aliases: ['bday', 'bd'],
+    cooldown: 3000,
+    permissions: null,
+    category: 'utility',
   },
   {
     name: 'bypass',
@@ -63,7 +72,7 @@ export const COMMANDS: CommandEntry[] = [
   },
   {
     name: 'language',
-    description: 'Change the bot response language for your server.',
+    description: 'Change the bot response language for your community.',
     usage: 'language [language_code]',
     aliases: ['lang'],
     cooldown: 5000,
@@ -99,7 +108,7 @@ export const COMMANDS: CommandEntry[] = [
   },
   {
     name: 'prefix',
-    description: 'Change the bot command prefix for your server (max 8 characters).',
+    description: 'Change the bot command prefix for your community (max 8 characters).',
     usage: 'prefix <new_prefix>',
     aliases: [],
     cooldown: 3000,
@@ -117,7 +126,7 @@ export const COMMANDS: CommandEntry[] = [
   },
   {
     name: 'roles',
-    description: 'Setup and manage reaction role panels for your server.',
+    description: 'Setup and manage reaction role panels for your community.',
     usage: 'roles <help|create|edit|view|delete|fix|dm|exclusive|stop> [options]',
     aliases: ['reactionroles', 'reactions', 'reactroles', 'reactionrole', 'rr'],
     cooldown: 7000,
@@ -153,7 +162,7 @@ export const COMMANDS: CommandEntry[] = [
   },
   {
     name: 'theme',
-    description: 'Change the bot avatar, banner, and embed colour for your server.',
+    description: 'Change the bot avatar, banner, and embed colour for your community.',
     usage: 'theme <color|default>',
     aliases: [],
     cooldown: 15000,
@@ -176,5 +185,5 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   'giveaways-polls': 'Giveaways & Polls',
   scheduling: 'Scheduling',
   utility: 'Utility',
-  'server-management': 'Server Management',
+  'server-management': 'Community Management',
 };

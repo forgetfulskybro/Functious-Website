@@ -17,7 +17,7 @@ export default function ReactionRolesOverview() {
           The bot can optionally DM members when a role is added or removed.
         </p>
         <ul className="list-disc space-y-2 pl-5">
-          <li><span className="font-semibold text-white">Up to 12 panels</span> per server, each holding up to 30 role–emoji pairs.</li>
+          <li><span className="font-semibold text-white">Up to 12 panels</span> per community, each holding up to 30 role–emoji pairs.</li>
           <li><span className="font-semibold text-white">Two message types:</span> plain content or a rich embed.</li>
           <li><span className="font-semibold text-white">Exclusive mode</span> limits a panel to one role per user at a time.</li>
         </ul>

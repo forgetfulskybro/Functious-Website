@@ -89,7 +89,7 @@ export default function RuneGlobalsPage() {
       </GuideSection>
 
       <GuideSection title="$guild">
-        <p>The server the tag was sent in.</p>
+        <p>The community the tag was sent in.</p>
         <ProseTable
           headers={['field', 'description']}
           rows={[
@@ -104,7 +104,7 @@ export default function RuneGlobalsPage() {
             ['features', 'list of guild features'],
             ['premium_tier', 'boost tier'],
             ['member_count', 'number of members'],
-            ['preferred_locale', 'server language'],
+            ['preferred_locale', 'community language'],
             ['created_at', 'guild creation date'],
           ]}
         />

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
-  description: 'Pick a server to configure Functious.',
+  description: 'Pick a community to configure Functious.',
 };
 
 export default async function DashboardPage() {

@@ -313,7 +313,7 @@ export function BirthdayPreviewModal({
           </div>
 
           <p className="text-white/25 text-[11px] mt-3">
-            Shown when this server announces birthdays.
+            Shown when this community announces birthdays.
           </p>
         </div>
       </div>

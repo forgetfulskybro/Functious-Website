@@ -18,7 +18,7 @@ export const FEATURES: FeatureData[] = [
     name: 'Reaction Roles',
     shortDescription: 'Let users self-assign roles by reacting to a message with emojis.',
     fullDescription:
-      'Reaction roles allow server members to pick their own roles via reactions. Create a message with {role:Name} tags, react with emojis to map each tag, and members can instantly self-assign roles by reacting. Supports exclusive mode, DM notifications, and easy editing or fixing.',
+      'Reaction roles allow community members to pick their own roles via reactions. Create a message with {role:Name} tags, react with emojis to map each tag, and members can instantly self-assign roles by reacting. Supports exclusive mode, DM notifications, and easy editing or fixing.',
     capabilities: [
       'Maximum amount of emojis on messages',
       'Custom emoji support',
@@ -43,7 +43,7 @@ export const FEATURES: FeatureData[] = [
       'Host giveaways with reaction entry, timed end dates, and configurable winner count. Members react with 🎉 to enter, and the bot automatically selects and announces winners when the timer expires. Reroll any giveaway if a winner is ineligible.',
     capabilities: [
       'Up to 50 winners per giveaway',
-      'Custom requirements (e.g., role or server booster)',
+      'Custom requirements (e.g., role or community booster)',
       'Reroll winners',
     ],
     usageExamples: [
@@ -60,7 +60,7 @@ export const FEATURES: FeatureData[] = [
     name: 'Polls',
     shortDescription: 'Create visual bar-chart polls with up to 10 options.',
     fullDescription:
-      'Polls generate real-time bar-chart images as users vote. Supports 2–10 options, timed end dates, and automatically displays results when the poll closes. Perfect for community decisions and server feedback.',
+      'Polls generate real-time bar-chart images as users vote. Supports 2–10 options, timed end dates, and automatically displays results when the poll closes. Perfect for community decisions and member feedback.',
     capabilities: [
       'Live-updating bar charts',
       'Up to 10 options',
@@ -79,10 +79,10 @@ export const FEATURES: FeatureData[] = [
     name: 'Tags',
     shortDescription: 'Store and quickly send reusable text or embed messages.',
     fullDescription:
-      'Tags are custom reusable messages for FAQs, server rules, or announcements. Create a tag once and send it instantly by name at any time. Supports plain text, embeds, or Rune scripts To learn more, click the related Guide above.',
+      'Tags are custom reusable messages for FAQs, community rules, or announcements. Create a tag once and send it instantly by name at any time. Supports plain text, embeds, or Rune scripts To learn more, click the related Guide above.',
     capabilities: [
       'Text or embed format',
-      'Up to 50 tags per server',
+      'Up to 50 tags per community',
       'Edit tag content, name, or type',
       'View tag stats (uses, creation date)',
     ],
@@ -107,7 +107,7 @@ export const FEATURES: FeatureData[] = [
       'Recurring schedules (daily, weekly, monthly, cron)',
       'Webhook support (custom name and avatar)',
       'Dynamic templates ({user}, {server}, {time}, {count}, math, conditionals)',
-      'Up to 10 scheduled messages per server',
+      'Up to 10 scheduled messages per community',
     ],
     usageExamples: [
       'f!schedule content #announcements',
@@ -147,7 +147,7 @@ export const FEATURES: FeatureData[] = [
     name: 'Temporary Channels',
     shortDescription: 'Auto-create and delete temporary voice channels as users join/leave.',
     fullDescription:
-      'Temporary channels create user-owned voice channels on-demand when someone joins a designated "Join To Create" channel. The channel is automatically deleted when all members leave, keeping your server clean and organised.',
+      'Temporary channels create user-owned voice channels on-demand when someone joins a designated "Join To Create" channel. The channel is automatically deleted when all members leave, keeping your community clean and organised.',
     capabilities: [
       'Join-to-create voice channel',
       'Custom channel names with numbering',
@@ -165,6 +165,31 @@ export const FEATURES: FeatureData[] = [
     category: 'server-management',
   },
   {
+    slug: 'media-channels',
+    name: 'Media Channels',
+    shortDescription: "Turn any channel into a media-only zone that filters messages by content type.",
+    fullDescription:
+      "Media channels silently delete anything that isn't content you allow, keeping image, video, and link channels clean without anyone needing to run a moderation command. Choose which types get through, optionally add rating reactions that auto-delete downvoted posts, and pin a rules reminder that re-posts itself after every new upload.",
+    capabilities: [
+      'Filter by attachment type: images, videos, files, links, or any attachment',
+      'Every attachment must pass, so mixed messages are caught too',
+      'Rating reactions that auto-delete posts past a downvote threshold',
+      'Sticky rules message that re-posts itself after each new post',
+      'Custom sticky text, or a default generated from your allowed types',
+      'Edit, remove, and list configured channels',
+    ],
+    usageExamples: [
+      'f!mc add #media',
+      'f!mc add #media --images --rating',
+      'f!mc add #media --videos --links --sticky --stickytext No spoilers please!',
+      'f!mc edit #media --images --delete 3',
+      'f!mc list',
+    ],
+    relatedCommands: ['mediachannels'],
+    relatedGuides: ['media-channels'],
+    category: 'server-management',
+  },
+  {
     slug: 'timezone-converter',
     name: 'Timezone Converter',
     shortDescription: 'Automatically convert time mentions to Fluxer timestamps.',
@@ -174,7 +199,7 @@ export const FEATURES: FeatureData[] = [
       'Per-user timezone settings',
       'Automatic time detection',
       'Webhook-based timestamp resending',
-      'Toggle on/off for the server',
+      'Toggle on/off for the community',
       'View user timezone info',
     ],
     usageExamples: [
@@ -187,15 +212,42 @@ export const FEATURES: FeatureData[] = [
     category: 'utility',
   },
   {
+    slug: 'birthday',
+    name: 'Birthdays',
+    shortDescription: "Store birthdays and announce them at midnight in each member's own timezone.",
+    fullDescription:
+      'Birthdays stores a date once and announces it automatically at midnight in that member\'s own timezone. Members opt in per community, can keep their age private, and can be given a birthday role that is removed a day later. Staff choose the announcement channel and wording, or blacklist members who would rather not be listed.',
+    capabilities: [
+      'Automatic announcements at midnight in each member\'s own timezone',
+      'Flexible date input ("12th of June", "June 12", "6/12")',
+      'Per-community opt-in, so members pick which communities see their birthday',
+      'Optional age, announced as an ordinal like "31st birthday"',
+      'Birthday role granted automatically and removed 24 hours later',
+      'Custom announcement text with {user} and {age} placeholders',
+      'Separate personal and community-wide ping toggles',
+      'Preview the announcement or force one early for any member',
+    ],
+    usageExamples: [
+      'f!bday set 12th of June',
+      'f!bday age 30',
+      'f!bday enable',
+      'f!bday preview',
+      'f!bday channel #birthdays',
+      'f!bday list',
+    ],
+    relatedCommands: ['birthday'],
+    category: 'utility',
+  },
+  {
     slug: 'auto-roles',
     name: 'Auto Roles',
     shortDescription: 'Automatically assign roles to users on join or after a delay.',
     fullDescription:
-      'Auto roles let you configure join roles, sticky roles, and timed roles for your server. Join roles are applied instantly on member join, sticky roles are restored if a user rejoins, and timed roles are applied after a configurable duration.',
+      'Auto roles let you configure join roles, sticky roles, and timed roles for your community. Join roles are applied instantly on member join, sticky roles are restored if a user rejoins, and timed roles are applied after a configurable duration.',
     capabilities: [
-      'Join roles (applied on server join)',
+      'Join roles (applied when someone joins the community)',
       'Sticky roles (restored if user leaves and rejoins)',
-      'Timed roles (applied after X time in server)',
+      'Timed roles (applied after X time in the community)',
       'Up to 20 join roles',
       'Time format: 1w3d2h5m',
     ],
@@ -212,9 +264,9 @@ export const FEATURES: FeatureData[] = [
   {
     slug: 'bypass',
     name: 'Bypass',
-    shortDescription: 'Grant roles permission to use commands without server permissions.',
+    shortDescription: 'Grant roles permission to use commands without community permissions.',
     fullDescription:
-      'Bypass allows you to give specific roles access to permission-locked commands without granting them full server permissions. Ideal for giving moderators access to bot commands without elevating their Fluxer permissions.',
+      'Bypass allows you to give specific roles access to permission-locked commands without granting them full community permissions. Ideal for giving moderators access to bot commands without elevating their Fluxer permissions.',
     capabilities: [
       'Bypass individual commands or all commands',
       'Up to 15 bypassed roles',

@@ -44,7 +44,7 @@ export default function Footer() {
                 { label: 'Features', href: '/#features' },
                 { label: 'Commands', href: '/commands' },
                 { label: 'Guides',   href: '/guides' },
-                { label: 'FAQ',      href: '/#faq' },
+                { label: 'FAQ',      href: '/faq' },
               ].map(({ label, href }) => (
                 <li key={label}>
                   <Link
@@ -64,7 +64,7 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3">
               {[
-                { label: 'Support Server', href: 'https://fluxer.gg/YnINU09E' },
+                { label: 'Support Community', href: 'https://fluxer.gg/YnINU09E' },
                 { label: 'GitHub',         href: 'https://github.com/forgetfulskybro/Fluxer-Functious' },
                 { label: 'Crowdin',        href: 'https://crowdin.com/project/functious' },
                 { label: 'Ko-Fi',          href: 'https://ko-fi.com/forgetfulskybro' },

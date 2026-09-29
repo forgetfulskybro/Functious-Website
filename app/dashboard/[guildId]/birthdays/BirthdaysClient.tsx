@@ -219,7 +219,7 @@ export default function BirthdaysClient({
         setIdInput('');
         setIdError('');
         showToast('Blacklisted', {
-          description: `${userId} won't receive birthday announcements in this server.`,
+          description: `${userId} won't receive birthday announcements in this community.`,
         });
         return true;
       } else {
@@ -327,7 +327,7 @@ export default function BirthdaysClient({
                     Upcoming Birthdays
                   </h2>
                   <p className="text-white/20 text-[10px] mt-0.5">
-                    Members with birthdays in this server
+                    Members with birthdays in this community
                   </p>
                 </div>
                 <button
@@ -376,7 +376,7 @@ export default function BirthdaysClient({
                 </ul>
               ) : list.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-white/25 text-xs">No birthdays in this server yet.</p>
+                  <p className="text-white/25 text-xs">No birthdays in this community yet.</p>
                   <p className="text-white/15 text-[10px] mt-1">Members opt in on their profile.</p>
                 </div>
               ) : filteredList.length === 0 ? (
@@ -769,7 +769,7 @@ export default function BirthdaysClient({
             <div className="px-5 pt-4 pb-3 border-b border-white/5">
               <h2 className="text-white font-bold text-base">Blacklist user</h2>
               <p className="text-white/30 text-xs mt-0.5">
-                Exclude them from birthday announcements in this server.
+                Exclude them from birthday announcements in this community.
               </p>
             </div>
             <div className="px-5 py-4 space-y-4">

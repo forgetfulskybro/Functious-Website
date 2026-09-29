@@ -32,11 +32,11 @@ export default function PrivacyPolicyPage() {
           </p>
           <ul className="mt-3 space-y-2 pl-5 list-disc">
             <li><strong className="text-white">User IDs</strong> - only for giveaway entries, poll votes (with public avatar URL), and timezone settings you choose to set.</li>
-            <li><strong className="text-white">Guild IDs</strong> - stored for every server Functious is in, to remember per-server settings.</li>
-            <li><strong className="text-white">Command usage statistics</strong> - which commands you use and how many times. We never store the content or arguments of any command. This data is tied to your user account, not to individual servers.</li>
+            <li><strong className="text-white">Community IDs</strong> - stored for every community Functious is in, to remember per-community settings.</li>
+            <li><strong className="text-white">Command usage statistics</strong> - which commands you use and how many times. We never store the content or arguments of any command. This data is tied to your user account, not to individual communities.</li>
             <li><strong className="text-white">Analytic data</strong> - limited usage analytics derived from command statistics to help improve Functious.</li>
             <li><strong className="text-white">Cookies</strong> - stored for a maximum of 7 days and then automatically deleted.</li>
-            <li><strong className="text-white">Guild setting change logs</strong> - records of who changed which server settings and when, so you can see who changed what.</li>
+            <li><strong className="text-white">Community setting change logs</strong> - records of who changed which community settings and when, so you can see who changed what.</li>
             <li><strong className="text-white">Temporary Voice Channels</strong> - User IDs of people in bot-created voice channels only.</li>
           </ul>
         </Section>
@@ -46,10 +46,10 @@ export default function PrivacyPolicyPage() {
             <li>Giveaway User IDs → to track entries and pick winners.</li>
             <li>Poll User IDs + avatar URLs → to display accurate vote results.</li>
             <li>Timezone User IDs → to convert times correctly between users.</li>
-            <li>Guild IDs → to apply server-specific settings.</li>
+            <li>Community IDs → to apply community-specific settings.</li>
             <li>Command usage statistics & analytic data → to understand feature usage and improve Functious (never includes command content).</li>
             <li>Cookies → for essential site/bot functionality; automatically expire after 7 days.</li>
-            <li>Guild setting change logs → to provide an audit trail of who changed server settings and when.</li>
+            <li>Community setting change logs → to provide an audit trail of who changed community settings and when.</li>
             <li>Voice User IDs → to manage temporary voice channel lifecycle.</li>
           </ul>
         </Section>
@@ -59,8 +59,8 @@ export default function PrivacyPolicyPage() {
             <li><strong className="text-white">Giveaway User IDs</strong> → removed the moment the giveaway ends.</li>
             <li><strong className="text-white">Poll User IDs & avatar URLs</strong> → removed the moment the poll ends.</li>
             <li><strong className="text-white">Temporary Voice Channel User IDs</strong> → removed the instant you leave the channel.</li>
-            <li><strong className="text-white">Guild settings & setting change logs</strong> → kept only while Functious remains in the server.</li>
-            <li><strong className="text-white">Command usage statistics & analytic data</strong> → tied to your user account and retained with you even if you leave a server that used the commands. Individual command content is never stored.</li>
+            <li><strong className="text-white">Community settings & setting change logs</strong> → kept only while Functious remains in the community.</li>
+            <li><strong className="text-white">Command usage statistics & analytic data</strong> → tied to your user account and retained with you even if you leave a community that used the commands. Individual command content is never stored.</li>
             <li><strong className="text-white">Cookies</strong> → automatically deleted after 7 days.</li>
           </ul>
         </Section>
@@ -75,7 +75,7 @@ export default function PrivacyPolicyPage() {
         <Section title="5. Data Storage & Security">
           <p>
             Data is stored in a secure database hosted locally on the developer's home lab hardware.
-            Nothing is stored externally - no cloud providers, no third-party servers.
+            Nothing is stored externally - no cloud providers, no third-party communities.
             We use industry-standard security practices, but no system is 100% secure.
           </p>
         </Section>
@@ -97,13 +97,13 @@ export default function PrivacyPolicyPage() {
         <Section title="8. Changes to This Policy">
           <p>
             We may update this Privacy Policy occasionally. The "Last Updated" date at the top will reflect any changes,
-            and major updates will be announced in Functious' official support server.
+            and major updates will be announced in Functious' official support community.
           </p>
         </Section>
 
         <Section title="9. Questions or Concerns">
           <p>
-            Contact the developer through the official support server (link available in Functious' bio or{' '}
+            Contact the developer through the official support community (link available in Functious' bio or{' '}
             <code className="text-orange text-sm bg-white/5 px-1.5 py-0.5 rounded">f!info</code> command). Can also be found under the <code className="text-orange text-sm bg-white/5 px-1.5 py-0.5 rounded">Support</code> dropdown.
           </p>
         </Section>

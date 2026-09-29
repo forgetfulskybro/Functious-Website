@@ -8,7 +8,7 @@ import AuditLogsPage from './AuditLogsClient';
 
 export const metadata: Metadata = {
   title: 'Audit Logs',
-  description: 'Guild setting changes and configuration history.',
+    description: 'Community setting changes and configuration history.',
 };
 
 export const dynamic = 'force-dynamic';

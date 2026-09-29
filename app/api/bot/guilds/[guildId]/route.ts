@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const guild = await getBotGuild(guildId);
   if (!guild) {
-    return NextResponse.json({ error: 'Bot is not in this server' }, { status: 404 });
+    return NextResponse.json({ error: 'Bot is not in this community' }, { status: 404 });
   }
 
   return NextResponse.json(guild);

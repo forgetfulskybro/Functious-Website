@@ -6,15 +6,31 @@ interface FaqItemProps {
   question: string;
   answer: string;
   isOpen: boolean;
-  onTogglAction: () => void;
+  onToggle: () => void;
 }
 
-export default function FaqItem({ question, answer, isOpen, onTogglAction }: FaqItemProps) {
+function Answer({ text }: { text: string }) {
   return (
-    <div className="border-b border-orange-mid/15">
+    <>
+      {text.split('`').map((part, index) =>
+        index % 2 === 1 ? (
+          <code key={index} className="font-mono text-orange-light">
+            {part}
+          </code>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
+export default function FaqItem({ question, answer, isOpen, onToggle }: FaqItemProps) {
+  return (
+    <div>
       <button
         type="button"
-        onClick={onTogglAction}
+        onClick={onToggle}
         aria-expanded={isOpen}
         className="flex w-full items-center justify-between gap-4 py-4 text-left text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
       >
@@ -39,7 +55,9 @@ export default function FaqItem({ question, answer, isOpen, onTogglAction }: Faq
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <p className="pb-4 text-sm leading-relaxed text-white/70">{answer}</p>
+            <p className="pb-4 text-sm leading-relaxed text-white/70">
+              <Answer text={answer} />
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

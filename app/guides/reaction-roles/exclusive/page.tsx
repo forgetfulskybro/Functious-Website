@@ -24,7 +24,7 @@ export default function ReactionRolesExclusive() {
         <CodeBlock title="Fluxer" code="f!roles exclusive 1234567890" />
         <Callout>
           Exclusive mode is per-panel. You can have some panels exclusive and others not within
-          the same server.
+          the same community.
         </Callout>
       </GuideSection>
 

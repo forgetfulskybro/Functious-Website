@@ -241,7 +241,7 @@ export default function ReactionSelect({
                 <div className="h-full flex flex-col items-center justify-center gap-1.5 text-center px-4">
                   <p className="text-white/30 text-xs">No custom emojis yet</p>
                   <p className="text-white/15 text-[10px]">
-                    Add custom emojis to your server for them to show up here
+                    Add custom emojis to your community for them to show up here
                   </p>
                 </div>
               ) : filteredCustom.length === 0 ? (

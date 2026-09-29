@@ -236,7 +236,7 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
             </ul>
           ) : polls.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-white/30 text-sm">No active polls in this server.</p>
+              <p className="text-white/30 text-sm">No active polls in this community.</p>
             </div>
           ) : (
             <ul className="space-y-2">

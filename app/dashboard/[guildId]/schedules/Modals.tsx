@@ -537,7 +537,7 @@ export function ScheduleModal({
                       type="text"
                       value={gwRequirement}
                       onChange={(e) => setGwRequirement(e.target.value)}
-                      placeholder="Must boost the server"
+                      placeholder="Must boost the community"
                       maxLength={500}
                       className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
                     />
