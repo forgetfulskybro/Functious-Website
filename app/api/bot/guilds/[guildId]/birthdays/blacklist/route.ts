@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, getSessionGuilds } from "@/lib/auth";
+import { getSession, getSessionGuilds, canManageGuild } from "@/lib/auth";
+import type { Session } from "@/lib/types";
 import { addBirthdayBlacklist, removeBirthdayBlacklist } from "@/lib/api";
 
 type Params = { params: Promise<{ guildId: string }> };
 
-function canManageGuild(permissions: string, owner: boolean): boolean {
-  if (owner) return true;
-  const perms = BigInt(permissions);
-  const MANAGE_GUILD = BigInt(0x20);
-  const ADMINISTRATOR = BigInt(0x8);
-  return (perms & MANAGE_GUILD) === MANAGE_GUILD || (perms & ADMINISTRATOR) === ADMINISTRATOR;
-}
 
-async function authorize(session: { accessToken: string } | null, guildId: string) {
+async function authorize(session: Session | null, guildId: string) {
   if (!session) return { error: NextResponse.json({ error: "Unauthorised" }, { status: 401 }) };
   const guilds = await getSessionGuilds(session.accessToken);
   const userGuild = guilds.find((g) => g.id === guildId);
-  if (!userGuild || !canManageGuild(userGuild.permissions, userGuild.owner)) {
+  if (!userGuild || !canManageGuild(userGuild, String(session.user.id))) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
   return { userGuild };

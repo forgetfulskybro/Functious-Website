@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getSessionGuilds } from '@/lib/auth';
+import { getSession, getSessionGuilds, canManageGuild } from '@/lib/auth';
 import { getBotPolls, createBotPoll } from '@/lib/api';
 
 type Params = { params: Promise<{ guildId: string }> };
-
-function canManageGuild(permissions: string, owner: boolean): boolean {
-  if (owner) return true;
-  const perms = BigInt(permissions);
-  return (perms & 0x20n) === 0x20n || (perms & 0x8n) === 0x8n;
-}
 
 export async function GET(_req: NextRequest, { params }: Params) {
   const { guildId } = await params;
@@ -17,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const guilds = await getSessionGuilds(session.accessToken);
   const userGuild = guilds.find(g => g.id === guildId);
-  if (!userGuild || !canManageGuild(userGuild.permissions, userGuild.owner)) {
+  if (!userGuild || !canManageGuild(userGuild, String(session.user.id))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -36,7 +30,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const guilds = await getSessionGuilds(session.accessToken);
   const userGuild = guilds.find(g => g.id === guildId);
-  if (!userGuild || !canManageGuild(userGuild.permissions, userGuild.owner)) {
+  if (!userGuild || !canManageGuild(userGuild, String(session.user.id))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

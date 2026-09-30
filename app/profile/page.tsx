@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { getSession, getSessionGuilds } from '@/lib/auth';
+import { getSession, getSessionGuilds, filterManageableGuilds } from '@/lib/auth';
 import { filterBotGuilds } from '@/lib/api';
 import { redirect } from 'next/navigation';
 import ProfilePage from './ProfilePage';
@@ -94,7 +94,7 @@ export default async function Profile() {
   const botGuildIds = await filterBotGuilds(guilds.map((g) => g.id));
   const botGuildSet = new Set(botGuildIds);
 
-  const allGuilds = guilds.map((g) => ({
+  const allGuilds = filterManageableGuilds(guilds, String(session.user.id)).map((g) => ({
     ...g,
     botPresent: botGuildSet.has(g.id),
   }));

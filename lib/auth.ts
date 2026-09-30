@@ -1,7 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import type { FluxerGuild, Session } from './types';
-
 const SESSION_COOKIE = 'functious_session';
 const secret = new TextEncoder().encode(
   process.env.SESSION_SECRET
@@ -62,6 +61,23 @@ export async function getSessionGuilds(accessToken: string): Promise<FluxerGuild
   } catch {
     return [];
   }
+}
+
+const MANAGE_GUILD = 0x20n;
+const ADMINISTRATOR = 0x8n;
+
+export function canManageGuild(guild: FluxerGuild, userId: string): boolean {
+  if (guild.owner || guild.owner_id === userId) return true;
+  try {
+    const perms = BigInt(guild.permissions);
+    return (perms & MANAGE_GUILD) === MANAGE_GUILD || (perms & ADMINISTRATOR) === ADMINISTRATOR;
+  } catch {
+    return false;
+  }
+}
+
+export function filterManageableGuilds(guilds: FluxerGuild[], userId: string): FluxerGuild[] {
+  return guilds.filter(g => canManageGuild(g, userId));
 }
 
 export function getOAuthUrl(): string {

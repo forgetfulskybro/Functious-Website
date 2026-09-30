@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getSessionGuilds } from '@/lib/auth';
+import { getSession, getSessionGuilds, canManageGuild } from '@/lib/auth';
 import { deleteReactionRoles } from '@/lib/api';
 
 type Params = { params: Promise<{ guildId: string; messageId: string }> };
-
-function canManageGuild(permissions: string, owner: boolean): boolean {
-  if (owner) return true;
-  const perms = BigInt(permissions);
-  const MANAGE_GUILD = BigInt(0x20);
-  const ADMINISTRATOR = BigInt(0x8);
-  return (perms & MANAGE_GUILD) === MANAGE_GUILD || (perms & ADMINISTRATOR) === ADMINISTRATOR;
-}
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   const { guildId, messageId } = await params;
@@ -19,7 +11,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
   const guilds = await getSessionGuilds(session.accessToken);
   const userGuild = guilds.find((g) => g.id === guildId);
-  if (!userGuild || !canManageGuild(userGuild.permissions, userGuild.owner)) {
+  if (!userGuild || !canManageGuild(userGuild, String(session.user.id))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

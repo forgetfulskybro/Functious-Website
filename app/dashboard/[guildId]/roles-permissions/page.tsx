@@ -1,5 +1,5 @@
 import { filterBotGuilds, emptyGuildData } from '@/lib/api';
-import { getSession, getSessionGuilds } from '@/lib/auth';
+import { getSession, getSessionGuilds, canManageGuild } from '@/lib/auth';
 import { redirect, notFound } from 'next/navigation';
 import RolesClient from './RolesClient';
 import type { Metadata } from 'next';
@@ -22,10 +22,7 @@ export default async function RolesPage({ params }: Props) {
   const botGuildSet = new Set(botGuildIds);
 
   const dashboardGuilds = guilds
-    .filter((g) => {
-      const p = BigInt(g.permissions);
-      return g.owner || (p & 0x20n) === 0x20n || (p & 0x8n) === 0x8n;
-    })
+    .filter(g => canManageGuild(g, String(session.user.id)))
     .map((g) => ({ ...g, botPresent: botGuildSet.has(g.id) }));
 
   const userGuild = dashboardGuilds.find((g) => g.id === guildId);
