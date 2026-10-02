@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import type { FluxerUser, DashboardGuild, BirthdayData } from '@/lib/types';
+import type { FluxerUser, DashboardGuild, BirthdayData, FluxerGuild } from '@/lib/types';
 import { Toggle } from '@/components/ui/Toggle';
 import { showToast, showErrorToast } from '@/components/ui/Toast';
 import { BirthdayModal, BirthdayPreviewModal } from './Modals';
@@ -85,12 +85,14 @@ function avatarSrc(user: FluxerUser): string {
 }
 
 export default function BirthdaySettings({
-  user,
-  guilds,
-}: {
-  user: FluxerUser;
-  guilds: DashboardGuild[];
-}) {
+    user,
+    guilds,
+    allGuilds,
+  }: {
+    user: FluxerUser;
+    guilds: DashboardGuild[];
+    allGuilds: FluxerGuild[];
+  }) {
   const [birthday, setBirthday] = useState<BirthdayData | null>(null);
   const [timezone, setTimezone] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,14 +107,14 @@ export default function BirthdaySettings({
   const [expandedGuilds, setExpandedGuilds] = useState(false);
   const [blacklistStatus, setBlacklistStatus] = useState<Record<string, boolean>>({});
 
-  const botGuilds = guilds.filter((g) => g.botPresent);
+  const botGuilds = allGuilds
   const enabledGuilds = birthday?.enabledGuilds ?? [];
-  const filteredGuilds = botGuilds.filter((g) =>
+  const filteredGuilds = botGuilds?.filter((g) =>
     g.name.toLowerCase().includes(search.trim().toLowerCase())
   );
   const visibleGuilds = expandedGuilds
     ? filteredGuilds
-    : filteredGuilds.slice(0, 5);
+    : filteredGuilds?.slice(0, 5);
 
   async function load() {
     setLoading(true);
@@ -135,9 +137,9 @@ export default function BirthdaySettings({
   }, []);
 
   useEffect(() => {
-    if (botGuilds.length === 0) return;
+    if (botGuilds?.length === 0) return;
     let cancelled = false;
-    const ids = botGuilds.map((g) => g.id);
+    const ids = botGuilds?.map((g) => g.id);
     (async () => {
       try {
         const res = await fetch(
@@ -155,7 +157,7 @@ export default function BirthdaySettings({
     return () => {
       cancelled = true;
     };
-  }, [botGuilds.length, guilds]);
+  }, [botGuilds?.length, guilds]);
 
   async function patch(updates: { birthday: Partial<BirthdayData> }) {
     const res = await fetch('/api/users/profile', {
@@ -232,7 +234,7 @@ export default function BirthdaySettings({
   const nextTs = hasBirthday
     ? nextBirthdayTimestamp(birthday!.month!, birthday!.day!, timezone)
     : null;
-  const previewGuild = previewGuildId ? botGuilds.find((g) => g.id === previewGuildId) : null;
+  const previewGuild = previewGuildId ? botGuilds?.find((g) => g.id === previewGuildId) : null;
 
   return (
     <>
@@ -293,7 +295,7 @@ export default function BirthdaySettings({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPreviewGuildId(enabledGuilds[0] ?? botGuilds[0]?.id ?? null)}
+                    onClick={() => setPreviewGuildId(enabledGuilds[0] ?? botGuilds[0].id ?? null)}
                     className="px-3.5 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange"
                   >
                     Preview
@@ -365,7 +367,7 @@ export default function BirthdaySettings({
               </p>
             </div>
 
-            {botGuilds.length === 0 ? (
+            {botGuilds?.length === 0 ? (
               <p className="text-white/30 text-sm py-6 text-center">
                 Invite Functious to a community to get started.
               </p>

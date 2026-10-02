@@ -107,6 +107,7 @@ export default async function Profile() {
     <ProfilePage
       user={session.user}
       guilds={allGuilds}
+      allGuilds={guilds}
       currentPage="profile"
       commands={commands}
       commandsTotal={commandsTotal}

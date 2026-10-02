@@ -1,7 +1,7 @@
 'use client';
 
 import Sidebar from '@/components/layout/Sidebar';
-import type { FluxerUser, DashboardGuild } from '@/lib/types';
+import type { FluxerUser, FluxerGuild, DashboardGuild } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { showToast, showErrorToast } from '@/components/ui/Toast';
@@ -19,6 +19,7 @@ interface CommandStat {
 interface ProfilePageProps {
   user: FluxerUser;
   guilds?: DashboardGuild[];
+  allGuilds?: FluxerGuild[];
   currentPage: string;
   commands?: CommandStat[];
   commandsTotal?: number;
@@ -65,28 +66,6 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 function pad2(n: number) {
   return String(n).padStart(2, '0');
 }
-
-function parseDt(s: string): { y: number; mo: number; d: number; h: number; mi: number } {
-  const [datePart, timePart] = s.split('T');
-  const [y, mo, d] = (datePart ?? '').split('-').map(Number);
-  const [h, mi] = (timePart ?? '00:00').split(':').map(Number);
-  return {
-    y: y || new Date().getFullYear(),
-    mo: (mo || 1) - 1,
-    d: d || 1,
-    h: h || 0,
-    mi: mi || 0,
-  };
-}
-
-function formatDt(y: number, mo: number, d: number, h: number, mi: number) {
-  return `${y}-${pad2(mo + 1)}-${pad2(d)}T${pad2(h)}:${pad2(mi)}`;
-}
-
-function daysInMonth(y: number, mo: number) {
-  return new Date(y, mo + 1, 0).getDate();
-}
-
 
 function CommandUsageSection({
   commands,
@@ -206,6 +185,7 @@ function CommandUsageSection({
 export default function ProfilePage({
   user: initialUser,
   guilds,
+  allGuilds,
   commands = [],
   commandsTotal = 0,
 }: ProfilePageProps) {
@@ -246,7 +226,7 @@ export default function ProfilePage({
         </div>
 
         {tab === 'birthdays' ? (
-          <BirthdaySettings user={user as FluxerUser} guilds={guilds ?? []} />
+          <BirthdaySettings user={user as FluxerUser} guilds={guilds ?? []} allGuilds={allGuilds!} />
         ) : tab === 'reminders' ? (
           <RemindersSettings userId={user.id} />
         ) : (
