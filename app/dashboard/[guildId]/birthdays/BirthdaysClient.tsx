@@ -262,7 +262,7 @@ export default function BirthdaysClient({
   async function handleAddById() {
     const id = idInput.trim();
     if (!/^\d{17,20}$/.test(id)) {
-      setIdError('Enter a valid Discord user ID (17–20 digits).');
+      setIdError('Enter a valid Fluxer user ID (17–20 digits).');
       return;
     }
     setIdError('');

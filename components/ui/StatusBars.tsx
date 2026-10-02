@@ -160,7 +160,7 @@ function enrich(
 
 function exactTitle(day: StatusDay, range24h: boolean) {
   const d = new Date(day.date);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "-";
   const when = range24h
     ? d.toLocaleString(undefined, {
         month: "short",

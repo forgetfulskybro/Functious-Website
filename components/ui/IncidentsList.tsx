@@ -28,7 +28,7 @@ function severityBadge(severity: IncidentItem["severity"]) {
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "-";
   return d.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
@@ -45,7 +45,7 @@ function ClientDate({ iso }: { iso: string }) {
   useEffect(() => {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) {
-      setText("—");
+      setText("-");
       return;
     }
     setText(

@@ -36,7 +36,7 @@ function formatValue(value: number, unit: "ms" | "mb" | "generic"): string {
 
 function formatTimestamp(iso: string, range: RangeKey): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "-";
   if (range === "24h" || range === "7d") {
     return d.toLocaleString(undefined, {
       month: "short",

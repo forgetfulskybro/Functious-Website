@@ -73,10 +73,14 @@ const GUILD_NAV_LINKS: { label: string; href: string; icon: React.ReactNode }[] 
   },
 ];
 
-const PROFILE_NAV_LINKS: { id: 'information' | 'birthdays'; label: string; icon: React.ReactNode }[] = [
+const PROFILE_NAV_LINKS: { id: 'information' | 'reminders' | 'birthdays'; label: string; icon: React.ReactNode }[] = [
   {
     id: 'information', label: 'Information',
     icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>,
+  },
+  {
+    id: 'reminders', label: 'Reminders',
+    icon: <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
   },
   {
     id: 'birthdays', label: 'Birthdays',
@@ -143,8 +147,12 @@ export default function Sidebar({ user, guilds, activeGuildId, currentPage }: Si
 
   const activeGuild = guilds?.find(g => g.id === activeGuildId);
 
-  const profileTab: 'information' | 'birthdays' =
-    searchParams.get('tab') === 'birthdays' ? 'birthdays' : 'information';
+  const profileTab: 'information' | 'reminders' | 'birthdays' =
+    searchParams.get('tab') === 'birthdays'
+      ? 'birthdays'
+      : searchParams.get('tab') === 'reminders'
+        ? 'reminders'
+        : 'information';
 
   const backHref = currentPage === 'profile' ? '/dashboard' : activeGuildId ? '/dashboard' : '/';
   const backLabel = currentPage === 'profile' ? 'Dashboard' : activeGuildId ? 'All communities' : 'Homepage';

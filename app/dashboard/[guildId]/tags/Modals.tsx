@@ -950,7 +950,7 @@ export function TagModal({
                             ? 'Valid'
                             : previewResult
                             ? 'Error'
-                            : '—'}
+                            : '-'}
                         </span>
                       )}
                       <button

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     const body = await req.json().catch(() => ({}));
     const userId = body?.userId ?? "";
     if (!SNOWFLAKE_RE.test(userId)) {
-      return NextResponse.json({ error: "A valid Discord user ID is required" }, { status: 400 });
+      return NextResponse.json({ error: "A valid Fluxer user ID is required" }, { status: 400 });
     }
     const result = await addBirthdayBlacklist(guildId, userId, session!.user.id);
     return NextResponse.json(result);
@@ -46,7 +46,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const userId = req.nextUrl.searchParams.get("userId") ?? "";
     if (!SNOWFLAKE_RE.test(userId)) {
-      return NextResponse.json({ error: "A valid Discord user ID is required" }, { status: 400 });
+      return NextResponse.json({ error: "A valid Fluxer user ID is required" }, { status: 400 });
     }
     const result = await removeBirthdayBlacklist(guildId, userId, session!.user.id);
     return NextResponse.json(result);

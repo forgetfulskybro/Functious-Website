@@ -45,9 +45,9 @@ export interface StatusPayload {
 }
 
 export function formatRelative(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return "—";
+  if (Number.isNaN(t)) return "-";
   const diff = Date.now() - t;
   if (diff < 60_000) return "just now";
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
@@ -56,12 +56,12 @@ export function formatRelative(iso: string | null | undefined): string {
 }
 
 export function formatMs(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return "—";
+  if (n == null || !Number.isFinite(n)) return "-";
   return n < 10 ? `${n.toFixed(1)}ms` : `${Math.round(n)}ms`;
 }
 
 export function formatMemory(n: number | null): string {
-  if (n == null || !Number.isFinite(n)) return "—";
+  if (n == null || !Number.isFinite(n)) return "-";
   if (n >= 1_000_000) {
     const mb = n / (1024 * 1024);
     return mb >= 100 ? `${Math.round(mb)} MB` : `${mb.toFixed(1)} MB`;
@@ -138,7 +138,7 @@ export function StatCard({
   skeleton?: boolean;
   href?: string;
 }) {
-  const showSkeleton = skeleton || value === "—";
+  const showSkeleton = skeleton || value === "-";
 
   const inner = (
     <>

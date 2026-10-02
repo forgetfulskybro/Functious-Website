@@ -36,7 +36,7 @@ export default function RemindGuide() {
 
       <GuideSection title="Viewing your reminders">
         <CodeBlock title="Fluxer" code="f!remind list" />
-        <p>You can have up to 10 active reminders at a time.</p>
+        <p>You can have up to 25 active reminders at a time.</p>
       </GuideSection>
 
       <GuideSection title="Deleting a reminder">
@@ -51,7 +51,7 @@ export default function RemindGuide() {
           <li>Minimum time: 1 minute in the future.</li>
           <li>Maximum time: 2 years.</li>
           <li>Maximum message length: 500 characters.</li>
-          <li>Maximum active reminders per user: 10.</li>
+          <li>Maximum active reminders per user: 25.</li>
         </ul>
       </GuideSection>
     </GuidePage>

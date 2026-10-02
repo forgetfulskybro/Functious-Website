@@ -40,7 +40,7 @@ export default function ReactionRolesEditing() {
 
       <GuideSection title="Fixing reactions">
         <p>
-          If reactions go missing -for example after a bot restart or a permissions change —
+          If reactions go missing -for example after a bot restart or a permissions change -
           the fix command removes all reactions from the panel and re-adds the correct ones.
         </p>
         <CodeBlock title="Fluxer" code="f!roles fix 1234567890" />
