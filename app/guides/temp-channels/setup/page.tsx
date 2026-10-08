@@ -28,7 +28,7 @@ export default function TempChannelsSetup() {
           Use <code className="font-mono text-orange-light">set config</code> to combine options in one command.
           All fields are optional - include only what you want to change from the defaults.
         </p>
-        <CodeBlock title="Fluxer" code={`f!tc set config {name:🎮 Room} {limit:5} {counting} {manage}`} />
+        <CodeBlock title="Fluxer" code={`f!tc set config {name:🎮 Room} {limit:5} {counting} {manage} {managevc}`} />
         <p>Options available during setup:</p>
         <ul className="list-disc space-y-1.5 pl-5">
           <li><code className="font-mono text-orange-light">{'{name:…}'}</code> - base name for created channels.</li>
@@ -36,6 +36,7 @@ export default function TempChannelsSetup() {
           <li><code className="font-mono text-orange-light">{'{counting}'}</code> - appends a number to the channel name (Room 1, Room 2…).</li>
           <li><code className="font-mono text-orange-light">{'{category:Name or ID}'}</code> - use an existing category instead of creating a new one.</li>
           <li><code className="font-mono text-orange-light">{'{manage}'}</code> - create a management panel channel (see the Manage Panel chapter).</li>
+          <li><code className="font-mono text-orange-light">{'{managevc}'}</code> - post the management panel inside every new temp channel's text chat instead of a separate manage channel.</li>
         </ul>
       </GuideSection>
 

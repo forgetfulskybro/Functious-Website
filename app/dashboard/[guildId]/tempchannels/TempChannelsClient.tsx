@@ -18,6 +18,7 @@ interface TempConfig {
   customParent?: string | null;
   manage?: string | null;
   manageMessage?: string | null;
+  managevc?: boolean;
 }
 
 interface Props {
@@ -48,6 +49,7 @@ export default function TempChannelsClient({
     counting: data.config?.counting || false,
     customParent: data.config?.customParent || null,
     manage: data.config?.manage || null,
+    managevc: data.config?.managevc || false,
   }));
 
   const [limitInput, setLimitInput] = useState(String(data.config?.channelLimit ?? 0));
@@ -87,6 +89,7 @@ export default function TempChannelsClient({
             channelLimit: config.channelLimit ?? 0,
             counting: !!config.counting,
             customParent: config.customParent || null,
+            managevc: !!config.managevc,
           },
         } as any);
         setDirty(false);
@@ -103,7 +106,7 @@ export default function TempChannelsClient({
     return () => {
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
     };
-  }, [config.channelName, config.channelLimit, config.counting, config.customParent, dirty]);
+  }, [config.channelName, config.channelLimit, config.counting, config.customParent, config.managevc, dirty]);
 
   const shownLoading = useRef(false);
   const shownError = useRef<string | null>(null);
@@ -185,6 +188,7 @@ export default function TempChannelsClient({
         channelName: config.channelName || undefined,
         channelLimit: config.channelLimit ?? 0,
         counting: !!config.counting,
+        managevc: !!config.managevc,
         reset: isSetup,
       });
     } else if (confirmAction === 'reset') {
@@ -196,6 +200,7 @@ export default function TempChannelsClient({
         channelName: config.channelName || undefined,
         channelLimit: config.channelLimit ?? 0,
         counting: !!config.counting,
+        managevc: !!config.managevc,
         reset: true,
       });
     }
@@ -211,6 +216,7 @@ export default function TempChannelsClient({
         channelName: config.channelName || undefined,
         channelLimit: config.channelLimit ?? 0,
         counting: !!config.counting,
+        managevc: !!config.managevc,
         reset: false,
       });
     }
@@ -445,6 +451,30 @@ export default function TempChannelsClient({
                     <div>
                       <p className={['text-sm font-medium', config.manage ? 'text-orange-warm' : 'text-white/80'].join(' ')}>Manage Panel</p>
                       <p className="text-white/35 text-xs mt-0.5">Channel panel for VC owners</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setConfig(c => ({ ...c, managevc: !c.managevc })); setDirty(true); }}
+                    className={[
+                      'flex items-start gap-3 text-left px-4 py-3.5 rounded-xl transition-colors',
+                      config.managevc ? 'bg-orange/10' : 'bg-white/[0.03] hover:bg-white/[0.05]',
+                    ].join(' ')}
+                  >
+                    <div className={[
+                      'w-4 h-4 mt-0.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                      config.managevc ? 'bg-orange border-orange' : 'border-white/20',
+                    ].join(' ')}>
+                      {config.managevc && (
+                        <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                          <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <p className={['text-sm font-medium', config.managevc ? 'text-orange-warm' : 'text-white/80'].join(' ')}>In-VC Panel</p>
+                      <p className="text-white/35 text-xs mt-0.5">Post the panel inside every new temp VC</p>
                     </div>
                   </button>
                 </div>

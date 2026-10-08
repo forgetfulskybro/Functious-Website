@@ -72,6 +72,7 @@ export interface GuildConfig {
   customParent: string | null;
   manage: string | null;
   manageMessage: string | null;
+  managevc: boolean | null;
 }
 
 export interface GuildData {

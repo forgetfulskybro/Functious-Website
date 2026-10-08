@@ -30,6 +30,7 @@ function patchCached(guildId: string, updates: Partial<GuildData>) {
 interface TempSetupOptions {
   customCategoryId?: string | null;
   manage?: boolean;
+  managevc?: boolean;
   channelName?: string;
   channelLimit?: number;
   counting?: boolean;

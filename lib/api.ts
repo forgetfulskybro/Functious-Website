@@ -83,6 +83,7 @@ export function emptyGuildData(guildId: string) {
       customParent: null,
       manage: null,
       manageMessage: null,
+      managevc: false,
     },
     guildChannels: [],
     guildRoles: [],
@@ -287,6 +288,7 @@ export async function setupTempChannels(
   options: {
     customCategoryId?: string | null;
     manage?: boolean;
+    managevc?: boolean;
     channelName?: string;
     channelLimit?: number;
     counting?: boolean;

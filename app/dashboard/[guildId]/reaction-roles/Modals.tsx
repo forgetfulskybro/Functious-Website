@@ -229,9 +229,15 @@ export function ReactionRoleModal({
         useMention,
       });
       onSaved(data.entry as ReactionRoleEntry);
-      showToast(initial ? 'Message updated' : 'Message created', {
-        description: 'Reaction roles are now live.',
-      });
+      if (Array.isArray(data.failedReactions) && data.failedReactions.length > 0) {
+        showErrorToast('Saved, but reactions were not added', {
+          description: `Could not add: ${data.failedReactions.join(' ')}`,
+        });
+      } else {
+        showToast(initial ? 'Message updated' : 'Message created', {
+          description: 'Reaction roles are now live.',
+        });
+      }
     } catch (err: any) {
       console.log(err);
       showErrorToast('Error', { description: err?.message || 'Failed to save.' });

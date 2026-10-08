@@ -11,9 +11,8 @@ export default function TempChannelsManage() {
 
       <GuideSection title="What the manage panel does">
         <p>
-          When enabled, the bot creates a read-only text channel containing a message with
-          management reaction emojis. The owner of a temp channel reacts to trigger a DM-based
-          conversation where they can make changes.
+          When enabled, the bot posts a message with management reaction emojis. The owner of a
+          temp channel reacts to start a short conversation where they can make changes.
         </p>
         <ul className="list-disc space-y-1.5 pl-5">
           <li>✏️ Rename the channel</li>
@@ -26,9 +25,34 @@ export default function TempChannelsManage() {
           <li>❌ Close the channel</li>
         </ul>
         <Callout>
-          The bot sends a DM asking for the new value after the owner reacts. Members must have
-          DMs from community members enabled for this to work.
+          With a separate manage channel the bot sends a DM asking for the new value after the
+          owner reacts. Members must have DMs from community members enabled for this to work -
+          if they don't, the bot posts a short notice in the panel's channel instead. With{' '}
+          <code className="font-mono text-orange-light">{'{managevc}'}</code> no DMs are involved
+          at all.
         </Callout>
+      </GuideSection>
+
+      <GuideSection title="Posting the panel inside the temp channel">
+        <p>
+          Instead of a separate manage channel, add{' '}
+          <code className="font-mono text-orange-light">{'{managevc}'}</code> to have the bot post
+          the same panel inside each newly created temporary voice channel's text chat. Nothing is
+          stored or re-fetched on restart - the panel lives and reacts right in the channel it
+          belongs to.
+        </p>
+        <CodeBlock title="Fluxer" code="f!tc set config {managevc}" />
+        <p>
+          In this mode the bot asks for input in the voice channel's text chat instead of by DM,
+          so owners never need their DMs open. A separate manage channel (if you also enable{' '}
+          <code className="font-mono text-orange-light">{'{manage}'}</code>) keeps using DMs.
+        </p>
+        <p>
+          Toggle it later with{' '}
+          <code className="font-mono text-orange-light">f!tc edit {'{managevc}'}</code> and turn it
+          off with <code className="font-mono text-orange-light">f!tc delete {'{managevc}'}</code>.
+          It applies to new temp channels - existing ones are left untouched.
+        </p>
       </GuideSection>
 
       <GuideSection title="Enabling during setup">

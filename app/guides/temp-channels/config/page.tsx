@@ -20,6 +20,8 @@ export default function TempChannelsConfig() {
         <CodeBlock title="Fluxer" code="f!tc edit {counting}" />
         <p>Point to a different category (by name or ID):</p>
         <CodeBlock title="Fluxer" code="f!tc edit {category:My Category}" />
+        <p>Toggle the in-VC management panel on or off (it flips its current state each time):</p>
+        <CodeBlock title="Fluxer" code="f!tc edit {managevc}" />
       </GuideSection>
 
       <GuideSection title="Removing specific settings">
@@ -35,6 +37,7 @@ export default function TempChannelsConfig() {
           <li><code className="font-mono text-orange-light">{'{counting}'}</code> - disables numbering.</li>
           <li><code className="font-mono text-orange-light">{'{category}'}</code> - removes the custom category override.</li>
           <li><code className="font-mono text-orange-light">{'{manage}'}</code> - removes the manage panel reference.</li>
+          <li><code className="font-mono text-orange-light">{'{managevc}'}</code> - turns off the in-VC management panel.</li>
         </ul>
         <Callout>
           Deleting a field from config does not delete the Fluxer channel - it only removes the
