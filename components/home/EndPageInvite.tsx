@@ -2,28 +2,33 @@
 
 import InviteButton from '@/components/ui/InviteButton';
 
-export default function FaqSection() {
-
+export default function EndPageInvite() {
   return (
     <section
-      id="faq"
+      id="invite"
       style={{
         background: 'linear-gradient(to bottom, #1a0808 0%, #62160E 100%)',
       }}
-      className="mx-auto w-full px-4 py-16 sm:px-6 lg:px-8"
-      aria-labelledby="faq-heading"
+      className="w-full px-4 py-20 sm:px-6 lg:px-8"
+      aria-labelledby="invite-heading"
     >
-      <div className="mx-auto max-w-3xl">
-      <h2
-        id="faq-heading"
-        className="mb-5 text-center text-3xl font-bold tracking-tight text-white sm:text-4xl"
-      >
-        Want a functional community?
-        </h2>
-        <h4 className="mb-10 text-center tracking-tight text-white/40">
-          Invite Functious to turn your community functional with ease.
-        </h4>
-        <div className="flex justify-center">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-xl">
+          <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-white/60">
+            Get started
+          </p>
+          <h2
+            id="invite-heading"
+            className="font-display text-3xl font-light tracking-tight text-white sm:text-4xl"
+          >
+            Want a functional community?
+          </h2>
+          <p className="mt-3 text-white/50">
+            Invite Functious to turn your community functional with ease.
+          </p>
+        </div>
+
+        <div className="flex-shrink-0">
           <InviteButton size="lg" />
         </div>
       </div>

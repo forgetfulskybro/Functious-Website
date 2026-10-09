@@ -4,7 +4,6 @@ import ReactionRolesDemo from '@/components/home/ReactionRolesDemo';
 import FeaturesGrid from '@/components/home/FeaturesGrid';
 import FaqSection from '@/components/home/FaqSection';
 import EndPageInvite from '@/components/home/EndPageInvite';
-import MotionWrapper from '@/components/ui/MotionWrapper';
 import PollsDemo from '@/components/home/PollsDemo';
 import SchedulesDemo from '@/components/home/SchedulesDemo';
 
@@ -20,36 +19,25 @@ export default function HomePage() {
       <HeroSection />
 
       <section aria-label="Reaction Roles Demo">
-        <MotionWrapper>
-          <ReactionRolesDemo />
-        </MotionWrapper>
+        <ReactionRolesDemo />
       </section>
 
       <section id="polls" aria-label="Polls Demo">
-        <MotionWrapper>
-          <PollsDemo />
-        </MotionWrapper>
+        <PollsDemo />
       </section>
 
       <section aria-label="Scheduled Messages Demo">
-        <MotionWrapper>
-          <SchedulesDemo />
-        </MotionWrapper>
+        <SchedulesDemo />
       </section>
 
       <section id="features" aria-label="Features">
-        <MotionWrapper>
-          <FeaturesGrid />
-        </MotionWrapper>
+        <FeaturesGrid />
       </section>
 
       <section id="EndPage" aria-label='End Page'>
-        <MotionWrapper>
-          <FaqSection />
-          <EndPageInvite />
-        </MotionWrapper>
+        <FaqSection />
+        <EndPageInvite />
       </section>
     </main>
   );
 }
-

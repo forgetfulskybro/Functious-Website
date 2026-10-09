@@ -262,8 +262,10 @@ export default function PollsDemo() {
   return (
     <ChannelDemo
       channelName="polls"
-      title="See Polls in Action"
-      subtitle="One command - a live chart poll in your channel"
+      eyebrow="Polls"
+      title="Polls that update as people vote"
+      subtitle="One command builds a live chart poll in the channel"
+      panelTitle="From command to live results"
       timeline={TIMELINE}
       explanations={EXPLANATIONS}
       explanationsSide="left"

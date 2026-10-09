@@ -121,8 +121,10 @@ interface ChannelDemoProps {
   timeline: TimelineStep[];
   explanations?: StepExplanation[];
   explanationsSide?: 'left' | 'right';
+  eyebrow?: string;
   title?: string;
   subtitle?: string;
+  panelTitle?: string;
   autoPlay?: boolean;
   className?: string;
 }
@@ -132,8 +134,10 @@ export function ChannelDemo({
   timeline,
   explanations = [],
   explanationsSide = 'right',
+  eyebrow,
   title,
   subtitle,
+  panelTitle,
   autoPlay = false,
   className = '',
 }: ChannelDemoProps) {
@@ -239,7 +243,11 @@ export function ChannelDemo({
   const explanationsPanel =
       explanations.length > 0 ? (
         <div className="flex-shrink-0 lg:w-72 xl:w-80">
-          <h3 className="mb-6 text-lg font-semibold text-white/90">How it works</h3>
+          {panelTitle && (
+            <p className="mb-6 font-mono text-xs uppercase tracking-[0.2em] text-white/45">
+              {panelTitle}
+            </p>
+          )}
           {explanations.map((step, index) => {
             const stepIdx = stepOrder.indexOf(step.id);
             const nextId = explanations[index + 1]?.id;
@@ -296,10 +304,15 @@ export function ChannelDemo({
         className={`mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 lg:px-8 ${className}`}
         aria-label="Channel demo"
       >
-        {(title || subtitle) && (
-          <div className="mb-10 text-center">
+        {(eyebrow || title || subtitle) && (
+          <div className="mb-10 max-w-2xl">
+            {eyebrow && (
+              <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-orange-light">
+                {eyebrow}
+              </p>
+            )}
             {title && (
-              <h2 className="text-3xl font-bold text-white sm:text-4xl">{title}</h2>
+              <h2 className="font-display text-3xl font-light tracking-tight text-white sm:text-4xl">{title}</h2>
             )}
             {subtitle && <p className="mt-3 text-white/60">{subtitle}</p>}
           </div>
@@ -310,7 +323,7 @@ export function ChannelDemo({
   
           <div className="relative min-w-0 flex-1">
             <div
-              className="w-full overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24] shadow-2xl"
+              className="w-full overflow-hidden rounded-lg border border-white/10 bg-[#1e1e24] shadow-2xl"
               role="region"
               aria-label="Fluxer channel simulation"
             >
@@ -434,7 +447,7 @@ export function ChannelDemo({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, transition: { duration: 0.25 } }}
                   onClick={play}
-                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-xl bg-black/55 backdrop-blur-[2px] transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-lg bg-black/55 transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
                   aria-label="Play demo"
                 >
                   <span className="flex h-16 w-16 items-center justify-center rounded-full bg-orange text-white shadow-lg shadow-orange/30 transition-transform hover:scale-105">
@@ -506,7 +519,7 @@ function UserAvatar({ src, name }: { src: string | null; name: string }) {
 function MessageHeader({ name, isBot }: { name: string; isBot?: boolean }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className={`text-sm font-semibold ${isBot ? 'text-orange-300' : 'text-white/80'}`}>
+      <span className={`text-sm font-semibold ${isBot ? 'text-orange-light' : 'text-white/80'}`}>
         {name}
       </span>
       {isBot && (

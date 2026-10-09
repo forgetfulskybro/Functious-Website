@@ -24,7 +24,7 @@ export default function Footer() {
                 height={32}
                 className="h-8 w-8 rounded-lg flex-shrink-0"
               />
-              <span className="text-orange-light font-semibold text-lg tracking-wide">
+              <span className="text-orange-light text-lg font-medium tracking-tight">
                 Functious
               </span>
             </Link>

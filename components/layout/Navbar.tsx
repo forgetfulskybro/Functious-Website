@@ -115,7 +115,7 @@ function SupportMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-52 rounded-xl border border-white/10 bg-[#1a0e0e]/95 backdrop-blur-md shadow-2xl shadow-black/60 py-1.5 z-50"
+          className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-52 rounded-lg border border-white/10 bg-[#1a0e0e] shadow-2xl shadow-black/60 py-1.5 z-50"
         >
           <div className="py-1">
             {SUPPORT_LINKS.map((item) => {
@@ -191,7 +191,7 @@ function GuestMenu() {
         aria-expanded={open}
         aria-haspopup="true"
         aria-label="Account menu"
-        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/8 border border-white/10 hover:bg-white/12 hover:border-white/20 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange group"
+        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/8 border border-white/10 hover:bg-white/12 hover:border-white/20 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange group"
       >
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 text-white/50 group-hover:ring-orange/40 transition-all">
           <svg
@@ -217,7 +217,7 @@ function GuestMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-white/10 bg-[#1a0e0e]/95 backdrop-blur-md shadow-2xl shadow-black/60 py-1.5 z-50"
+          className="absolute right-0 top-full mt-2 w-52 rounded-lg border border-white/10 bg-[#1a0e0e] shadow-2xl shadow-black/60 py-1.5 z-50"
         >
           <div className="py-1">
             <a
@@ -301,7 +301,7 @@ function UserMenu({ user }: { user: FluxerUser }) {
         aria-expanded={open}
         aria-haspopup="true"
         aria-label={`${displayName} - account menu`}
-        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-white/8 border border-white/10 hover:bg-white/12 hover:border-white/20 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange group"
+        className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/8 border border-white/10 hover:bg-white/12 hover:border-white/20 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange group"
       >
         <Image
           src={src}
@@ -320,7 +320,7 @@ function UserMenu({ user }: { user: FluxerUser }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-white/10 bg-[#1a0e0e]/95 backdrop-blur-md shadow-2xl shadow-black/60 py-1.5 z-50"
+          className="absolute right-0 top-full mt-2 w-52 rounded-lg border border-white/10 bg-[#1a0e0e] shadow-2xl shadow-black/60 py-1.5 z-50"
         >
           <div className="px-4 py-3 border-b border-[#3B1919]">
             <p className="text-white/90 text-sm font-semibold truncate">
@@ -453,10 +453,17 @@ export default function Navbar() {
   return (
     <header
       className={[
-        'fixed top-0 left-0 right-0 z-50 transition-colors duration-300',
-        scrolled ? 'bg-[#0D0505]/80 backdrop-blur-md' : 'bg-transparent',
+        'fixed top-0 left-0 right-0 z-50',
+        scrolled ? 'border-b border-white/10' : 'border-b border-transparent',
       ].join(' ')}
     >
+      <div
+        aria-hidden="true"
+        className={[
+          'absolute inset-0 -z-10 bg-bg-dark transition-opacity duration-300',
+          scrolled ? 'opacity-100' : 'opacity-0',
+        ].join(' ')}
+      />
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex h-16 items-center justify-between">
           <Link
@@ -472,7 +479,7 @@ export default function Navbar() {
               className="h-8 w-8 rounded-lg flex-shrink-0"
               priority
             />
-            <span className="text-orange-warm font-bold text-xl tracking-wide">
+            <span className="text-orange-warm text-xl font-medium tracking-tight">
               Functious
             </span>
           </Link>
@@ -542,7 +549,7 @@ export default function Navbar() {
           id="mobile-menu"
           className={[
             'md:hidden w-full',
-            scrolled ? 'bg-[#0D0505]/80 backdrop-blur-md' : 'bg-[#0D0505]/95',
+            scrolled ? 'bg-bg-dark border-b border-white/10' : 'bg-bg-dark',
           ].join(' ')}
         >
           <nav aria-label="Mobile navigation">

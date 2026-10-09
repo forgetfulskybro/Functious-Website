@@ -12,7 +12,7 @@ export default function FeatureCard({ feature }: FeatureCardProps) {
   return (
     <Link
       href={`/features/${slug}`}
-      className="group flex h-full flex-col rounded-xl border border-white/10 bg-[#140b08] p-5 transition-colors hover:border-orange/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+      className="group flex h-full flex-col rounded-lg border border-white/10 bg-[#140b08] p-5 transition-colors hover:border-orange/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
       aria-label={`Learn more about ${name}`}
     >
       <span className="text-base font-semibold text-white transition-colors group-hover:text-orange-light">

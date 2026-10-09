@@ -26,7 +26,7 @@ export default function GuidePage({ guide, chapter, description, children }: Gui
         <span className="text-white/80">{chapter.title}</span>
       </nav>
 
-      <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+      <h1 className="font-display text-3xl font-light tracking-tight text-white sm:text-4xl">
         {chapter.title}
       </h1>
       <p className="mt-4 max-w-2xl text-lg text-white/60">{description}</p>

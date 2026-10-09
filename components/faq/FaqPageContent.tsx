@@ -65,7 +65,7 @@ export default function FaqPageContent() {
         <div className="lg:flex lg:gap-12">
           <div className="lg:hidden">
             <div className="mb-6">
-              <span className="block text-sm font-bold text-white">FAQ</span>
+              <span className="block font-mono text-xs uppercase tracking-[0.2em] text-white/60">FAQ</span>
               <span className="block text-xs text-white/40">Grouped by command.</span>
             </div>
             <nav
@@ -82,7 +82,7 @@ export default function FaqPageContent() {
           <aside className="hidden w-56 flex-shrink-0 lg:block">
             <div className="sticky top-24">
               <div className="mb-5">
-                <span className="block text-sm font-bold text-white">FAQ</span>
+                <span className="block font-mono text-xs uppercase tracking-[0.2em] text-white/60">FAQ</span>
                 <span className="block text-xs text-white/40">Grouped by command.</span>
               </div>
               <nav aria-label="FAQ commands">
@@ -96,7 +96,7 @@ export default function FaqPageContent() {
 
           <main className="min-w-0 flex-1 lg:max-w-3xl">
             <header className="mb-12 max-w-2xl">
-              <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+              <h1 className="font-display text-3xl font-light tracking-tight text-white sm:text-4xl">
                 Frequently Asked Questions
               </h1>
               <p className="mt-4 text-lg text-white/60">
@@ -116,7 +116,7 @@ export default function FaqPageContent() {
                   <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <h2
                       id={`${group.id}-heading`}
-                      className="text-xl font-semibold text-white"
+                      className="font-display text-xl font-normal text-white"
                     >
                       {group.title}
                     </h2>
@@ -131,7 +131,7 @@ export default function FaqPageContent() {
 
                   <p className="mb-4 text-sm text-white/40">{group.tagline}</p>
 
-                  <div className="divide-y divide-white/[0.06] rounded-xl border border-white/10 bg-[#140b08] px-5">
+                  <div className="divide-y divide-white/[0.06] rounded-lg border border-white/10 bg-[#140b08] px-5">
                     {group.items.map((item) => {
                       const key = `${group.id}:${item.question}`;
                       return (

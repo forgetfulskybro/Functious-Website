@@ -194,8 +194,8 @@ export function Markdown({ text }: { text: string }) {
         
               if (group.type === 'header') {
                 const sizes: Record<number, string> = {
-                  1: 'text-2xl font-bold mt-4 mb-2',
-                  2: 'text-xl font-bold mt-3 mb-1.5',
+                  1: 'font-display text-2xl font-normal mt-4 mb-2',
+                  2: 'font-display text-xl font-normal mt-3 mb-1.5',
                   3: 'text-lg font-semibold mt-2.5 mb-1',
                   4: 'text-base font-semibold mt-2 mb-1',
                   5: 'text-sm font-semibold mt-1.5 mb-0.5',
@@ -359,7 +359,7 @@ function renderInline(text: string): ReactNode[] {
       render: (m) => (
         <code
           key={key++}
-          className="rounded bg-black/40 px-1 py-0.5 font-mono text-[0.85em] text-orange-200/90"
+          className="rounded bg-black/40 px-1 py-0.5 font-mono text-[0.85em] text-orange-light/90"
         >
           {m[1]}
         </code>
@@ -486,7 +486,7 @@ export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-[#150a08]">
+      <div className="overflow-hidden rounded-lg border border-white/10 bg-[#150a08]">
         <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-4 py-2">
           <span className="font-mono text-xs text-white/40">{title}</span>
 
@@ -607,7 +607,7 @@ export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
       {isRune && result && (
         <div className="space-y-2">
           {result.ok === false && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3">
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3">
               <p className="text-red-400 text-xs font-medium mb-1">
                 {result.error?.name || 'Error'}
                 {result.error?.line != null &&
@@ -624,7 +624,7 @@ export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24]">
+          <div className="overflow-hidden rounded-lg border border-white/10 bg-[#1e1e24]">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-white/40">#</span>
@@ -652,7 +652,7 @@ export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-orange-300">Functious</span>
+                      <span className="text-sm font-semibold text-orange-light">Functious</span>
                       <span className="rounded bg-orange/20 px-1 py-0.5 text-[10px] leading-none text-white/35">
                         BOT
                       </span>

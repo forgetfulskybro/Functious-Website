@@ -343,7 +343,7 @@ export default function ScheduledMessagesDemo() {
               embed: (
                 <OrangeEmbed>
                   <div className="space-y-1.5">
-                    <p><span className="text-orange-300">Message scheduled. It will be sent </span>
+                    <p><span className="text-orange-light">Message scheduled. It will be sent </span>
                       <span
                         className="inline-flex cursor-default items-center gap-1 rounded bg-white/[0.07] px-1.5 py-0.5 text-[11px] text-white/70 underline decoration-white/25 decoration-dotted underline-offset-2"
                         title={sendAtAbsolute}
@@ -357,7 +357,7 @@ export default function ScheduledMessagesDemo() {
                       <span className="inline-flex items-center rounded-md bg-[#3f4a5a] px-1.5 py-px text-[#5ba1e7] text-sm font-medium ring-1 ring-inset ring-[#5ba1e7]/30">
                         #announcements
                       </span>                    </p>
-                    <p><span className="text-orange-300">Repeats: weekly</span></p>
+                    <p><span className="text-orange-light">Repeats: weekly</span></p>
                   </div>
                 </OrangeEmbed>
               ),
@@ -382,8 +382,10 @@ export default function ScheduledMessagesDemo() {
   return (
     <ChannelDemo
       channelName="staff"
-      title="See Scheduled Messages in Action"
-      subtitle="Complete guided flow with webhooks and recurring options"
+      eyebrow="Scheduled messages"
+      title="Messages that send themselves"
+      subtitle="A guided flow with webhooks and recurring options"
+      panelTitle="The setup, step by step"
       timeline={TIMELINE}
       explanations={EXPLANATIONS}
     />

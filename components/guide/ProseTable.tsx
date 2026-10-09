@@ -8,7 +8,7 @@ interface ProseTableProps {
 
 export default function ProseTable({ headers, rows }: ProseTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#140b08]">
+    <div className="overflow-x-auto rounded-lg border border-white/10 bg-[#140b08]">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-white/10 bg-white/5">

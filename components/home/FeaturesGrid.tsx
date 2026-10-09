@@ -7,10 +7,13 @@ export default function FeaturesGrid() {
       className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 lg:px-8"
       aria-labelledby="features-heading"
     >
-      <div className="mb-10 text-center">
+      <div className="mb-10 max-w-2xl">
+        <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-orange-light">
+          Features
+        </p>
         <h2
           id="features-heading"
-          className="text-3xl font-bold tracking-tight text-white sm:text-4xl"
+          className="font-display text-3xl font-light tracking-tight text-white sm:text-4xl"
         >
           Useful features for community needs
         </h2>

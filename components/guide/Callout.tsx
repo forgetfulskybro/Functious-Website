@@ -5,7 +5,7 @@ interface CalloutProps {
 
 export default function Callout({ title, children }: CalloutProps) {
   return (
-    <div className="rounded-xl border border-orange/25 bg-orange/10 px-4 py-3.5">
+    <div className="rounded-lg border border-orange/25 bg-orange/10 px-4 py-3.5">
       {title && (
         <p className="text-sm font-semibold text-orange-light">{title}</p>
       )}

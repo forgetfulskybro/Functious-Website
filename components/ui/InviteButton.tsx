@@ -23,15 +23,16 @@ export default function InviteButton({ size = 'md', className = '' }: InviteButt
       className={[
         'group inline-flex items-center justify-center gap-3 rounded-2xl font-semibold',
         'bg-gradient-to-br from-orange-500 via-orange-600 to-rose-500',
+        'bg-[length:200%_200%] bg-[position:0%_0%]',
         'text-white shadow-xl shadow-orange-600/40',
         'border border-white/20',
 
-        'hover:from-orange-600 hover:via-rose-600 hover:to-pink-600',
+        'hover:bg-[position:100%_100%]',
         'hover:shadow-2xl hover:shadow-orange-500/50',
         'hover:text-white',
 
         'active:scale-[0.97]',
-        'transition-all duration-200 ease-out',
+        'transition-all duration-300 ease-out',
         'focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
         sizeClasses[size],
         className,

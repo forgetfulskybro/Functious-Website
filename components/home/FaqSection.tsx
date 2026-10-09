@@ -18,30 +18,24 @@ export default function FaqSection() {
       className="mx-auto w-full border-t border-orange-mid/25 bg-[#1a0808] px-4 py-16 sm:px-6 lg:px-8"
       aria-labelledby="faq-heading"
     >
-      <div className="mx-auto max-w-3xl">
-        <h2
-          id="faq-heading"
-          className="mb-10 text-center text-3xl font-bold tracking-tight text-white sm:text-4xl"
-        >
-          Frequently Asked Questions
-        </h2>
+      <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
+        <div className="lg:sticky lg:top-24 lg:self-start">
+          <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-orange-light">
+            FAQ
+          </p>
+          <h2
+            id="faq-heading"
+            className="font-display text-3xl font-light tracking-tight text-white sm:text-4xl"
+          >
+            Questions people ask first
+          </h2>
+          <p className="mt-3 text-white/60">
+            The things community owners want to know before they invite Functious.
+          </p>
 
-        <div className="divide-y divide-orange-mid/15 rounded-xl border border-orange-mid/20 bg-[#1f0d08] px-6">
-          {FEATURED_FAQ.map((item, index) => (
-            <FaqItem
-              key={item.question}
-              question={item.question}
-              answer={item.answer}
-              isOpen={openIndex === index}
-              onToggle={() => handleToggle(index)}
-            />
-          ))}
-        </div>
-
-        <div className="mt-10 flex justify-center">
           <Link
             href="/faq"
-            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-white/70 transition-colors duration-200 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+            className="group mt-6 inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-white/70 transition-colors duration-200 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
           >
             <span>View all FAQs</span>
             <span
@@ -51,6 +45,18 @@ export default function FaqSection() {
               →
             </span>
           </Link>
+        </div>
+
+        <div className="mt-10 divide-y divide-orange-mid/15 rounded-lg border border-orange-mid/20 bg-[#1f0d08] px-6 lg:mt-0">
+          {FEATURED_FAQ.map((item, index) => (
+            <FaqItem
+              key={item.question}
+              question={item.question}
+              answer={item.answer}
+              isOpen={openIndex === index}
+              onToggle={() => handleToggle(index)}
+            />
+          ))}
         </div>
       </div>
     </section>

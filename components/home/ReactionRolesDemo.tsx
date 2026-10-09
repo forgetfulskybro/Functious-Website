@@ -64,7 +64,7 @@ const setupEmbed = (
         </span>
         <p className="text-[12px] leading-relaxed text-white/70">
           Send a message using{' '}
-          <code className="rounded bg-white/10 px-1 py-0.5 font-mono text-[11px] text-orange-300">
+          <code className="rounded bg-white/10 px-1 py-0.5 font-mono text-[11px] text-orange-light">
             {'{role:Name}'}
           </code>{' '}
           tags where each role should appear.
@@ -95,9 +95,9 @@ const setupEmbed = (
         </p>
         <p className="font-mono text-[11px] leading-relaxed text-white/55">
           Color Roles:{' '}
-          <span className="text-orange-300/80">{'{role:Blue}'}</span>{' '}
-          <span className="text-orange-300/80">{'{role:Red}'}</span>{' '}
-          <span className="text-orange-300/80">{'{role:Purple}'}</span>
+          <span className="text-orange-light/80">{'{role:Blue}'}</span>{' '}
+          <span className="text-orange-light/80">{'{role:Red}'}</span>{' '}
+          <span className="text-orange-light/80">{'{role:Purple}'}</span>
         </p>
       </div>
     </div>
@@ -314,8 +314,10 @@ export default function ReactionRolesDemo() {
   return (
     <ChannelDemo
       channelName="roles"
-      title="See Reaction Roles in Action"
-      subtitle="The full setup flow - exactly how it works in your community"
+      eyebrow="Reaction roles"
+      title="Roles people claim in one tap"
+      subtitle="The full setup, exactly as it runs in your community"
+      panelTitle="Pairing a role to an emoji"
       timeline={TIMELINE}
       explanations={EXPLANATIONS}
     />

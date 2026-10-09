@@ -20,7 +20,7 @@ export default function CommandCard({
   return (
     <div
       className={`
-        overflow-hidden rounded-xl border transition-colors duration-200
+        overflow-hidden rounded-lg border transition-colors duration-200
         ${isOpen
           ? 'border-orange/30 bg-[#140b08]'
           : 'border-white/10 bg-[#140b08] hover:border-white/15'
