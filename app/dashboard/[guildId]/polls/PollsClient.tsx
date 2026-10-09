@@ -117,7 +117,7 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
     if (!error) shownError.current = null;
   }, [error]);
 
-  const createPoll = useCallback(async (payload: { channelId: string; question: string; duration: string; options: string[] }) => {
+  const createPoll = useCallback(async (payload: { channelId: string; question: string; duration: string; options: string[]; thread: boolean }) => {
     setBusy(true);
     try {
       const res = await fetch(`/api/bot/guilds/${activeGuildId}/polls`, {

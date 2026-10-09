@@ -284,13 +284,14 @@ function defaultEndTime() {
 export function CreatePollModal({ channels, busy, onSave, onClose }: {
   channels: { id: string; name: string; type: number, parentId: string }[];
   busy?: boolean;
-  onSave: (payload: { channelId: string; question: string; duration: string; options: string[] }) => Promise<void>;
+  onSave: (payload: { channelId: string; question: string; duration: string; options: string[]; thread: boolean }) => Promise<void>;
   onClose: () => void;
 }) {
   const [channelId, setChannelId] = useState('');
   const [question, setQuestion] = useState('');
   const [endTime, setEndTime] = useState(defaultEndTime);
   const [options, setOptions] = useState<string[]>(['', '']);
+  const [thread, setThread] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const isBusy = submitting || !!busy;
   const optListRef = useRef<HTMLDivElement>(null);
@@ -330,7 +331,7 @@ export function CreatePollModal({ channels, busy, onSave, onClose }: {
 
     setSubmitting(true);
     try {
-      await onSave({ channelId, question: question.trim(), duration, options: filled });
+      await onSave({ channelId, question: question.trim(), duration, options: filled, thread });
     } finally {
       setSubmitting(false);
     }
@@ -384,6 +385,18 @@ export function CreatePollModal({ channels, busy, onSave, onClose }: {
               <DateTimePicker value={endTime} onChangeAction={setEndTime} />
               <p className="text-white/20 text-[10px] mt-1.5">Min 30 seconds · Max 30 days from now</p>
             </div>
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <div className="relative mt-0.5 flex-shrink-0">
+                <input type="checkbox" className="sr-only" checked={thread} onChange={e => setThread(e.target.checked)} />
+                <div className={`h-5 w-9 rounded-full transition-colors ${thread ? 'bg-orange/80' : 'bg-white/10'}`} />
+                <div className={`absolute top-[3px] h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${thread ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white/80">Create discussion thread</p>
+                <p className="mt-0.5 text-xs text-white/35">Opens a thread on the poll message (archives after 1 week)</p>
+              </div>
+            </label>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">

@@ -127,6 +127,7 @@ export async function createBotPoll(
     question: string;
     duration: string;
     options: string[];
+    thread?: boolean;
     ownerId?: string;
   },
   userId?: string

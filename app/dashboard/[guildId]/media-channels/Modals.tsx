@@ -18,6 +18,8 @@ export interface MediaChannelEntry {
   deleteThreshold: number;
   sticky: boolean;
   stickyText: string | null;
+  threads: boolean;
+  desc: boolean;
   stickyMessageId: string | null;
 }
 
@@ -83,6 +85,8 @@ export function MediaChannelModal({
   const [deleteThreshold, setDeleteThreshold] = useState(initial?.deleteThreshold ?? 0);
   const [sticky, setSticky] = useState(initial?.sticky ?? false);
   const [stickyText, setStickyText] = useState(initial?.stickyText ?? '');
+  const [threads, setThreads] = useState(initial?.threads ?? false);
+  const [desc, setDesc] = useState(initial?.desc ?? false);
   const [submitting, setSubmitting] = useState(false);
 
   const busy = submitting || !!saving;
@@ -111,6 +115,8 @@ export function MediaChannelModal({
         deleteThreshold: rating ? deleteThreshold : 0,
         sticky,
         stickyText: sticky && stickyText.trim() ? stickyText.trim() : null,
+        threads,
+        desc,
         stickyMessageId: initial?.stickyMessageId ?? null,
       });
     } finally {
@@ -151,6 +157,11 @@ export function MediaChannelModal({
               {!isEdit && channelId && existingChannelIds.includes(channelId) && (
                 <p className="mt-1.5 text-xs text-red-400/80">This channel is already configured. Use Edit instead.</p>
               )}
+            </div>
+
+            <div className="mb-5 grid grid-cols-1 gap-4 rounded-xl border border-white/5 bg-white/[0.02] p-4 sm:grid-cols-2">
+              <Toggle checked={threads} onChange={setThreads} label="Create threads" description="Opens a thread on each allowed post (archives after 1 week)" />
+              <Toggle checked={desc} onChange={setDesc} label="Allow post text" description="Allows text on your message" />
             </div>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

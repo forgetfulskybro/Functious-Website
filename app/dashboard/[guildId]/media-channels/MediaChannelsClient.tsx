@@ -31,6 +31,8 @@ function mapEntries(raw: any[]): MediaChannelEntry[] {
     deleteThreshold: e.deleteThreshold ?? 0,
     sticky: e.sticky ?? false,
     stickyText: e.stickyText ?? null,
+    threads: e.threads ?? false,
+    desc: e.desc ?? false,
     stickyMessageId: e.stickyMessageId ?? null,
   }));
 }
@@ -248,6 +250,8 @@ export default function MediaChannelsClient({
                         />
                       )}
                       {entry.sticky && <BadgePill label="sticky" />}
+                      {entry.threads && <BadgePill label={entry.desc ? 'threads · from text' : 'threads'} />}
+                      {!entry.threads && entry.desc && <BadgePill label="post text" />}
                     </div>
 
                     <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
