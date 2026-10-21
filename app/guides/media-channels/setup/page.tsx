@@ -28,7 +28,7 @@ export default function MediaChannelsSetup() {
         </p>
         <ul className="list-disc space-y-1.5 pl-5">
           <li><code className="font-mono text-orange-light">--attachments</code> - any attachment (images, videos, files).</li>
-          <li><code className="font-mono text-orange-light">--images</code> - png, jpg, jpeg, gif, webp, bmp, tiff, avif.</li>
+          <li><code className="font-mono text-orange-light">--images</code> - png, jpg, jpeg, gif, webp, bmp, tiff, tif, avif.</li>
           <li><code className="font-mono text-orange-light">--videos</code> - mp4, mov, webm, mkv, avi, wmv, flv, m4v.</li>
           <li><code className="font-mono text-orange-light">--files</code> - everything else: zip, pdf, txt, etc.</li>
           <li><code className="font-mono text-orange-light">--links</code> - bare URLs with no attachment required.</li>

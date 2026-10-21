@@ -90,7 +90,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       {
         question: 'How do I let moderators use commands without giving them admin?',
         answer:
-          'Bypass grants specific roles access to permission-locked commands without changing their community permissions. Use `f!bypass add <role> <commands>` for particular commands, or `f!bypass add <role> all` for every one.',
+          'Bypass grants specific roles access to permission-locked commands without changing their community permissions. Use `f!bypass add <role> | <commands>` for particular commands, or `f!bypass add <role> | all` for every one.',
         featured: true,
       },
     ],
@@ -115,7 +115,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       {
         question: 'What do the different content type options do?',
         answer:
-          '`--attachments` allows any attachment and is the default when you pass no options. `--images` covers png, jpg, jpeg, gif, webp, bmp, tiff and avif. `--videos` covers mp4, mov, webm, mkv, avi, wmv, flv and m4v. `--files` allows everything else, such as zip, pdf or txt. `--links` allows plain links with no attachment. Combine them freely, but using any specific option turns off the broad default unless you also add `--attachments`.',
+          '`--attachments` allows any attachment and is the default when you pass no options. `--images` covers png, jpg, jpeg, gif, webp, bmp, tiff, tif and avif. `--videos` covers mp4, mov, webm, mkv, avi, wmv, flv and m4v. `--files` allows everything else, such as zip, pdf or txt. `--links` allows plain links with no attachment. Combine them freely, but using any specific option turns off the broad default unless you also add `--attachments`.',
       },
       {
         question: 'How does the rating and auto-delete option work?',

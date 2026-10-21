@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FAQ_GROUPS } from '@/data/faq';
 import FaqItemView from '@/components/faq/FaqItem';
@@ -58,6 +58,39 @@ export default function FaqPageContent() {
     setOpenKey(key);
     setActiveGroup(groupId);
   };
+
+  useEffect(() => {
+    const sections = FAQ_GROUPS.map((group) =>
+      document.getElementById(group.id),
+    ).filter((section): section is HTMLElement => section !== null);
+
+    if (sections.length === 0) return;
+
+    const threshold = 120;
+
+    const handleScroll = () => {
+      let current = sections[0].id;
+
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= threshold) {
+          current = section.id;
+        } else {
+          break;
+        }
+      }
+
+      setActiveGroup(current);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-bg-dark">

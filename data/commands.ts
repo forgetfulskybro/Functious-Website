@@ -28,7 +28,7 @@ export const COMMANDS: CommandEntry[] = [
   {
     name: 'birthday',
     description: "Store birthdays and announce them at midnight in each member's own timezone.",
-    usage: 'birthday <help|set <date>|edit <date>|age <number|remove>|view|remove|preview|ping|enable|disable|servers|settings|channel <#channel>|role <@role>|annping|list|force <@user>|blacklist [@user|remove|clear]|message [withage <text>|noage <text>|reset]>',
+    usage: 'birthday <help|set <date>|edit <date>|age <number|remove>|view|remove|preview|ping|enable|disable|servers|settings|channel <#channel>|role <@role>|annping|list|force <@user>|blacklist [@user|remove @user|clear]|message [withage <text>|noage <text>|reset]>',
     aliases: ['bday', 'bd'],
     cooldown: 3000,
     permissions: null,
@@ -37,7 +37,7 @@ export const COMMANDS: CommandEntry[] = [
   {
     name: 'bypass',
     description: 'Grant roles a bypass to use commands locked behind permissions.',
-    usage: 'bypass <add|remove|edit|view> [role] | [commands]',
+    usage: 'bypass <add|remove|edit|view|help> [role] | [commands]',
     aliases: ['bp'],
     cooldown: 2000,
     permissions: 'Administrator',
@@ -46,7 +46,7 @@ export const COMMANDS: CommandEntry[] = [
   {
     name: 'giveaway',
     description: 'Create, delete, and reroll giveaways with reaction-based entry.',
-    usage: 'giveaway <time> | <winners> | <prize> [| channel:<#channel>] [| dm:yes] [| ping:no] [| multiwin:yes] [| image:<url>] [| requirement]',
+    usage: 'giveaway <time> | <winners> | <prize> [| channel:<#channel>] [| dm:yes] [| ping:no] [| multiwin:yes] [| image:<url>] [| requirement] | delete <id> | reroll <id> | <number|all> | help',
     aliases: ['gw'],
     cooldown: 5000,
     permissions: 'Manage Guild',
@@ -73,7 +73,7 @@ export const COMMANDS: CommandEntry[] = [
   {
     name: 'language',
     description: 'Change the bot response language for your community.',
-    usage: 'language [language_code]',
+    usage: 'language [code | short_code | name]',
     aliases: ['lang'],
     cooldown: 5000,
     permissions: 'Manage Guild',
@@ -82,7 +82,7 @@ export const COMMANDS: CommandEntry[] = [
   {
     name: 'mediachannels',
     description: 'Restrict channels to media or links only, with optional rating reactions and sticky messages.',
-    usage: 'mediachannels <add|edit|remove|list> [#channel] [--images] [--videos] [--files] [--links] [--rating] [--delete N] [--sticky] [--stickytext text]',
+    usage: 'mediachannels <add|edit|remove|list> [#channel] [--attachments] [--images] [--videos] [--files] [--links] [--rating] [--delete N] [--sticky] [--stickytext text] [--thread] [--desc]',
     aliases: ['mediachannel', 'mc', 'mediachan'],
     cooldown: 3000,
     permissions: 'Manage Guild',
@@ -100,7 +100,7 @@ export const COMMANDS: CommandEntry[] = [
   {
     name: 'polls',
     description: 'Create visual bar-chart polls with up to 10 options.',
-    usage: 'polls <time> | <question> | <option1> | <option2> [| more options...]',
+    usage: 'polls <time> | <question> | <option1> | <option2> [| more options...] | thread <...> | view | delete <number> | toggle | help',
     aliases: ['poll'],
     cooldown: 7000,
     permissions: null,
@@ -109,7 +109,7 @@ export const COMMANDS: CommandEntry[] = [
   {
     name: 'prefix',
     description: 'Change the bot command prefix for your community (max 8 characters).',
-    usage: 'prefix <new_prefix>',
+    usage: 'prefix <set|change> <new_prefix>',
     aliases: [],
     cooldown: 3000,
     permissions: 'Manage Guild',
@@ -118,7 +118,7 @@ export const COMMANDS: CommandEntry[] = [
   {
     name: 'remind',
     description: 'Set a personal reminder delivered in the channel or via DM.',
-    usage: 'remind [dm] <time> <message>',
+    usage: 'remind [dm] <time> <message> | list | delete <index> | add <time> <message> | rlist | rdelete <index> | help',
     aliases: ['reminder', 're', 'reminders'],
     cooldown: 2500,
     permissions: null,
@@ -136,7 +136,7 @@ export const COMMANDS: CommandEntry[] = [
   {
     name: 'schedule',
     description: 'Schedule messages, embeds, polls, giveaways, or reminders to send at a future time.',
-    usage: 'schedule <content|embed|poll|giveaway|remind|view|edit|delete|stop> [#channel] [options]',
+    usage: 'schedule <content|embed|poll|giveaway|remind|view|edit|delete|stop|help> [#channel] [options]',
     aliases: ['sched', 'scheduler'],
     cooldown: 3000,
     permissions: 'Manage Guild',

@@ -50,7 +50,7 @@ export default function RemindGuide() {
         <ul className="list-disc space-y-1.5 pl-5">
           <li>Minimum time: 1 minute in the future.</li>
           <li>Maximum time: 2 years.</li>
-          <li>Maximum message length: 500 characters.</li>
+          <li>Maximum message length: 400 characters.</li>
           <li>Maximum active reminders per user: 25.</li>
         </ul>
       </GuideSection>

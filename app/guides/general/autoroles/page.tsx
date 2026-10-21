@@ -17,8 +17,8 @@ export default function AutorolesGuide() {
           Join roles are added to every member the moment they join the community. Add one or more
           role names (or mentions) after the subcommand:
         </p>
-        <CodeBlock title="Fluxer - add" code="f!autoroles joinroles add Member, Newcomer" />
-        <CodeBlock title="Fluxer - remove" code="f!autoroles joinroles remove Member" />
+        <CodeBlock title="Fluxer - add" code="f!autoroles join add Member, Newcomer" />
+        <CodeBlock title="Fluxer - remove" code="f!autoroles join remove Member" />
         <Callout>
           You can add up to 20 join roles per community. Duplicates are ignored automatically.
         </Callout>
@@ -29,12 +29,7 @@ export default function AutorolesGuide() {
           When sticky roles are enabled, the bot records each member's roles when they leave.
           If they rejoin, those roles are restored automatically.
         </p>
-        <CodeBlock title="Fluxer - toggle on/off" code="f!autoroles stickyroles" />
-        <p>
-          You can also whitelist specific roles to stick instead of all of them:
-        </p>
-        <CodeBlock title="Fluxer - add sticky role" code="f!autoroles stickyroles add Verified" />
-        <CodeBlock title="Fluxer - remove sticky role" code="f!autoroles stickyroles remove Verified" />
+        <CodeBlock title="Fluxer - toggle on/off" code="f!autoroles sticky" />
       </GuideSection>
 
       <GuideSection title="Timed roles">
@@ -42,8 +37,8 @@ export default function AutorolesGuide() {
           Timed roles are assigned to a member after they have been in the community for a set
           amount of time. Use the <code className="font-mono text-orange-light">{'{time:}'}</code> option to set the delay:
         </p>
-        <CodeBlock title="Fluxer - add timed role" code="f!autoroles timedroles add Veteran {time:30d}" />
-        <CodeBlock title="Fluxer - remove timed role" code="f!autoroles timedroles remove Veteran" />
+        <CodeBlock title="Fluxer - add timed role" code="f!autoroles timed add Veteran {time:30d}" />
+        <CodeBlock title="Fluxer - remove timed role" code="f!autoroles timed remove Veteran" />
         <p>
           Time formats: <code className="font-mono text-orange-light">30m</code>,{' '}
           <code className="font-mono text-orange-light">12h</code>,{' '}

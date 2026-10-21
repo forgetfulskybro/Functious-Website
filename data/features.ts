@@ -48,7 +48,7 @@ export const FEATURES: FeatureData[] = [
     ],
     usageExamples: [
       'f!giveaway 20m | 3 | A t-shirt',
-      'f!giveaway 1h | 1 | Nitro | channel:#giveaways',
+      'f!giveaway 1h | 1 | Plutonium | channel:#giveaways',
       'f!giveaway reroll <messageId> | 2',
     ],
     relatedCommands: ['giveaway'],
@@ -68,7 +68,7 @@ export const FEATURES: FeatureData[] = [
     ],
     usageExamples: [
       "f!polls 5m | What's your favorite color? | Red | Blue | Green",
-      'f!polls 1h | Best feature? | Giveaways | Polls | Roles | Tags',
+      'f!polls thread 1h | Best feature? | Giveaways | Polls | Roles | Tags',
     ],
     relatedCommands: ['polls'],
     relatedGuides: ['general/polls'],
@@ -156,9 +156,9 @@ export const FEATURES: FeatureData[] = [
       'Channel owner management controls',
     ],
     usageExamples: [
-      'f!tempchannels setup',
-      'f!tempchannels config {name:My Channel} {limit:5} {counting:on}',
-      'f!tempchannels reset default',
+      'f!tc set default',
+      'f!tc set config {name:My Channel} {limit:5} {counting}',
+      'f!tc set config {reset}',
     ],
     relatedCommands: ['tempchannels'],
     relatedGuides: ['temp-channels'],
@@ -249,7 +249,7 @@ export const FEATURES: FeatureData[] = [
       'Sticky roles (restored if user leaves and rejoins)',
       'Timed roles (applied after X time in the community)',
       'Up to 20 join roles',
-      'Time format: 1w3d2h5m',
+      'Time format: 6d12h30m',
     ],
     usageExamples: [
       'f!autoroles join add Member, Updates',
@@ -273,8 +273,8 @@ export const FEATURES: FeatureData[] = [
       'Role-based command access control',
     ],
     usageExamples: [
-      'f!bypass add Moderator roles, schedule',
-      'f!bypass add Admin all',
+      'f!bypass add Moderator | roles, schedule',
+      'f!bypass add Admin | all',
       'f!bypass view',
       'f!bypass remove Moderator',
     ],
