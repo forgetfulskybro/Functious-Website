@@ -8,18 +8,12 @@ export default function FeaturesGrid() {
       aria-labelledby="features-heading"
     >
       <div className="mb-10 max-w-2xl">
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-orange-light">
-          Features
-        </p>
         <h2
           id="features-heading"
           className="font-display text-3xl font-light tracking-tight text-white sm:text-4xl"
         >
           Useful features for community needs
         </h2>
-        <p className="mt-3 text-white/60">
-          Everything Functious can do, from reaction roles to scheduled messages.
-        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -288,25 +288,25 @@ const EXPLANATIONS: StepExplanation[] = [
     id: 'bot-embed',
     label: 'Run the command',
     detail:
-      'Type f!roles create. Functious sends a setup embed showing the {role:Name} format and the steps to pair each role.',
+      'Type f!roles create.',
   },
   {
     id: 'user-types1',
     label: 'Write your message',
     detail:
-      'Send a message with {role:Blue}, {role:Red}, etc. wherever each role should appear.',
+      'Add {role:YourRole} for each role.',
   },
   {
     id: 'msg-deleted',
-    label: 'Bot copies & deletes yours',
+    label: 'Bot copies it',
     detail:
-      "Functious deletes your original message and sends its own copy. React to the bot's message with emojis in order.",
+      "React to the bot's copy with one emoji per role.",
   },
   {
     id: 'react-0',
-    label: 'React - roles update live',
+    label: 'Assign roles',
     detail:
-      'Each emoji you add is immediately paired to the matching {role:X} tag. The tag flips to the emoji + role name right away.',
+      'Each emoji pairs with its role.',
   },
 ];
 
@@ -314,10 +314,7 @@ export default function ReactionRolesDemo() {
   return (
     <ChannelDemo
       channelName="roles"
-      eyebrow="Reaction roles"
-      title="Roles people claim in one tap"
-      subtitle="The full setup, exactly as it runs in your community"
-      panelTitle="Pairing a role to an emoji"
+      title="Reaction roles"
       timeline={TIMELINE}
       explanations={EXPLANATIONS}
     />

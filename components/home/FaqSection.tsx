@@ -20,9 +20,6 @@ export default function FaqSection() {
     >
       <div className="mx-auto max-w-6xl lg:grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
         <div className="lg:sticky lg:top-24 lg:self-start">
-          <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-orange-light">
-            FAQ
-          </p>
           <h2
             id="faq-heading"
             className="font-display text-3xl font-light tracking-tight text-white sm:text-4xl"

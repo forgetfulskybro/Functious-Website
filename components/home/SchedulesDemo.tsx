@@ -372,20 +372,17 @@ export default function ScheduledMessagesDemo() {
   );
 
   const EXPLANATIONS: StepExplanation[] = [
-    { id: 'ask-content', label: 'Message Content', detail: 'Send the message you want scheduled.' },
-    { id: 'ask-webhook', label: 'Webhook Setup', detail: 'Optional custom webhook with name and avatar.' },
-    { id: 'ask-recurring', label: 'Recurring', detail: 'Choose repeat frequency (none, daily, weekly, etc.).' },
-    { id: 'ask-time', label: 'Send Time', detail: 'Set when the message should be delivered.' },
-    { id: 'confirm', label: 'Confirmation', detail: 'All details confirmed and message queued.' },
+    { id: 'ask-content', label: 'Content', detail: 'Send the message you want scheduled.' },
+    { id: 'ask-webhook', label: 'Webhook', detail: 'Optional name and avatar.' },
+    { id: 'ask-recurring', label: 'Repeat', detail: 'None, daily, weekly, or cron.' },
+    { id: 'ask-time', label: 'Send time', detail: 'When to send it.' },
+    { id: 'confirm', label: 'Confirm', detail: 'Message queued.' },
   ];
 
   return (
     <ChannelDemo
       channelName="staff"
-      eyebrow="Scheduled messages"
-      title="Messages that send themselves"
-      subtitle="A guided flow with webhooks and recurring options"
-      panelTitle="The setup, step by step"
+      title="Scheduled messages"
       timeline={TIMELINE}
       explanations={EXPLANATIONS}
     />

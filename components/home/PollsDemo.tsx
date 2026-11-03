@@ -243,29 +243,26 @@ export default function PollsDemo() {
       id: 'user-cmd',
       label: 'Run the command',
       detail:
-        'Type f!polls with a duration, the question, and options separated by |',
+        'Type f!polls with a duration, question, and options.',
     },
     {
       id: 'bot-poll',
       label: 'Poll is posted',
       detail:
-        'Functious posts an embed with the question, live percentage bars, and number reactions.',
+        'The poll posts with live result bars.',
     },
     {
       id: 'user-votes',
       label: 'Members vote',
       detail:
-        'React with an option emoji to vote. The bars and percentages update instantly as votes come in.',
+        'React to vote. Results update live.',
     },
   ];
 
   return (
     <ChannelDemo
       channelName="polls"
-      eyebrow="Polls"
-      title="Polls that update as people vote"
-      subtitle="One command builds a live chart poll in the channel"
-      panelTitle="From command to live results"
+      title="Polls"
       timeline={TIMELINE}
       explanations={EXPLANATIONS}
       explanationsSide="left"

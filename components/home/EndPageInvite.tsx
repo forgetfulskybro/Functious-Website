@@ -14,9 +14,6 @@ export default function EndPageInvite() {
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-xl">
-          <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-white/60">
-            Get started
-          </p>
           <h2
             id="invite-heading"
             className="font-display text-3xl font-light tracking-tight text-white sm:text-4xl"
