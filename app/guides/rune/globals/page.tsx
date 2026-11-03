@@ -62,7 +62,7 @@ export default function RuneGlobalsPage() {
       </GuideSection>
 
       <GuideSection title="$message">
-        <p>The message that invoked the tag.</p>
+        <p>The message that invoked the tag. When the tag is used as a reply, this is the message you replied to.</p>
         <ProseTable
           headers={['field', 'description']}
           rows={[

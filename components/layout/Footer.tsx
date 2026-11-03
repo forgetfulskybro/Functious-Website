@@ -43,6 +43,7 @@ export default function Footer() {
                 { label: 'Home',     href: '/' },
                 { label: 'Features', href: '/#features' },
                 { label: 'Commands', href: '/commands' },
+                { label: 'Translate', href: '/translate' },
                 { label: 'Guides',   href: '/guides' },
                 { label: 'FAQ',      href: '/faq' },
               ].map(({ label, href }) => (
@@ -66,7 +67,6 @@ export default function Footer() {
               {[
                 { label: 'Support Community', href: 'https://fluxer.gg/YnINU09E' },
                 { label: 'GitHub',         href: 'https://github.com/forgetfulskybro/Fluxer-Functious' },
-                { label: 'Crowdin',        href: 'https://crowdin.com/project/functious' },
                 { label: 'Ko-Fi',          href: 'https://ko-fi.com/forgetfulskybro' },
               ].map(({ label, href }) => (
                 <li key={label}>

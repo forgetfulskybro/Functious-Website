@@ -2,7 +2,13 @@
 
 import { useEffect, useRef } from 'react';
 
-export default function AuthCallbackClient({ code }: { code: string | null }) {
+export default function AuthCallbackClient({
+  code,
+  next,
+}: {
+  code: string | null;
+  next: string | null;
+}) {
   const called = useRef(false);
 
   useEffect(() => {
@@ -17,7 +23,16 @@ export default function AuthCallbackClient({ code }: { code: string | null }) {
     })
       .then(async res => {
         if (res.ok) {
-          window.location.href = '/dashboard';
+          const destination =
+            next &&
+            next.startsWith('/') &&
+            !next.startsWith('//') &&
+            next !== '/login' &&
+            !next.startsWith('/auth') &&
+            !next.startsWith('/api/auth')
+              ? next
+              : '/dashboard';
+          window.location.href = destination;
         } else {
           const data = await res.json().catch(() => ({}));
           //window.location.href = `/auth-error?reason=${data.reason ?? 'unknown'}`;
@@ -26,7 +41,7 @@ export default function AuthCallbackClient({ code }: { code: string | null }) {
       .catch(() => {
         window.location.href = '/auth-error?reason=unknown';
       });
-  }, [code]);
+  }, [code, next]);
 
   return (
     <main className="min-h-screen bg-bg-dark flex items-center justify-center">

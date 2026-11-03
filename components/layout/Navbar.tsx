@@ -10,6 +10,7 @@ import { usePathname } from 'next/navigation';
 const NAV_LINKS = [
   { label: 'Features', href: '/#features' },
   { label: 'Commands', href: '/commands' },
+  { label: 'Translate', href: '/translate' },
   { label: 'FAQ', href: '/faq' },
   { label: 'Guides', href: '/guides' },
 ] as const;
@@ -34,6 +35,15 @@ const SUPPORT_LINKS = [
     description: 'How we handle data',
   },
 ] as const;
+
+function loginHref(pathname: string): string {
+  const next =
+    pathname === '/login' || pathname.startsWith('/auth')
+      ? '/'
+      : pathname || '/';
+
+  return `/api/auth/login?next=${encodeURIComponent(next)}`;
+}
 
 function avatarUrl(user: FluxerUser): string {
   if (!user.avatar) {
@@ -164,6 +174,7 @@ function SupportMenu() {
 function GuestMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -221,7 +232,7 @@ function GuestMenu() {
         >
           <div className="py-1">
             <a
-              href="/api/auth/login"
+              href={loginHref(pathname)}
               role="menuitem"
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/6 transition-colors focus-visible:outline-none focus-visible:bg-white/6"
@@ -374,6 +385,26 @@ function UserMenu({ user }: { user: FluxerUser }) {
               Profile
             </Link>
 
+            <Link
+              href="/translate"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/6 transition-colors focus-visible:outline-none focus-visible:bg-white/6"
+            >
+              <svg
+                className="w-4 h-4 text-white/40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
+              </svg>
+              Translate
+            </Link>
+
             <a
               href={BOT_INVITE_URL}
               target="_blank"
@@ -431,6 +462,7 @@ export default function Navbar() {
   const [user, setUser] = useState<FluxerUser | null>(null);
 
   const pathname = usePathname();
+  const signInHref = loginHref(pathname);
   const isActiveLink = (href: string) =>
     href.startsWith('/') &&
     (pathname === href || pathname.startsWith(`${href}/`));
@@ -609,7 +641,7 @@ export default function Navbar() {
                 <>
                   <li className="border-t border-white/10 pt-4">
                     <a
-                      href="/api/auth/login"
+                      href={signInHref}
                       onClick={() => setMobileOpen(false)}
                       className="inline-flex w-full items-center justify-center rounded-lg bg-orange px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-bright focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
                     >
@@ -666,6 +698,15 @@ export default function Navbar() {
                       className="block text-sm text-white/70 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
                     >
                       Profile →
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/translate"
+                      onClick={() => setMobileOpen(false)}
+                      className="block text-sm text-white/70 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+                    >
+                      Translate →
                     </Link>
                   </li>
                   <li>

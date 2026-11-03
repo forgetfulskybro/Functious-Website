@@ -4,6 +4,7 @@ import type { FluxerUser, FluxerGuild, UserProfile } from '@/lib/types';
 import { Markdown } from '@/components/guide/CodeBlock';
 import { showErrorToast } from '@/components/ui/Toast';
 import GetCoords from '@/components/ui/GetCoords';
+import { Toggle } from '@/components/ui/Toggle';
 import { runTagSafe } from '@/app/interpreter';
 import UserBadge from '@/components/ui/UserBadge';
 import Image from 'next/image';
@@ -17,6 +18,7 @@ export interface TagEntry {
   createdBy?: string; 
   createdAt?: number;
   uses?: number;
+  trigger?: boolean;
 }
 
 interface ChatMessage {
@@ -396,6 +398,7 @@ export function TagModal({
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [type, setType] = useState<'text' | 'embed' | 'script'>(initial?.type ?? 'text');
+  const [trigger, setTrigger] = useState(initial?.trigger === true);
   const [content, setContent] = useState(() =>
     initial?.type === 'embed'
       ? initial.embedData?.description ?? ''
@@ -662,6 +665,7 @@ export function TagModal({
         createdBy: initial?.createdBy ?? userId,
         createdAt: initial?.createdAt ?? Math.floor(Date.now() / 1000),
         uses: initial?.uses ?? 0,
+        trigger,
       });
     } catch {
       showErrorToast('Error', { description: 'Failed to save tag.' });
@@ -797,6 +801,16 @@ export function TagModal({
                   )}
                 </div>
               )}
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-white/70">Trigger word</p>
+                <p className="mt-0.5 text-[10px] text-white/30">
+                  Run this tag by sending its name on its own, without the command prefix.
+                </p>
+              </div>
+              <Toggle value={trigger} onChangeAction={setTrigger} />
             </div>
 
             {!isScript ? (
@@ -1271,6 +1285,7 @@ export function TagViewModal({
             <h2 className="text-lg font-bold text-white">{tag.name}</h2>
             <p className="mt-0.5 text-xs text-white/30">
               {typeLabel}
+              {tag.trigger && ' · 🔔 trigger word'}
               {(tag.uses ?? 0) > 0 && ` · ${tag.uses} use${tag.uses === 1 ? '' : 's'}`}
             </p>
           </div>

@@ -1,0 +1,682 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
+import { Toggle } from '@/components/ui/Toggle';
+import { showErrorToast, showToast } from '@/components/ui/Toast';
+import type { UserProfile } from '@/lib/types';
+import type {
+  TranslationImportResult,
+  TranslationLanguageSummary,
+  Translator,
+} from '@/lib/translationTypes';
+
+function profileAvatar(
+  userId: string,
+  profile: { avatar?: string | null; avatarUrl?: string | null } | null,
+): string | null {
+  if (!profile) return null;
+  if (profile.avatarUrl) return profile.avatarUrl;
+  if (!profile.avatar) return null;
+  const ext = profile.avatar.startsWith('a_') ? 'gif' : 'png';
+  return `https://fluxerusercontent.com/avatars/${userId}/${profile.avatar}.${ext}?size=128`;
+}
+
+interface Props {
+  initialTranslators: Translator[];
+  languages: TranslationLanguageSummary[];
+  currentUserId: string;
+}
+
+function RoleToggle({
+  label,
+  hint,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  hint: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <Toggle value={value} onChangeAction={onChange} disabled={disabled} />
+      <div>
+        <p className="text-sm font-medium text-white/75">{label}</p>
+        <p className="text-xs text-white/45">{hint}</p>
+      </div>
+    </div>
+  );
+}
+
+function TranslatorRow({
+  translator,
+  profile,
+  languages,
+  currentUserId,
+  onRemoved,
+}: {
+  translator: Translator;
+  profile?: UserProfile;
+  languages: TranslationLanguageSummary[];
+  currentUserId: string;
+  onRemoved: (userId: string) => void;
+}) {
+  const [languagesForUser, setLanguagesForUser] = useState<string[]>(
+    translator.permissions.languages,
+  );
+  const [proofreader, setProofreader] = useState(translator.permissions.proofreader);
+  const [developer, setDeveloper] = useState(translator.permissions.developer);
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [confirmRemoving, setConfirmRemoving] = useState(false);
+  const [baseline, setBaseline] = useState({
+    languages: translator.permissions.languages,
+    proofreader: translator.permissions.proofreader,
+    developer: translator.permissions.developer,
+  });
+  const [requested, setRequested] = useState(
+    translator.permissions.requestedLanguages,
+  );
+
+  const resolvedProfile = profile ?? translator.profile ?? null;
+  const displayName =
+    resolvedProfile?.globalName ||
+    resolvedProfile?.username ||
+    `User ${translator.userId.slice(-4)}`;
+  const handle = resolvedProfile?.username
+    ? `@${resolvedProfile.username}`
+    : translator.userId;
+  const avatar = profileAvatar(translator.userId, resolvedProfile);
+  const locked = translator.owner;
+
+  const dirty =
+    [...languagesForUser].sort().join(',') !==
+      [...baseline.languages].sort().join(',') ||
+    proofreader !== baseline.proofreader ||
+    developer !== baseline.developer;
+
+  function toggleLanguage(code: string) {
+    setLanguagesForUser((current) =>
+      current.includes(code)
+        ? current.filter((entry) => entry !== code)
+        : [...current, code],
+    );
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch(
+        `/api/translations/translators/${translator.userId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            languages: languagesForUser,
+            proofreader,
+            developer,
+          }),
+        },
+      );
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Could not update this translator');
+      }
+
+      const updated = data.translator;
+      setLanguagesForUser(updated.permissions.languages);
+      setProofreader(updated.permissions.proofreader);
+      setDeveloper(updated.permissions.developer);
+      setBaseline({
+        languages: updated.permissions.languages,
+        proofreader: updated.permissions.proofreader,
+        developer: updated.permissions.developer,
+      });
+      setRequested(updated.permissions.requestedLanguages);
+      showToast('Translator updated');
+    } catch (error) {
+      showErrorToast('Could not update translator', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove() {
+    setRemoving(true);
+    try {
+      const res = await fetch(
+        `/api/translations/translators/${translator.userId}`,
+        { method: 'DELETE' },
+      );
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Could not remove this translator');
+      }
+
+      onRemoved(translator.userId);
+    } catch (error) {
+      showErrorToast('Could not remove translator', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+      setConfirmRemoving(false);
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-bg-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          {avatar ? (
+            <img
+              src={avatar}
+              alt={displayName}
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-lg object-cover ring-1 ring-white/10"
+            />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange/15 text-sm font-semibold text-orange-warm ring-1 ring-white/10">
+              {displayName.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate text-sm font-semibold text-white">
+                {displayName}
+                {translator.userId === currentUserId && (
+                  <span className="ml-1.5 text-xs font-normal text-white/40">
+                    (you)
+                  </span>
+                )}
+              </p>
+              {developer && (
+                <span className="rounded border border-orange/25 bg-orange/10 px-2 py-0.5 text-[10px] font-medium text-orange-light">
+                  Developer
+                </span>
+              )}
+              {proofreader && (
+                <span className="rounded border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+                  Proofreader
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 truncate text-xs text-white/45">{handle}</p>
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-white/40">
+              <span className="text-white/35">ID</span>
+              <span className="select-all font-mono text-white/55">
+                {translator.userId}
+              </span>
+            </p>
+            <p className="mt-0.5 text-xs text-white/40">
+              {translator.contributions.approved} approved ·{' '}
+              {translator.contributions.total} edits
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {removing ? (
+            <span className="text-xs text-white/40">Removing…</span>
+          ) : confirmRemoving ? (
+            <>
+              <button
+                type="button"
+                onClick={remove}
+                className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 transition-colors hover:border-rose-400/50 hover:bg-rose-500/20"
+              >
+                Confirm
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmRemoving(false)}
+                className="rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-white/55 transition-colors hover:border-white/20 hover:text-white/80"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmRemoving(true)}
+              disabled={saving || locked || translator.userId === currentUserId}
+              title={
+                locked
+                  ? 'Owners cannot be removed'
+                  : translator.userId === currentUserId
+                    ? 'You cannot remove yourself'
+                    : undefined
+              }
+              className="rounded-lg border border-rose-500/20 px-3 py-2 text-xs font-medium text-rose-200/70 transition-colors hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-200 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Remove
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={save}
+            disabled={!dirty || saving || locked}
+            className="rounded-lg bg-orange px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-bright disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/10 pt-3">
+        <RoleToggle
+          label="Developer"
+          hint="Full access"
+          value={developer}
+          onChange={setDeveloper}
+          disabled={locked}
+        />
+        <RoleToggle
+          label="Proofreader"
+          hint="Can approve translations"
+          value={proofreader}
+          onChange={setProofreader}
+          disabled={locked}
+        />
+      </div>
+
+      <div className="mt-3">
+        {!developer && (
+          <div className="flex flex-wrap gap-1.5">
+            {languages.map((language) => {
+              const active = languagesForUser.includes(language.code);
+              return (
+                <button
+                  key={language.code}
+                  type="button"
+                  onClick={() => toggleLanguage(language.code)}
+                  className={[
+                    'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                    active
+                      ? 'border-orange/35 bg-orange/10 text-orange-light'
+                      : 'border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/75',
+                  ].join(' ')}
+                >
+                  {language.native}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {requested.length > 0 && (
+          <p className="mt-2 text-xs text-white/40">
+            Requested:{' '}
+            <span className="text-orange-light/70">
+              {requested
+                .map(
+                  (code) =>
+                    languages.find((language) => language.code === code)?.native ??
+                    code,
+                )
+                .join(', ')}
+            </span>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function DeveloperPanel({
+  initialTranslators,
+  languages,
+  currentUserId,
+}: Props) {
+  const router = useRouter();
+  const importInput = useRef<HTMLInputElement>(null);
+  const [translators, setTranslators] = useState<Translator[]>(initialTranslators);
+  const [newUserId, setNewUserId] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(
+    languages.map((language) => language.code),
+  );
+  const [includePending, setIncludePending] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const unresolvedIds = useMemo(
+    () =>
+      translators
+        .filter((translator) => !translator.profile || translator.profile.pending)
+        .map((translator) => translator.userId),
+    [translators],
+  );
+  const profiles = useUserProfiles(unresolvedIds);
+
+  async function addTranslator(event: React.FormEvent) {
+    event.preventDefault();
+    const userId = newUserId.trim();
+
+    if (!/^\d{17,20}$/.test(userId)) {
+      showErrorToast('Enter a valid Fluxer user ID');
+      return;
+    }
+
+    setAdding(true);
+    try {
+      const res = await fetch(`/api/translations/translators/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ languages: [] }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Could not add that translator');
+      }
+
+      const added: Translator = {
+        ...data.translator,
+        contributions: { approved: 0, total: 0 },
+      };
+
+      setTranslators((current) => {
+        const exists = current.some((entry) => entry.userId === userId);
+        return exists
+          ? current.map((entry) => (entry.userId === userId ? { ...entry, ...added } : entry))
+          : [...current, added];
+      });
+      setNewUserId('');
+      showToast('Translator added');
+    } catch (error) {
+      showErrorToast('Could not add translator', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  function handleRemoved(userId: string) {
+    setTranslators((current) =>
+      current.filter((translator) => translator.userId !== userId),
+    );
+    showToast('Translator removed');
+  }
+
+  function toggleExportLanguage(code: string) {
+    setSelectedLanguages((current) =>
+      current.includes(code)
+        ? current.filter((entry) => entry !== code)
+        : [...current, code],
+    );
+  }
+
+  async function downloadExport() {
+    if (selectedLanguages.length === 0) {
+      showErrorToast('Pick at least one language to export');
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('languages', selectedLanguages.join(','));
+      if (includePending) params.set('includePending', '1');
+
+      const res = await fetch(`/api/translations/export?${params.toString()}`);
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? 'Export failed');
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get('content-disposition') ?? '';
+      const filename =
+        disposition.match(/filename="?([^";]+)"?/i)?.[1] ??
+        'functious-translations.zip';
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+
+      showToast('Translation archive downloaded');
+    } catch (error) {
+      showErrorToast('Could not export translations', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleImport(event: ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(event.target.files ?? []);
+    event.target.value = '';
+
+    if (chosen.length === 0) return;
+
+    setImporting(true);
+    try {
+      const form = new FormData();
+      for (const file of chosen) form.append('files', file);
+
+      const res = await fetch('/api/translations/import', {
+        method: 'POST',
+        body: form,
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Import failed');
+      }
+
+      const result = data as TranslationImportResult;
+      const stringCount = result.strings ?? 0;
+      const languageCount = result.languages?.length ?? 0;
+      const warnings = result.errors?.length ?? 0;
+
+      showToast(
+        `Imported ${stringCount.toLocaleString('en-US')} string${stringCount === 1 ? '' : 's'} across ${languageCount} language${languageCount === 1 ? '' : 's'}${warnings > 0 ? ` · ${warnings} warning${warnings === 1 ? '' : 's'}` : ''}`,
+      );
+      router.refresh();
+    } catch (error) {
+      showErrorToast('Could not import translations', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+      <nav className="flex items-center gap-2 text-sm text-white/40">
+        <Link
+          href="/translate"
+          className="transition-colors hover:text-orange-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+        >
+          Translate
+        </Link>
+        <span aria-hidden="true">/</span>
+        <span className="text-white/60">Console</span>
+      </nav>
+
+      <header className="mt-5">
+        <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          Translator console
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
+          Manage access, review permissions, and move language files in and out.
+        </p>
+      </header>
+
+      <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
+        <section>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-white">People</h2>
+            <span className="text-sm tabular-nums text-white/40">
+              {translators.length}
+            </span>
+          </div>
+
+          <form
+            onSubmit={addTranslator}
+            className="mb-3 flex flex-wrap gap-2 rounded-xl border border-white/10 bg-bg-card p-3"
+          >
+            <input
+              value={newUserId}
+              onChange={(event) => setNewUserId(event.target.value)}
+              placeholder="Fluxer user ID"
+              inputMode="numeric"
+              className="min-w-[180px] flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/80 placeholder:text-white/30 focus:border-orange/45 focus:outline-none focus:ring-1 focus:ring-orange/30"
+            />
+            <button
+              type="submit"
+              disabled={adding}
+              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {adding ? 'Adding…' : 'Add translator'}
+            </button>
+          </form>
+
+          <div className="space-y-3">
+            {translators.length === 0 ? (
+              <div className="rounded-xl border border-white/10 bg-bg-card px-5 py-12 text-center">
+                <p className="text-sm font-medium text-white/60">
+                  No translators yet.
+                </p>
+                <p className="mt-1 text-xs text-white/40">
+                  Share the translate page, or add someone by user ID.
+                </p>
+              </div>
+            ) : (
+              translators.map((translator) => (
+                <TranslatorRow
+                  key={translator.userId}
+                  translator={translator}
+                  profile={profiles[translator.userId]}
+                  languages={languages}
+                  currentUserId={currentUserId}
+                  onRemoved={handleRemoved}
+                />
+              ))
+            )}
+          </div>
+        </section>
+
+        <aside className="h-fit lg:sticky lg:top-24">
+          <section className="rounded-xl border border-white/10 bg-bg-card p-4">
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="text-lg font-semibold text-white">
+                Export &amp; import
+              </h2>
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedLanguages(
+                    selectedLanguages.length === languages.length
+                      ? []
+                      : languages.map((language) => language.code),
+                  )
+                }
+                className="text-xs text-white/45 transition-colors hover:text-orange-light"
+              >
+                {selectedLanguages.length === languages.length
+                  ? 'Clear all'
+                  : 'Select all'}
+              </button>
+            </div>
+
+
+            <div className="mt-3 space-y-1">
+              {languages.map((language) => {
+                const active = selectedLanguages.includes(language.code);
+
+                return (
+                  <label
+                    key={language.code}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 transition-colors hover:bg-white/[0.03]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      onChange={() => toggleExportLanguage(language.code)}
+                      className="h-3.5 w-3.5 rounded border-white/15 bg-transparent accent-orange"
+                    />
+                    <span className="flex-1 truncate text-sm text-white/65">
+                      {language.native}
+                    </span>
+                    <span className="text-xs tabular-nums text-white/40">
+                      {language.stats.approvedPercent.toFixed(0)}%
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <label className="mt-3 flex cursor-pointer items-center gap-2 border-t border-white/10 pt-3">
+              <input
+                type="checkbox"
+                checked={includePending}
+                onChange={(event) => setIncludePending(event.target.checked)}
+                className="h-3.5 w-3.5 rounded border-white/15 bg-transparent accent-orange"
+              />
+              <span className="text-sm text-white/55">
+                Include awaiting review
+              </span>
+            </label>
+
+            <input
+              ref={importInput}
+              type="file"
+              accept=".json,.zip,application/json,application/zip"
+              multiple
+              className="hidden"
+              onChange={handleImport}
+            />
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => importInput.current?.click()}
+                disabled={importing || exporting}
+                className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {importing ? 'Importing…' : 'Import'}
+              </button>
+              <button
+                type="button"
+                onClick={downloadExport}
+                disabled={exporting || importing}
+                className="flex-1 rounded-lg bg-orange px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-bright disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {exporting ? 'Preparing archive…' : 'Download ZIP'}
+              </button>
+            </div>
+
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}

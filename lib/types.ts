@@ -91,6 +91,7 @@ export interface GuildData {
   bypassRoles: string[];
   timedRoles: unknown[];
   tags: unknown[];
+  tagTriggerBots: boolean;
   scheduledMessages: unknown[];
   mediaChannels: unknown[];
   userTimezones: unknown[];

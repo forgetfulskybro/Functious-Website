@@ -70,6 +70,7 @@ export function emptyGuildData(guildId: string) {
     bypassRoles: [],
     timedRoles: [],
     tags: [],
+    tagTriggerBots: false,
     scheduledMessages: [],
     mediaChannels: [],
     userTimezones: [],

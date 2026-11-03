@@ -3,7 +3,9 @@ import { TagEntry, DeleteTagModal, TagViewModal, TagModal } from './Modals';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { TagRowSkeleton } from '@/components/ui/Skeletons';
+import { TagRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
+import { SettingRow } from '@/components/ui/SettingRow';
+import { Toggle } from '@/components/ui/Toggle';
 import { useGuildData } from '@/hooks/useGuildData';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import UserBadge from '@/components/ui/UserBadge';
@@ -61,6 +63,7 @@ function mapTags(raw: any[]): TagEntry[] {
     createdBy: t.createdBy,
     createdAt: t.createdAt,
     uses: t.uses || 0,
+    trigger: t.trigger === true,
   }));
 }
 
@@ -111,6 +114,18 @@ export default function TagsClient({
       }
     },
     [tags, save]
+  );
+
+  const handleBotTriggerToggle = useCallback(
+    async (value: boolean) => {
+      try {
+        await save({ tagTriggerBots: value } as any);
+        showToast('Settings saved', {
+          description: `Bot trigger words ${value ? 'enabled' : 'disabled'}.`,
+        });
+      } catch { }
+    },
+    [save]
   );
 
   const shownLoading = useRef(false);
@@ -168,13 +183,32 @@ export default function TagsClient({
           </div>
         </div>
 
+        <div className="mb-5 rounded-xl bg-bg-card px-6 py-1">
+          {loading ? (
+            <div className="py-3.5">
+              <Skeleton className="h-5 w-full" />
+            </div>
+          ) : (
+            <SettingRow
+              label="Bot trigger words"
+              description="Let bot messages run tags that have a trigger word."
+            >
+              <Toggle
+                value={data.tagTriggerBots === true}
+                onChangeAction={handleBotTriggerToggle}
+                disabled={saving}
+              />
+            </SettingRow>
+          )}
+        </div>
+
         <section className="rounded-2xl bg-bg-card p-6">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-widest text-white/45">
                 Custom Tags
               </h2>
-              <p className="mt-0.5 text-[10px] text-white/20">Text, embed & Rune script</p>
+              <p className="mt-0.5 text-[10px] text-white/20">Text, embed & Rune script · trigger words run by name</p>
             </div>
             {!loading && (
               <button
@@ -211,6 +245,11 @@ export default function TagsClient({
                     <p className="truncate font-medium text-white/80">
                       {tag.name}{' '}
                       <span className="text-xs text-white/40">({typeLabel(tag.type)})</span>
+                      {tag.trigger && (
+                        <span className="ml-1.5 rounded bg-orange/15 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-orange-warm">
+                          trigger word
+                        </span>
+                      )}
                     </p>
                     <div className="mt-0.5 text-xs text-white/30 flex items-center gap-1.5 flex-wrap">
                       <span>{tag.uses || 0} uses</span>

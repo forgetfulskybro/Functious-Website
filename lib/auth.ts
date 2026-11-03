@@ -32,15 +32,12 @@ export async function getSession(): Promise<Session | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(SESSION_COOKIE)?.value;
-    if (!token) {
-      console.log('[getSession] No session cookie found');
-      return null;
-    }
+    if (!token) return null;
 
     const { payload } = await jwtVerify(token, secret);
     return (payload as { session: Session }).session;
   } catch (err) {
-    console.log('[getSession] JWT verification failed:', err);
+    console.warn('[getSession] JWT verification failed:', err);
     return null;
   }
 }
@@ -80,9 +77,18 @@ export function filterManageableGuilds(guilds: FluxerGuild[], userId: string): F
   return guilds.filter(g => canManageGuild(g, userId));
 }
 
-export function getOAuthUrl(): string {
+export function safeNextPath(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (!value.startsWith('/') || value.startsWith('//') || value.includes('\\')) {
+    return null;
+  }
+  return value;
+}
+
+export function getOAuthUrl(state?: string): string {
   const clientId = process.env.FLUXER_CLIENT_ID!;
   const redirectUri = encodeURIComponent(process.env.FLUXER_REDIRECT_URI!);
+  const stateParam = state ? `&state=${encodeURIComponent(state)}` : '';
 
-  return `${FLUXER_OAUTH_BASE}?client_id=${clientId}&scope=identify+guilds&redirect_uri=${redirectUri}&response_type=code`;
+  return `${FLUXER_OAUTH_BASE}?client_id=${clientId}&scope=identify+guilds&redirect_uri=${redirectUri}&response_type=code${stateParam}`;
 }
