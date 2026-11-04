@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from 'react';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import UserBadge from '@/components/ui/UserBadge';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
+import type { UserProfile } from '@/lib/types';
 import { placeholderError } from '@/lib/translationPlaceholders';
 import type {
   TranslationBulkAction,
@@ -137,6 +138,57 @@ function formatNoteDate(timestamp: number): string {
   });
 }
 
+function formatActivityDate(timestamp: number, full = false): string {
+  const options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  };
+  if (full) {
+    options.hour = 'numeric';
+    options.minute = '2-digit';
+    options.timeZoneName = 'short';
+  }
+  return new Date(timestamp).toLocaleString('en-US', options);
+}
+
+function TranslationCredit({
+  entry,
+  profile,
+  full = false,
+}: {
+  entry: TranslationString;
+  profile?: UserProfile | null;
+  full?: boolean;
+}) {
+  if (!entry.value.trim() || entry.status === 'untranslated') return null;
+
+  const userId = entry.translatedBy ?? entry.updatedBy;
+  if (!userId) return null;
+
+  const timestamp = entry.translatedBy
+    ? entry.translatedAt ?? entry.editedAt ?? entry.updatedAt
+    : entry.updatedAt ?? entry.editedAt;
+  const label = entry.translatedBy ? 'Translated by' : 'Last updated by';
+
+  return (
+    <div
+      className={`flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-white/35 ${
+        full ? 'mt-2.5 text-xs' : 'mt-1 text-[10px]'
+      }`}
+    >
+      <span>{label}</span>
+      <UserBadge userId={userId} profile={profile} showId={false} inline />
+      {timestamp && (
+        <span className="whitespace-nowrap">
+          · {formatActivityDate(timestamp, full)}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function lastNoteAt(entry: TranslationString): number {
   return entry.notes.reduce(
     (latest, note) => Math.max(latest, note.createdAt),
@@ -250,6 +302,21 @@ export default function TranslationEditor({
     [selected],
   );
   const noteProfiles = useUserProfiles(noteUserIds);
+
+  const translationUserIds = useMemo(
+    () => [
+      ...new Set(
+        strings
+          .filter(
+            (entry) => entry.value.trim() && entry.status !== 'untranslated',
+          )
+          .map((entry) => entry.translatedBy ?? entry.updatedBy)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ],
+    [strings],
+  );
+  const translationProfiles = useUserProfiles(translationUserIds);
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -1089,6 +1156,14 @@ export default function TranslationEditor({
                             {entry.value}
                           </p>
                         )}
+                        <TranslationCredit
+                          entry={entry}
+                          profile={
+                            translationProfiles[
+                              entry.translatedBy ?? entry.updatedBy ?? ''
+                            ]
+                          }
+                        />
                       </button>
                     ))
                   )}
@@ -1194,6 +1269,16 @@ export default function TranslationEditor({
                         )
                       )}
                     </div>
+
+                    <TranslationCredit
+                      entry={selected}
+                      profile={
+                        translationProfiles[
+                          selected.translatedBy ?? selected.updatedBy ?? ''
+                        ]
+                      }
+                      full
+                    />
 
                     {(canEdit ||
                       canReview ||

@@ -21,6 +21,8 @@ export interface TranslationString {
   status: TranslationStatus;
   updatedAt: number | null;
   updatedBy: string | null;
+  translatedBy: string | null;
+  translatedAt: number | null;
   approvedAt: number | null;
   editedAt: number | null;
   previous: TranslationPreviousVersion | null;

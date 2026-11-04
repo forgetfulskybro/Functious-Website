@@ -26,7 +26,9 @@ export interface ReactionRoleEntry {
   chanId: string;
   roles: ReactionRoleMapping[];
   exclusive?: boolean | null;
-  type?: 'content' | 'embed';
+  type?: 'content' | 'embed' | 'custom';
+  custom?: boolean;
+  authorId?: string | null;
   content?: string;
 }
 
@@ -68,6 +70,14 @@ function setCachedMessage(
   });
 }
 
+const MESSAGE_LINK_RE = /(\d{17,20})\/(\d{17,20})\/(\d{17,20})/;
+
+function parseMessageLink(value: string) {
+  const match = String(value || '').match(MESSAGE_LINK_RE);
+  if (!match) return null;
+  return { guildId: match[1], channelId: match[2], messageId: match[3] };
+}
+
 
 export function ReactionRoleModal({
   initial,
@@ -88,10 +98,16 @@ export function ReactionRoleModal({
   onSaved: (item: ReactionRoleEntry) => void;
   onClose: () => void;
 }) {
-  const [type, setType] = useState<'content' | 'embed'>(initial?.type || 'content');
+  const initialCustom = initial?.custom === true;
+  const [type, setType] = useState<'content' | 'embed' | 'custom'>(
+    initialCustom ? 'custom' : initial?.type === 'embed' ? 'embed' : 'content'
+  );
   const [channelId, setChannelId] = useState(initial?.chanId || '');
   const [content, setContent] = useState(initial?.content || '');
-  const [contentLoading, setContentLoading] = useState(!!initial);
+  const [contentLoading, setContentLoading] = useState(!!initial && !initialCustom);
+  const [messageLink, setMessageLink] = useState(
+    initialCustom ? `https://fluxer.app/channels/${guildId}/${initial?.chanId}/${initial?.msgId}` : ''
+  );
   const [mappings, setMappings] = useState<ReactionRoleMapping[]>(
     initial?.roles?.length
       ? initial.roles.map((r, i) => ({
@@ -111,6 +127,7 @@ export function ReactionRoleModal({
   const typeOptions = [
     { value: 'content', label: 'Text Message' },
     { value: 'embed', label: 'Embed' },
+    { value: 'custom', label: 'Custom message' },
   ];
 
   function updateMapping(idx: number, patch: Partial<ReactionRoleMapping>) {
@@ -166,7 +183,8 @@ export function ReactionRoleModal({
 
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
-    if (!channelId || submitting || saving) return;
+    if (submitting || saving) return;
+    if (type !== 'custom' && !channelId) return;
 
     const clean = mappings
       .map((m) => ({
@@ -182,8 +200,27 @@ export function ReactionRoleModal({
       return;
     }
 
-    const finalContent = buildFinalContent();
-    if (!finalContent.trim()) {
+    let customTarget: { channelId: string; messageId: string } | null = null;
+    if (type === 'custom') {
+      if (initialCustom) {
+        customTarget = { channelId: initial!.chanId, messageId: initial!.msgId };
+      } else {
+        const link = parseMessageLink(messageLink);
+        if (link) {
+          customTarget = { channelId: link.channelId, messageId: link.messageId };
+        } else if (/^\d{17,20}$/.test(messageLink.trim()) && channelId) {
+          customTarget = { channelId, messageId: messageLink.trim() };
+        }
+      }
+
+      if (!customTarget) {
+        showErrorToast('Error', { description: 'Add a valid message link or message ID.' });
+        return;
+      }
+    }
+
+    const finalContent = type === 'custom' ? '' : buildFinalContent();
+    if (type !== 'custom' && !finalContent.trim()) {
       showErrorToast('Error', { description: 'Message content cannot be empty.' });
       return;
     }
@@ -191,14 +228,23 @@ export function ReactionRoleModal({
     try {
       setSubmitting(true);
 
-      const body = {
-        type,
-        channelId,
-        content: finalContent,
-        roles: clean,
-        exclusive: exclusive || null,
-        useMention,
-      };
+      const body =
+        type === 'custom'
+          ? {
+              custom: true,
+              channelId: customTarget!.channelId,
+              messageId: customTarget!.messageId,
+              roles: clean,
+              exclusive: exclusive || null,
+            }
+          : {
+              type,
+              channelId,
+              content: finalContent,
+              roles: clean,
+              exclusive: exclusive || null,
+              useMention,
+            };
 
       let res: Response;
       if (initial) {
@@ -223,20 +269,32 @@ export function ReactionRoleModal({
       }
 
       const data = await res.json();
-      setCachedMessage(guildId, data.entry.msgId, {
-        content: finalContent,
-        type,
-        useMention,
-      });
+      if (!data?.entry) throw new Error(data?.error || 'Save failed');
+
+      if (type === 'custom') {
+        invalidateCachedMessage(guildId, data.entry.msgId);
+      } else {
+        setCachedMessage(guildId, data.entry.msgId, {
+          content: finalContent,
+          type,
+          useMention,
+        });
+      }
       onSaved(data.entry as ReactionRoleEntry);
       if (Array.isArray(data.failedReactions) && data.failedReactions.length > 0) {
         showErrorToast('Saved, but reactions were not added', {
           description: `Could not add: ${data.failedReactions.join(' ')}`,
         });
       } else {
-        showToast(initial ? 'Message updated' : 'Message created', {
-          description: 'Reaction roles are now live.',
-        });
+        showToast(
+          initial ? 'Setup updated' : type === 'custom' ? 'Custom setup created' : 'Message created',
+          {
+            description:
+              type === 'custom'
+                ? 'Reactions were added to the existing message.'
+                : 'Reaction roles are now live.',
+          }
+        );
       }
     } catch (err: any) {
       console.log(err);
@@ -258,7 +316,7 @@ export function ReactionRoleModal({
       : roles.map((r) => ({ id: r.id, name: r.name, color: r.color }));
 
   useEffect(() => {
-    if (!initial?.msgId) {
+    if (!initial?.msgId || initialCustom) {
       setContentLoading(false);
       return;
     }
@@ -304,7 +362,7 @@ export function ReactionRoleModal({
     return () => {
       cancelled = true;
     };
-  }, [initial?.msgId, guildId]);
+  }, [initial?.msgId, initialCustom, guildId]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -313,9 +371,15 @@ export function ReactionRoleModal({
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[#2A1313]">
           <div>
             <h2 className="text-white font-bold text-lg">
-              {initial ? 'Edit Reaction Role Message' : 'New Reaction Role Message'}
+              {initialCustom
+                ? 'Edit Custom Reaction Roles'
+                : initial
+                  ? 'Edit Reaction Role Message'
+                  : 'New Reaction Role Message'}
             </h2>
-            <p className="text-white/30 text-xs mt-0.5">Members react to get roles</p>
+            <p className="text-white/30 text-xs mt-0.5">
+              {type === 'custom' ? 'Members react to an existing message' : 'Members react to get roles'}
+            </p>
           </div>
           <button type="button" onClick={onClose} disabled={busy} className="text-white/40 hover:text-white text-xl">
             ✕
@@ -330,7 +394,10 @@ export function ReactionRoleModal({
                 <SelectDropdown
                   label=""
                   value={type}
-                  onChange={(v) => setType(v as any)}
+                  onChange={(v) => {
+                    setType(v as any);
+                    if (v === 'custom') setContentLoading(false);
+                  }}
                   options={typeOptions}
                 />
               </div>
@@ -347,27 +414,47 @@ export function ReactionRoleModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-white/50 text-xs font-medium mb-1.5">
-              Message content
-              <span className="text-white/25 ml-1">Use {'{role:Name}'} placeholders</span>
-            </label>
-            {contentLoading ? (
-              <div className="w-full h-[132px] bg-white/5 rounded-lg flex items-center justify-center">
-                <p className="text-white/30 text-xs animate-pulse">Loading message…</p>
-              </div>
-            ) : (
-              <RoleAutocompleteTextarea
-                value={content}
-                onChange={setContent}
-                roles={roleSuggestions}
-                placeholder={`**Pick a color!**\n\n{role:Blue}\n{role:Red}\n{role:Purple}`}
+          {type === 'custom' && (
+            <div>
+              <label className="block text-white/50 text-xs font-medium mb-1.5">
+                Message link or ID
+              </label>
+              <input
+                value={messageLink}
+                onChange={(e) => setMessageLink(e.target.value)}
+                disabled={initialCustom}
+                placeholder="https://fluxer.app/channels/.../.../..."
+                className="w-full h-10 bg-white/5 rounded-lg px-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange disabled:opacity-60"
               />
-            )}
-            <p className="text-white/25 text-[10px] mt-1.5">
-              Type <code className="text-orange-light/70">{'{role:'}</code> then a role name - Tab or click to complete.
-            </p>
-          </div>
+              <p className="text-white/25 text-[10px] mt-1.5">
+                The bot adds the reactions below to this existing message. It never edits or deletes it.
+              </p>
+            </div>
+          )}
+
+          {type !== 'custom' && (
+            <div>
+              <label className="block text-white/50 text-xs font-medium mb-1.5">
+                Message content
+                <span className="text-white/25 ml-1">Use {'{role:Name}'} placeholders</span>
+              </label>
+              {contentLoading ? (
+                <div className="w-full h-[132px] bg-white/5 rounded-lg flex items-center justify-center">
+                  <p className="text-white/30 text-xs animate-pulse">Loading message…</p>
+                </div>
+              ) : (
+                <RoleAutocompleteTextarea
+                  value={content}
+                  onChange={setContent}
+                  roles={roleSuggestions}
+                  placeholder={`**Pick a color!**\n\n{role:Blue}\n{role:Red}\n{role:Purple}`}
+                />
+              )}
+              <p className="text-white/25 text-[10px] mt-1.5">
+                Type <code className="text-orange-light/70">{'{role:'}</code> then a role name - Tab or click to complete.
+              </p>
+            </div>
+          )}
 
           <div className="rounded-xl bg-white/[0.03] p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -462,13 +549,15 @@ export function ReactionRoleModal({
           </div>
 
           <div className="space-y-3">
-            <label className="flex items-center justify-between cursor-pointer">
-              <div>
-                <p className="text-white/70 text-xs">Use role mentions</p>
-                <p className="text-white/25 text-[10px]">Show {'<@&id>'} instead of role names</p>
-              </div>
-              <Toggle value={useMention} onChangeAction={setUseMention} />
-            </label>
+            {type !== 'custom' && (
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <p className="text-white/70 text-xs">Use role mentions</p>
+                  <p className="text-white/25 text-[10px]">Show {'<@&id>'} instead of role names</p>
+                </div>
+                <Toggle value={useMention} onChangeAction={setUseMention} />
+              </label>
+            )}
             <label className="flex items-center justify-between cursor-pointer">
               <div>
                 <p className="text-white/70 text-xs">Exclusive</p>
@@ -489,10 +578,16 @@ export function ReactionRoleModal({
             </button>
             <button
               type="submit"
-              disabled={!channelId || mappings.every((m) => !m.emoji || !m.role) || busy}
+              disabled={
+                busy ||
+                mappings.every((m) => !m.emoji || !m.role) ||
+                (type === 'custom'
+                  ? !initialCustom && !parseMessageLink(messageLink) && !(/^\d{17,20}$/.test(messageLink.trim()) && channelId)
+                  : !channelId)
+              }
               className="flex-1 py-3 bg-orange hover:bg-orange-bright disabled:opacity-50 rounded-xl font-semibold text-white"
             >
-              {busy ? 'Saving…' : initial ? 'Save Changes' : 'Create Message'}
+              {busy ? 'Saving…' : initial ? 'Save Changes' : type === 'custom' ? 'Create Custom Setup' : 'Create Message'}
             </button>
           </div>
         </form>
@@ -679,9 +774,12 @@ export function ViewModal({
       <div className="relative bg-[#160a0a] rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between p-5 border-b border-[#2A1313]">
           <div>
-            <h2 className="text-white text-lg font-bold">Reaction Role Message</h2>
+            <h2 className="text-white text-lg font-bold">
+              {item.custom ? 'Custom Reaction Roles' : 'Reaction Role Message'}
+            </h2>
             <p className="text-white/30 text-xs mt-0.5">
               {item.roles.length} role{item.roles.length !== 1 ? 's' : ''}
+              {item.custom ? ' • Existing message' : ''}
             </p>
           </div>
           <button type="button" onClick={onClose} className="text-white/40 hover:text-white text-xl">
@@ -778,12 +876,14 @@ export function DeleteConfirmModal({
   item,
   guildChannels = [],
   saving,
+  custom = false,
   onConfirm,
   onClose,
 }: {
   item: ReactionRoleEntry;
   guildChannels?: KnownChannel[];
   saving?: boolean;
+  custom?: boolean;
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
 }) {
@@ -810,8 +910,14 @@ export function DeleteConfirmModal({
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={busy ? undefined : onClose} />
       <div className="relative w-full max-w-sm rounded-2xl bg-[#160a0a] shadow-2xl overflow-hidden">
         <div className="px-6 pt-5 pb-4 border-b border-[#2A1313]">
-          <h2 className="text-white font-bold text-lg">Delete reaction role message?</h2>
-          <p className="text-white/30 text-xs mt-0.5">The Fluxer message will also be deleted.</p>
+          <h2 className="text-white font-bold text-lg">
+            {custom ? 'Remove custom reaction roles?' : 'Delete reaction role message?'}
+          </h2>
+          <p className="text-white/30 text-xs mt-0.5">
+            {custom
+              ? 'The bot will remove its reactions. The message itself will stay.'
+              : 'The Fluxer message will also be deleted.'}
+          </p>
         </div>
         <div className="px-6 py-5">
           <div className="rounded-xl bg-white/[0.03] px-4 py-3">

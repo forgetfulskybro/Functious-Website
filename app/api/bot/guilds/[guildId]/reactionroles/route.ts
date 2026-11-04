@@ -19,7 +19,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   try {
     const result = await createReactionRoles(guildId, body, session.user.id);
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(result, { status: result?.error ? 400 : 201 });
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || 'Failed to create giveaway' },

@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   try {
     const result = await updateReactionRoles(guildId, messageId, body, session.user.id);
-    return NextResponse.json(result);
+    return NextResponse.json(result, { status: result?.error ? 400 : 200 });
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || 'Failed to update reaction roles exclusivity' },

@@ -209,7 +209,7 @@ export default function ReactionRolesClient({
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                New Message
+                New Setup
               </button>
             )}
           </div>
@@ -242,6 +242,7 @@ export default function ReactionRolesClient({
                     <div className="flex-1 min-w-0">
                       <p className="text-white/80 font-medium truncate">
                         {item.roles.length} role{item.roles.length !== 1 ? 's' : ''}
+                        {item.custom ? ' • Custom' : ''}
                         {item.exclusive ? ' • Exclusive' : ''}
                       </p>
                       <p className="text-white/30 text-xs mt-0.5 truncate">
@@ -352,6 +353,7 @@ export default function ReactionRolesClient({
           item={liveDeleteItem}
           guildChannels={guildChannels}
           saving={saving}
+          custom={liveDeleteItem.custom === true}
           onConfirm={async () => {
             try {
               const res = await fetch(
