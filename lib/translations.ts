@@ -71,6 +71,16 @@ export async function getTranslationLanguages(): Promise<TranslationLanguageSumm
   return data.languages ?? [];
 }
 
+export async function refreshTranslationFiles(
+  userId: string,
+): Promise<TranslationLanguageSummary[]> {
+  const data = await botRequest<{
+    ok: boolean;
+    languages: TranslationLanguageSummary[];
+  }>('/api/translations/refresh', { method: 'POST', userId });
+  return data.languages ?? [];
+}
+
 export async function getTranslationLanguage(
   code: string,
 ): Promise<TranslationLanguageData> {

@@ -353,6 +353,7 @@ export default function DeveloperPanel({
   );
   const [includePending, setIncludePending] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const unresolvedIds = useMemo(
     () =>
@@ -465,6 +466,28 @@ export default function DeveloperPanel({
       });
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function refreshFiles() {
+    setRefreshing(true);
+    try {
+      const res = await fetch('/api/translations/refresh', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? 'Refresh failed');
+      }
+
+      showToast('Translation files refreshed');
+      router.refresh();
+    } catch (error) {
+      showErrorToast('Could not refresh translation files', {
+        description:
+          error instanceof Error ? error.message : 'Please try again.',
+      });
+    } finally {
+      setRefreshing(false);
     }
   }
 
@@ -659,7 +682,7 @@ export default function DeveloperPanel({
               <button
                 type="button"
                 onClick={() => importInput.current?.click()}
-                disabled={importing || exporting}
+                disabled={importing || exporting || refreshing}
                 className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {importing ? 'Importing…' : 'Import'}
@@ -667,12 +690,25 @@ export default function DeveloperPanel({
               <button
                 type="button"
                 onClick={downloadExport}
-                disabled={exporting || importing}
+                disabled={exporting || importing || refreshing}
                 className="flex-1 rounded-lg bg-orange px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-bright disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {exporting ? 'Preparing archive…' : 'Download ZIP'}
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={refreshFiles}
+              disabled={refreshing || importing || exporting}
+              className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {refreshing ? 'Refreshing…' : 'Refresh translation files'}
+            </button>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-white/35">
+              Reload language files and approved database translations without
+              restarting the bot.
+            </p>
 
           </section>
         </aside>
