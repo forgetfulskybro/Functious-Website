@@ -55,6 +55,7 @@ function IconBtn({
 function mapTags(raw: any[]): TagEntry[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((t: any) => ({
+    ...t,
     id: t.id || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     name: String(t.name || ''),
     type: t.type === 'embed' ? 'embed' : t.type === 'script' ? 'script' : 'text',
@@ -64,6 +65,7 @@ function mapTags(raw: any[]): TagEntry[] {
     createdAt: t.createdAt,
     uses: t.uses || 0,
     trigger: t.trigger === true,
+    anyTrigger: t.anyTrigger === true,
   }));
 }
 
@@ -208,7 +210,7 @@ export default function TagsClient({
               <h2 className="text-xs font-semibold uppercase tracking-widest text-white/45">
                 Custom Tags
               </h2>
-              <p className="mt-0.5 text-[10px] text-white/20">Text, embed & Rune script · trigger words run by name</p>
+              <p className="mt-0.5 text-[10px] text-white/20">Text, embed & Rune script · exact or anywhere triggers</p>
             </div>
             {!loading && (
               <button
@@ -245,9 +247,9 @@ export default function TagsClient({
                     <p className="truncate font-medium text-white/80">
                       {tag.name}{' '}
                       <span className="text-xs text-white/40">({typeLabel(tag.type)})</span>
-                      {tag.trigger && (
+                      {(tag.trigger || tag.anyTrigger) && (
                         <span className="ml-1.5 rounded bg-orange/15 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-orange-warm">
-                          trigger word
+                          {tag.anyTrigger ? 'anywhere trigger' : 'trigger word'}
                         </span>
                       )}
                     </p>
@@ -312,7 +314,7 @@ export default function TagsClient({
           initial={modal === 'create' ? undefined : modal}
           existingNames={tags
             .filter((t) => (modal === 'create' ? true : t.id !== (modal as TagEntry).id))
-            .map((t) => t.name.toLowerCase())}
+            .map((t) => t.name.trim().toLowerCase())}
           userId={user.id}
           saving={saving}
           onSave={async (updatedTag) => {

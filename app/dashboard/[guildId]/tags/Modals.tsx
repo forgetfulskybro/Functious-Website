@@ -4,7 +4,6 @@ import type { FluxerUser, FluxerGuild, UserProfile } from '@/lib/types';
 import { Markdown } from '@/components/guide/CodeBlock';
 import { showErrorToast } from '@/components/ui/Toast';
 import GetCoords from '@/components/ui/GetCoords';
-import { Toggle } from '@/components/ui/Toggle';
 import { runTagSafe } from '@/app/interpreter';
 import UserBadge from '@/components/ui/UserBadge';
 import Image from 'next/image';
@@ -19,7 +18,16 @@ export interface TagEntry {
   createdAt?: number;
   uses?: number;
   trigger?: boolean;
+  anyTrigger?: boolean;
 }
+
+type TriggerMode = 'off' | 'trigger' | 'anywhere';
+
+const TRIGGER_MODES: { value: TriggerMode; label: string }[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'trigger', label: 'Trigger' },
+  { value: 'anywhere', label: 'Anywhere' },
+];
 
 interface ChatMessage {
   id: string;
@@ -33,6 +41,28 @@ type CtxKind = 'user' | 'channel' | 'message' | 'guild' | 'args';
 const LINE_HEIGHT_PX = 22.75;
 const VERTICAL_PADDING_PX = 24;
 const MAX_VISIBLE_LINES = 18;
+
+function containsTagName(content: string, name: string) {
+  const haystack = content.toLowerCase();
+  const needle = name.toLowerCase().trim();
+  if (!needle) return false;
+
+  const isWordChar = (char: string | undefined) =>
+    typeof char === 'string' && /[a-z0-9_]/i.test(char);
+
+  let index = haystack.indexOf(needle);
+  while (index !== -1) {
+    const before = haystack[index - 1];
+    const after = haystack[index + needle.length];
+    const startsClean = !isWordChar(needle[0]) || !isWordChar(before);
+    const endsClean =
+      !isWordChar(needle[needle.length - 1]) || !isWordChar(after);
+    if (startsClean && endsClean) return true;
+    index = haystack.indexOf(needle, index + 1);
+  }
+
+  return false;
+}
 
 const CONTEXT_FIELDS: Record<CtxKind, { field: string; description: string }[]> = {
   user: [
@@ -191,7 +221,7 @@ function ctxUser(user: FluxerUser) {
   };
 }
 
-function buildPreviewContext(args: string[], user: FluxerUser, guild: FluxerGuild) {
+function buildPreviewContext(args: string[], user: FluxerUser, guild: FluxerGuild, messageContent = '!tag example') {
   const u = ctxUser(user);
   return {
     args,
@@ -210,7 +240,7 @@ function buildPreviewContext(args: string[], user: FluxerUser, guild: FluxerGuil
     },
     message: {
       id: '111222333444555666',
-      content: '!tag example',
+      content: messageContent,
       author_id: user.id,
       author: u,
       channel_id: '987654321098765432',
@@ -343,6 +373,37 @@ function BotEmbed({ emb }: { emb: any }) {
   );
 }
 
+function UserMessage({ user, text }: { user: FluxerUser; text: string }) {
+  const avatarUrl = user.avatar
+    ? `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.png`
+    : null;
+  return (
+    <div className="flex gap-3">
+      {avatarUrl ? (
+        <Image
+          src={avatarUrl}
+          alt=""
+          width={32}
+          height={32}
+          className="mt-0.5 h-8 w-8 flex-shrink-0 rounded-full"
+        />
+      ) : (
+        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-orange/25 text-xs font-bold text-orange-warm">
+          {(user.username || 'U')[0]}
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <span className="text-sm font-semibold text-white/80">
+          {user.global_name || user.username}
+        </span>
+        <div className="mt-0.5 break-words text-sm leading-relaxed text-white/70">
+          <Markdown text={text} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BotMessage({ text, embeds }: { text?: string; embeds?: any[] }) {
   const empty = !text?.trim() && (!embeds || embeds.length === 0);
   return (
@@ -398,7 +459,13 @@ export function TagModal({
 }) {
   const [name, setName] = useState(initial?.name ?? '');
   const [type, setType] = useState<'text' | 'embed' | 'script'>(initial?.type ?? 'text');
-  const [trigger, setTrigger] = useState(initial?.trigger === true);
+  const [triggerMode, setTriggerMode] = useState<TriggerMode>(
+    initial?.anyTrigger === true
+      ? 'anywhere'
+      : initial?.trigger === true
+        ? 'trigger'
+        : 'off'
+  );
   const [content, setContent] = useState(() =>
     initial?.type === 'embed'
       ? initial.embedData?.description ?? ''
@@ -437,9 +504,17 @@ export function TagModal({
     Math.min(Math.max(lines.length, 1), MAX_VISIBLE_LINES) * LINE_HEIGHT_PX +
     VERTICAL_PADDING_PX;
   const gutterWidth = gutterRef.current?.offsetWidth ?? 40;
-  const sanitizeName = (v: string) => v.replace(/\s+/g, '').slice(0, 32);
+  const sanitizeName = (v: string) =>
+    v.replace(/\s+/g, ' ').replace(/^\s+/, '').slice(0, 32);
   const cleanName = sanitizeName(name);
-  const tagNameHint = cleanName || 'mytag';
+  const tagNameHint = cleanName || 'my tag';
+  const triggerEnabled = triggerMode !== 'off';
+  const anywhereTrigger = triggerMode === 'anywhere';
+  const previewMessage = triggerEnabled
+    ? anywhereTrigger
+      ? `Hey ${tagNameHint}!`
+      : cleanName
+    : `!tag ${tagNameHint}`;
   const isScript = type === 'script';
   const busy = submitting || !!saving;
 
@@ -465,7 +540,12 @@ export function TagModal({
       try {
         const result = runTagSafe(
           content || ' ',
-          buildPreviewContext(previewArgs, user, guild)
+          buildPreviewContext(
+            triggerEnabled ? [] : previewArgs,
+            user,
+            guild,
+            previewMessage
+          )
         );
         setPreviewResult(
           result.ok
@@ -484,7 +564,7 @@ export function TagModal({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [content, type, previewArgs, user, guild, interactive]);
+  }, [content, type, previewArgs, user, guild, interactive, triggerEnabled, previewMessage]);
 
   useEffect(() => {
     if (interactive) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -572,9 +652,25 @@ export function TagModal({
     const trimmed = raw.trim();
     if (!trimmed) return;
     const userMsg: ChatMessage = { id: `u-${Date.now()}`, kind: 'user', content: trimmed };
-    const match = trimmed.match(/^(?:f!|!)(?:tags?|t)\s+(\S+)(?:\s+([\s\S]*))?$/i);
+    const nameLower = cleanName.toLowerCase();
+    const commandMatch = trimmed.match(/^(?:f!|!)(?:tags?|t)\s+([\s\S]+)$/i);
+    const commandRest = commandMatch?.[1].trim() ?? '';
+    const commandAfter = commandRest.slice(cleanName.length);
+    const isCommandInvocation =
+      !!commandMatch &&
+      !!nameLower &&
+      commandRest.toLowerCase().slice(0, nameLower.length) === nameLower &&
+      (!commandAfter || /^\s/.test(commandAfter));
+    const isTriggerInvocation =
+      !commandMatch &&
+      !!nameLower &&
+      (triggerMode === 'trigger'
+        ? trimmed.toLowerCase() === nameLower
+        : triggerMode === 'anywhere'
+          ? containsTagName(trimmed, cleanName)
+          : false);
 
-    if (!match || (cleanName && match[1].toLowerCase() !== cleanName.toLowerCase())) {
+    if (!isCommandInvocation && !isTriggerInvocation) {
       setChatMessages((p) => [...p, userMsg]);
       return;
     }
@@ -590,7 +686,12 @@ export function TagModal({
     try {
       const result = runTagSafe(
         content,
-        buildPreviewContext(tokenizeArgs(match[2] || ''), user, guild)
+        buildPreviewContext(
+          isTriggerInvocation ? [] : tokenizeArgs(commandAfter.trim()),
+          user,
+          guild,
+          trimmed
+        )
       );
       if (!result.ok) {
         const err = result.error;
@@ -631,9 +732,9 @@ export function TagModal({
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     if (busy) return;
-    const finalName = sanitizeName(name);
+    const finalName = cleanName;
     if (!finalName) {
-      showErrorToast('Error', { description: 'Tag name is required (no spaces).' });
+      showErrorToast('Error', { description: 'Tag name is required.' });
       return;
     }
     if (existingNames.includes(finalName.toLowerCase())) {
@@ -645,7 +746,19 @@ export function TagModal({
       return;
     }
     if (type === 'script') {
-      const check = runTagSafe(content, buildPreviewContext([], user, guild));
+      const check = runTagSafe(
+        content,
+        buildPreviewContext(
+          [],
+          user,
+          guild,
+          triggerEnabled
+            ? anywhereTrigger
+              ? `Hey ${finalName}!`
+              : finalName
+            : `!tag ${finalName}`
+        )
+      );
       if (!check.ok) {
         showErrorToast('Rune Error', {
           description: check.error?.message || 'Invalid script',
@@ -665,7 +778,8 @@ export function TagModal({
         createdBy: initial?.createdBy ?? userId,
         createdAt: initial?.createdAt ?? Math.floor(Date.now() / 1000),
         uses: initial?.uses ?? 0,
-        trigger,
+        trigger: triggerMode === 'trigger',
+        anyTrigger: triggerMode === 'anywhere',
       });
     } catch {
       showErrorToast('Error', { description: 'Failed to save tag.' });
@@ -722,15 +836,14 @@ export function TagModal({
                 type="text"
                 value={name}
                 onChange={(e) => setName(sanitizeName(e.target.value))}
-                onKeyDown={(e) => e.key === ' ' && e.preventDefault()}
                 className="w-full rounded-lg bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
-                placeholder="welcome"
+                placeholder="my tag"
                 maxLength={32}
                 autoComplete="off"
                 spellCheck={false}
                 required
               />
-              <p className="mt-1 text-[10px] text-white/25">No spaces · max 32 characters</p>
+              <p className="mt-1 text-[10px] text-white/25">Spaces allowed · max 32 characters</p>
             </div>
 
             <div className={`grid items-start gap-4 ${isScript ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
@@ -745,7 +858,7 @@ export function TagModal({
                 ]}
               />
 
-              {isScript && !interactive && (
+              {isScript && !interactive && !triggerEnabled && (
                 <div className="flex flex-col">
                   <label className="mb-1.5 block text-xs font-medium text-white/50">
                     Test Arguments
@@ -803,14 +916,40 @@ export function TagModal({
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-4 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-white/70">Trigger word</p>
-                <p className="mt-0.5 text-[10px] text-white/30">
-                  Run this tag by sending its name on its own, without the command prefix.
-                </p>
+            <div className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-white/70">Trigger mode</p>
+                  <p className="mt-0.5 text-[10px] text-white/30">
+                    {triggerMode === 'off'
+                      ? 'Only runs with the tag command.'
+                      : triggerMode === 'trigger'
+                        ? `Runs when “${tagNameHint}” is sent on its own. Triggers receive no arguments.`
+                        : `Runs when “${tagNameHint}” appears anywhere in a message or embed. Triggers receive no arguments.`}
+                  </p>
+                </div>
+                <div
+                  className="grid flex-shrink-0 grid-cols-3 gap-1 rounded-lg bg-black/20 p-1"
+                  role="group"
+                  aria-label="Trigger mode"
+                >
+                  {TRIGGER_MODES.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={triggerMode === option.value}
+                      onClick={() => setTriggerMode(option.value)}
+                      className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                        triggerMode === option.value
+                          ? 'bg-orange/20 text-orange-warm'
+                          : 'text-white/35 hover:bg-white/5 hover:text-white/70'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <Toggle value={trigger} onChangeAction={setTrigger} />
             </div>
 
             {!isScript ? (
@@ -953,7 +1092,13 @@ export function TagModal({
                 <div className="flex min-w-0 flex-col gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-medium uppercase tracking-wider text-white/50">
-                      {interactive ? 'Interactive' : 'Live Preview'}
+                      {interactive
+                        ? 'Interactive'
+                        : triggerMode === 'anywhere'
+                          ? 'Anywhere Trigger Preview'
+                          : triggerMode === 'trigger'
+                            ? 'Trigger Preview'
+                            : 'Live Preview'}
                     </p>
                     <div className="flex items-center gap-2">
                       {!interactive && (
@@ -976,7 +1121,12 @@ export function TagModal({
                               {
                                 id: 'welcome',
                                 kind: 'system',
-                                content: `Interactive preview · try \`f!tag ${tagNameHint} hello\``,
+                                content:
+                                  triggerMode === 'anywhere'
+                                    ? `Interactive preview · try \`Hey ${tagNameHint}!\``
+                                    : triggerMode === 'trigger'
+                                      ? `Interactive preview · try \`${tagNameHint}\``
+                                      : `Interactive preview · try \`f!tag ${tagNameHint} hello\``,
                               },
                             ]);
                           }
@@ -1039,10 +1189,21 @@ export function TagModal({
                       {!interactive ? (
                         !previewResult || validating ? (
                           <p className="text-xs italic text-white/25">
-                            {validating ? 'Running…' : 'Start typing to preview'}
+                            {validating
+                              ? 'Running…'
+                              : triggerMode === 'anywhere'
+                                ? 'Start typing to preview the anywhere trigger'
+                                : triggerMode === 'trigger'
+                                  ? 'Start typing to preview the trigger'
+                                  : 'Start typing to preview'}
                           </p>
                         ) : previewResult.ok ? (
-                          <BotMessage text={previewResult.text} embeds={previewResult.embeds} />
+                          <>
+                            {triggerEnabled && cleanName && (
+                              <UserMessage user={user} text={previewMessage} />
+                            )}
+                            <BotMessage text={previewResult.text} embeds={previewResult.embeds} />
+                          </>
                         ) : (
                           <p className="text-xs text-red-400/70">Fix the error to see a preview</p>
                         )
@@ -1127,7 +1288,11 @@ export function TagModal({
                           />
                         </div>
                         <p className="mt-1.5 px-1 text-[10px] text-white/20">
-                          f!tag {tagNameHint} [args…] · Enter to send
+                          {triggerMode === 'anywhere'
+                            ? `Type ${tagNameHint} anywhere in a message, or f!tag ${tagNameHint} [args…] · Enter to send`
+                            : triggerMode === 'trigger'
+                              ? `Send ${tagNameHint} or f!tag ${tagNameHint} [args…] · Enter to send`
+                              : `f!tag ${tagNameHint} [args…] · Enter to send`}
                         </p>
                       </div>
                     )}
@@ -1285,7 +1450,7 @@ export function TagViewModal({
             <h2 className="text-lg font-bold text-white">{tag.name}</h2>
             <p className="mt-0.5 text-xs text-white/30">
               {typeLabel}
-              {tag.trigger && ' · 🔔 trigger word'}
+              {(tag.trigger || tag.anyTrigger) && ` · 🔔 ${tag.anyTrigger ? 'anywhere trigger' : 'trigger word'}`}
               {(tag.uses ?? 0) > 0 && ` · ${tag.uses} use${tag.uses === 1 ? '' : 's'}`}
             </p>
           </div>

@@ -705,10 +705,7 @@ export default function DeveloperPanel({
             >
               {refreshing ? 'Refreshing…' : 'Refresh translation files'}
             </button>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-white/35">
-              Reload language files and approved database translations without
-              restarting the bot.
-            </p>
+
 
           </section>
         </aside>
