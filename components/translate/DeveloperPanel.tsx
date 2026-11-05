@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
-import { Toggle } from '@/components/ui/Toggle';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
+import TranslationModeration from '@/components/translate/TranslationModeration';
 import type { UserProfile } from '@/lib/types';
 import type {
   TranslationImportResult,
@@ -28,28 +28,296 @@ interface Props {
   initialTranslators: Translator[];
   languages: TranslationLanguageSummary[];
   currentUserId: string;
+  canManageAccess: boolean;
+  isOwner: boolean;
 }
 
-function RoleToggle({
-  label,
-  hint,
-  value,
-  onChange,
-  disabled,
-}: {
+type PermissionKey = 'developer' | 'moderator' | 'proofreader';
+
+const PERMISSION_OPTIONS: {
+  key: PermissionKey;
   label: string;
   hint: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
+  ownerOnly?: boolean;
+}[] = [
+  {
+    key: 'developer',
+    label: 'Developer',
+    hint: 'Full console and moderation access',
+    ownerOnly: true,
+  },
+  {
+    key: 'moderator',
+    label: 'Moderator',
+    hint: 'Can remove notes and translations',
+  },
+  {
+    key: 'proofreader',
+    label: 'Proofreader',
+    hint: 'Can approve and review translations',
+  },
+];
+
+function PermissionMenu({
+  value,
+  owner,
+  canGrantDeveloper,
+  disabled,
+  onChange,
+}: {
+  value: Record<PermissionKey, boolean>;
+  owner: boolean;
+  canGrantDeveloper: boolean;
+  disabled: boolean;
+  onChange: (key: PermissionKey, checked: boolean) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const active = PERMISSION_OPTIONS.filter((option) => value[option.key]);
+  const summary =
+    active.length === 0
+      ? 'Translator only'
+      : active.map((option) => option.label).join(' · ');
+
   return (
-    <div className="flex items-center gap-2.5">
-      <Toggle value={value} onChangeAction={onChange} disabled={disabled} />
-      <div>
-        <p className="text-sm font-medium text-white/75">{label}</p>
-        <p className="text-xs text-white/45">{hint}</p>
-      </div>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={disabled}
+        className={[
+          'flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors',
+          open
+            ? 'border-orange/35 bg-orange/[0.06] text-orange-light'
+            : 'border-white/10 text-white/55 hover:border-white/20 hover:text-white/80',
+          disabled ? 'cursor-not-allowed opacity-40' : '',
+        ].join(' ')}
+      >
+        <span className="max-w-56 truncate">
+          {owner ? 'Owner access' : summary}
+        </span>
+        <svg
+          className="h-3 w-3 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {open && !disabled && (
+        <>
+          <button
+            type="button"
+            aria-label="Close permissions menu"
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-20 cursor-default"
+          />
+          <div
+            role="menu"
+            aria-label="User permissions"
+            className="absolute left-0 z-30 mt-1 w-72 rounded-lg border border-white/10 bg-bg-card p-1 shadow-2xl"
+          >
+            <p className="px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-white/35">
+              Permissions
+            </p>
+            {PERMISSION_OPTIONS.map((option) => {
+              const checked = value[option.key];
+              const ownerLocked = option.ownerOnly && !canGrantDeveloper;
+              const optionDisabled = ownerLocked;
+
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={checked}
+                  disabled={optionDisabled}
+                  onClick={() => onChange(option.key, !checked)}
+                  className={[
+                    'flex w-full items-start gap-2 rounded-md px-2.5 py-2 text-left transition-colors',
+                    optionDisabled
+                      ? 'cursor-not-allowed opacity-45'
+                      : 'hover:bg-white/[0.04]',
+                  ].join(' ')}
+                >
+                  <span
+                    className={[
+                      'mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                      checked
+                        ? 'border-orange/50 bg-orange/20 text-orange-light'
+                        : 'border-white/15 text-transparent',
+                    ].join(' ')}
+                  >
+                    <svg
+                      className="h-2.5 w-2.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="m5 13 4 4L19 7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs font-medium text-white/75">
+                      {option.label}
+                    </span>
+                    <span className="block text-[11px] leading-snug text-white/35">
+                      {ownerLocked
+                        ? 'Only the owner can change developer access'
+                        : option.hint}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+            {!canGrantDeveloper && (
+              <p className="mt-1 border-t border-white/[0.06] px-2.5 py-2 text-[11px] leading-snug text-white/30">
+                Developer access is controlled by the owner.
+              </p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function LanguageMenu({
+  value,
+  languages,
+  disabled,
+  onChange,
+}: {
+  value: string[];
+  languages: TranslationLanguageSummary[];
+  disabled: boolean;
+  onChange: (code: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = languages.filter((language) => value.includes(language.code));
+  const summary = disabled
+    ? 'All languages'
+    : active.length === 0
+      ? 'No languages'
+      : active.length === languages.length
+        ? 'All languages'
+        : active.map((language) => language.native).join(', ');
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={disabled}
+        className={[
+          'flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors',
+          open
+            ? 'border-orange/35 bg-orange/[0.06] text-orange-light'
+            : 'border-white/10 text-white/55 hover:border-white/20 hover:text-white/80',
+          disabled ? 'cursor-not-allowed opacity-40' : '',
+        ].join(' ')}
+      >
+        <span className="max-w-56 truncate">{summary}</span>
+        <svg
+          className="h-3 w-3 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {open && !disabled && (
+        <>
+          <button
+            type="button"
+            aria-label="Close language menu"
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-20 cursor-default"
+          />
+          <div
+            role="menu"
+            aria-label="Translator languages"
+            className="absolute left-0 z-30 mt-1 max-h-72 w-64 overflow-y-auto rounded-lg border border-white/10 bg-bg-card p-1 shadow-2xl"
+          >
+            <p className="px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-white/35">
+              Languages
+            </p>
+            {languages.map((language) => {
+              const checked = value.includes(language.code);
+
+              return (
+                <button
+                  key={language.code}
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={checked}
+                  onClick={() => onChange(language.code)}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-white/[0.04]"
+                >
+                  <span
+                    className={[
+                      'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                      checked
+                        ? 'border-orange/50 bg-orange/20 text-orange-light'
+                        : 'border-white/15 text-transparent',
+                    ].join(' ')}
+                  >
+                    <svg
+                      className="h-2.5 w-2.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="m5 13 4 4L19 7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-medium text-white/75">
+                      {language.native}
+                    </span>
+                    <span className="block text-[10px] text-white/30">
+                      {language.code}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -59,18 +327,21 @@ function TranslatorRow({
   profile,
   languages,
   currentUserId,
+  canGrantDeveloper,
   onRemoved,
 }: {
   translator: Translator;
   profile?: UserProfile;
   languages: TranslationLanguageSummary[];
   currentUserId: string;
+  canGrantDeveloper: boolean;
   onRemoved: (userId: string) => void;
 }) {
   const [languagesForUser, setLanguagesForUser] = useState<string[]>(
     translator.permissions.languages,
   );
   const [proofreader, setProofreader] = useState(translator.permissions.proofreader);
+  const [moderator, setModerator] = useState(translator.permissions.moderator);
   const [developer, setDeveloper] = useState(translator.permissions.developer);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -78,6 +349,7 @@ function TranslatorRow({
   const [baseline, setBaseline] = useState({
     languages: translator.permissions.languages,
     proofreader: translator.permissions.proofreader,
+    moderator: translator.permissions.moderator,
     developer: translator.permissions.developer,
   });
   const [requested, setRequested] = useState(
@@ -94,11 +366,13 @@ function TranslatorRow({
     : translator.userId;
   const avatar = profileAvatar(translator.userId, resolvedProfile);
   const locked = translator.owner;
+  const ownerLockedRemoval = !canGrantDeveloper && developer;
 
   const dirty =
     [...languagesForUser].sort().join(',') !==
       [...baseline.languages].sort().join(',') ||
     proofreader !== baseline.proofreader ||
+    moderator !== baseline.moderator ||
     developer !== baseline.developer;
 
   function toggleLanguage(code: string) {
@@ -112,16 +386,41 @@ function TranslatorRow({
   async function save() {
     setSaving(true);
     try {
+      const updates: {
+        languages?: string[];
+        proofreader?: boolean;
+        moderator?: boolean;
+        developer?: boolean;
+      } = {};
+
+      if (
+        [...languagesForUser].sort().join(',') !==
+        [...baseline.languages].sort().join(',')
+      ) {
+        updates.languages = languagesForUser;
+      }
+      if (proofreader !== baseline.proofreader) {
+        updates.proofreader = proofreader;
+      }
+      if (moderator !== baseline.moderator) {
+        updates.moderator = moderator;
+      }
+      if (developer !== baseline.developer) {
+        updates.developer = developer;
+      }
+
+      if (updates.developer !== undefined && !canGrantDeveloper) {
+        showErrorToast('Only the owner can change developer access');
+        return;
+      }
+      if (Object.keys(updates).length === 0) return;
+
       const res = await fetch(
         `/api/translations/translators/${translator.userId}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            languages: languagesForUser,
-            proofreader,
-            developer,
-          }),
+          body: JSON.stringify(updates),
         },
       );
       const data = await res.json().catch(() => ({}));
@@ -133,10 +432,12 @@ function TranslatorRow({
       const updated = data.translator;
       setLanguagesForUser(updated.permissions.languages);
       setProofreader(updated.permissions.proofreader);
+      setModerator(updated.permissions.moderator);
       setDeveloper(updated.permissions.developer);
       setBaseline({
         languages: updated.permissions.languages,
         proofreader: updated.permissions.proofreader,
+        moderator: updated.permissions.moderator,
         developer: updated.permissions.developer,
       });
       setRequested(updated.permissions.requestedLanguages);
@@ -204,15 +505,28 @@ function TranslatorRow({
                   </span>
                 )}
               </p>
-              {developer && (
-                <span className="rounded border border-orange/25 bg-orange/10 px-2 py-0.5 text-[10px] font-medium text-orange-light">
-                  Developer
+              {translator.owner ? (
+                <span className="rounded border border-orange/30 bg-orange/15 px-2 py-0.5 text-[10px] font-medium text-orange-bright">
+                  Owner
                 </span>
-              )}
-              {proofreader && (
-                <span className="rounded border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
-                  Proofreader
-                </span>
+              ) : (
+                <>
+                  {developer && (
+                    <span className="rounded border border-orange/25 bg-orange/10 px-2 py-0.5 text-[10px] font-medium text-orange-light">
+                      Developer
+                    </span>
+                  )}
+                  {moderator && (
+                    <span className="rounded border border-violet-500/25 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-300">
+                      Moderator
+                    </span>
+                  )}
+                  {proofreader && (
+                    <span className="rounded border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
+                      Proofreader
+                    </span>
+                  )}
+                </>
               )}
             </div>
             <p className="mt-0.5 truncate text-xs text-white/45">{handle}</p>
@@ -253,13 +567,20 @@ function TranslatorRow({
             <button
               type="button"
               onClick={() => setConfirmRemoving(true)}
-              disabled={saving || locked || translator.userId === currentUserId}
+              disabled={
+                saving ||
+                locked ||
+                translator.userId === currentUserId ||
+                ownerLockedRemoval
+              }
               title={
                 locked
                   ? 'Owners cannot be removed'
                   : translator.userId === currentUserId
                     ? 'You cannot remove yourself'
-                    : undefined
+                    : ownerLockedRemoval
+                      ? 'Only the owner can remove developer access'
+                      : undefined
               }
               className="rounded-lg border border-rose-500/20 px-3 py-2 text-xs font-medium text-rose-200/70 transition-colors hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-200 disabled:cursor-not-allowed disabled:opacity-30"
             >
@@ -277,62 +598,55 @@ function TranslatorRow({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/10 pt-3">
-        <RoleToggle
-          label="Developer"
-          hint="Full access"
-          value={developer}
-          onChange={setDeveloper}
-          disabled={locked}
-        />
-        <RoleToggle
-          label="Proofreader"
-          hint="Can approve translations"
-          value={proofreader}
-          onChange={setProofreader}
-          disabled={locked}
-        />
-      </div>
-
-      <div className="mt-3">
-        {!developer && (
-          <div className="flex flex-wrap gap-1.5">
-            {languages.map((language) => {
-              const active = languagesForUser.includes(language.code);
-              return (
-                <button
-                  key={language.code}
-                  type="button"
-                  onClick={() => toggleLanguage(language.code)}
-                  className={[
-                    'rounded-full border px-2.5 py-1 text-xs transition-colors',
-                    active
-                      ? 'border-orange/35 bg-orange/10 text-orange-light'
-                      : 'border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/75',
-                  ].join(' ')}
-                >
-                  {language.native}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {requested.length > 0 && (
-          <p className="mt-2 text-xs text-white/40">
-            Requested:{' '}
-            <span className="text-orange-light/70">
-              {requested
-                .map(
-                  (code) =>
-                    languages.find((language) => language.code === code)?.native ??
-                    code,
-                )
-                .join(', ')}
-            </span>
+      <div className="mt-4 flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-white/10 pt-3">
+        <div>
+          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-white/35">
+            Permissions
+          </p>
+          <PermissionMenu
+            value={{ developer, moderator, proofreader }}
+            owner={translator.owner}
+            canGrantDeveloper={canGrantDeveloper}
+            disabled={locked}
+            onChange={(key, checked) => {
+              if (key === 'developer') setDeveloper(checked);
+              if (key === 'moderator') setModerator(checked);
+              if (key === 'proofreader') setProofreader(checked);
+            }}
+          />
+        </div>
+        <div>
+          <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-white/35">
+            Languages
+          </p>
+          <LanguageMenu
+            value={languagesForUser}
+            languages={languages}
+            disabled={locked || developer}
+            onChange={toggleLanguage}
+          />
+        </div>
+        {!canGrantDeveloper && !translator.owner && (
+          <p className="max-w-xs text-xs leading-relaxed text-white/35">
+            Only the owner can add or remove developer access.
           </p>
         )}
       </div>
+
+      {requested.length > 0 && (
+        <p className="mt-2 text-xs text-white/40">
+          Requested:{' '}
+          <span className="text-orange-light/70">
+            {requested
+              .map(
+                (code) =>
+                  languages.find((language) => language.code === code)?.native ??
+                  code,
+              )
+              .join(', ')}
+          </span>
+        </p>
+      )}
     </div>
   );
 }
@@ -341,6 +655,8 @@ export default function DeveloperPanel({
   initialTranslators,
   languages,
   currentUserId,
+  canManageAccess,
+  isOwner,
 }: Props) {
   const router = useRouter();
   const importInput = useRef<HTMLInputElement>(null);
@@ -354,6 +670,9 @@ export default function DeveloperPanel({
   const [includePending, setIncludePending] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [view, setView] = useState<'access' | 'moderation'>(
+    canManageAccess ? 'access' : 'moderation',
+  );
 
   const unresolvedIds = useMemo(
     () =>
@@ -549,11 +868,45 @@ export default function DeveloperPanel({
           Translator console
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/55">
-          Manage access, review permissions, and move language files in and out.
+          {canManageAccess
+            ? 'Manage access, moderate translations, and move language files in and out.'
+            : 'Review and remove notes or translations authored by translators.'}
         </p>
       </header>
 
-      <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
+      {canManageAccess && (
+        <div className="mt-5 inline-flex rounded-lg border border-white/10 p-0.5">
+          <button
+            type="button"
+            onClick={() => setView('access')}
+            aria-pressed={view === 'access'}
+            className={[
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              view === 'access'
+                ? 'bg-white/[0.07] text-white'
+                : 'text-white/40 hover:text-white/70',
+            ].join(' ')}
+          >
+            Access
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('moderation')}
+            aria-pressed={view === 'moderation'}
+            className={[
+              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              view === 'moderation'
+                ? 'bg-white/[0.07] text-white'
+                : 'text-white/40 hover:text-white/70',
+            ].join(' ')}
+          >
+            Moderation
+          </button>
+        </div>
+      )}
+
+      {canManageAccess && view === 'access' ? (
+        <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-xl font-semibold text-white">People</h2>
@@ -600,6 +953,7 @@ export default function DeveloperPanel({
                   profile={profiles[translator.userId]}
                   languages={languages}
                   currentUserId={currentUserId}
+                  canGrantDeveloper={isOwner}
                   onRemoved={handleRemoved}
                 />
               ))
@@ -710,6 +1064,16 @@ export default function DeveloperPanel({
           </section>
         </aside>
       </div>
+      ) : (
+        <div className="mt-8">
+          <TranslationModeration
+            translators={translators}
+            profiles={profiles}
+            languages={languages}
+            currentUserId={currentUserId}
+          />
+        </div>
+      )}
     </div>
   );
 }

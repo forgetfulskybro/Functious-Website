@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import UserBadge from '@/components/ui/UserBadge';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
@@ -12,6 +12,7 @@ import type {
   TranslationBulkResult,
   TranslationLanguageMeta,
   TranslationMutationResponse,
+  TranslationNote,
   TranslationPermissions,
   TranslationPreviousVersion,
   TranslationStats,
@@ -20,18 +21,29 @@ import type {
 } from '@/lib/translationTypes';
 import { CoverageBar, SourceTarget } from './TranslateChrome';
 
-type Filter = 'all' | 'untranslated' | 'pending' | 'approved' | 'outdated' | 'notes';
+type FilterKey =
+  | 'untranslated'
+  | 'pending'
+  | 'approved'
+  | 'outdated'
+  | 'notes'
+  | 'images';
+
+type FilterState = { include: FilterKey[]; exclude: FilterKey[] };
 
 type SortKey = 'default' | 'edited' | 'approved' | 'notes' | 'noted' | 'key';
 
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'all', label: 'All' },
+const FILTER_OPTIONS: { key: FilterKey; label: string }[] = [
   { key: 'untranslated', label: 'Untranslated' },
   { key: 'pending', label: 'Awaiting review' },
   { key: 'approved', label: 'Approved' },
   { key: 'outdated', label: 'Outdated' },
   { key: 'notes', label: 'Has notes' },
+  { key: 'images', label: 'Has image' },
 ];
+
+const EMPTY_FILTERS: FilterState = { include: [], exclude: [] };
+const NOTE_PAGE_SIZE = 3;
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: 'default', label: 'Source order' },
@@ -41,6 +53,460 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: 'noted', label: 'Recently noted' },
   { key: 'key', label: 'Key A–Z' },
 ];
+
+const BULK_ACTIONS: { key: TranslationBulkAction; label: string }[] = [
+  { key: 'approve', label: 'Approve' },
+  { key: 'unreview', label: 'Awaiting review' },
+  { key: 'outdated', label: 'Outdated' },
+  { key: 'untranslated', label: 'Untranslated' },
+  { key: 'seed', label: 'Seed source' },
+  { key: 'note', label: 'Add note' },
+];
+
+const BULK_RESULT_LABELS: Record<TranslationBulkAction, string> = {
+  approve: 'approved',
+  unreview: 'marked awaiting review',
+  outdated: 'marked outdated',
+  untranslated: 'marked untranslated',
+  seed: 'seeded with source',
+  note: 'given a note',
+};
+
+const BULK_RENDER_LIMIT = 200;
+
+function SortMenu({
+  value,
+  onChange,
+}: {
+  value: SortKey;
+  onChange: (value: SortKey) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const current = SORTS.find((option) => option.key === value) ?? SORTS[0];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((currentOpen) => !currentOpen)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={[
+          'flex items-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors',
+          open || value !== 'default'
+            ? 'border-orange/40 bg-orange/10 text-orange-light'
+            : 'border-white/10 text-white/55 hover:border-white/20 hover:text-white/80',
+        ].join(' ')}
+      >
+        <svg
+          className="h-3.5 w-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path d="M4 6h16M4 12h10M4 18h6" strokeLinecap="round" />
+        </svg>
+        <span className="whitespace-nowrap">{current.label}</span>
+        <svg
+          className="h-3 w-3"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label="Close sort menu"
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-20 cursor-default"
+          />
+          <div
+            role="menu"
+            aria-label="Sort strings"
+            className="absolute right-0 z-30 mt-1 w-48 rounded-lg border border-white/10 bg-bg-card p-1 shadow-2xl"
+          >
+            {SORTS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                role="menuitemradio"
+                aria-checked={value === option.key}
+                onClick={() => {
+                  onChange(option.key);
+                  setOpen(false);
+                }}
+                className={[
+                  'flex w-full items-center justify-between gap-3 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors',
+                  value === option.key
+                    ? 'bg-orange/10 text-orange-light'
+                    : 'text-white/60 hover:bg-white/[0.04] hover:text-white',
+                ].join(' ')}
+              >
+                {option.label}
+                {value === option.key && (
+                  <svg
+                    className="h-3.5 w-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="m5 13 4 4L19 7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function FilterMenu({
+  mode,
+  value,
+  counts,
+  onChange,
+}: {
+  mode: 'include' | 'exclude';
+  value: FilterKey[];
+  counts: Record<FilterKey, number>;
+  onChange: (value: FilterKey[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const label = mode === 'include' ? 'Include' : 'Exclude';
+  const active = value.length > 0;
+
+  function toggle(key: FilterKey) {
+    onChange(
+      value.includes(key)
+        ? value.filter((item) => item !== key)
+        : [...value, key],
+    );
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={[
+          'flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors',
+          open || active
+            ? 'border-orange/35 bg-orange/[0.06] text-orange-light'
+            : 'border-white/10 text-white/55 hover:border-white/20 hover:text-white/80',
+        ].join(' ')}
+      >
+        <svg
+          className="h-3.5 w-3.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
+          {mode === 'include' ? (
+            <path d="M12 9v6M9 12h6" strokeLinecap="round" />
+          ) : (
+            <path d="M9 12h6" strokeLinecap="round" />
+          )}
+        </svg>
+        <span>{label}</span>
+        {active && (
+          <span className="rounded bg-orange/15 px-1 text-[10px] tabular-nums text-orange-light/80">
+            {value.length}
+          </span>
+        )}
+        <svg
+          className="h-3 w-3"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label={`Close ${label.toLowerCase()} filters`}
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-20 cursor-default"
+          />
+          <div
+            role="menu"
+            aria-label={`${label} filters`}
+            className="absolute left-0 z-30 mt-1 w-52 rounded-lg border border-white/10 bg-bg-card p-1 shadow-2xl"
+          >
+            <p className="px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-white/35">
+              {mode === 'include' ? 'Show only' : 'Remove matching'}
+            </p>
+            {FILTER_OPTIONS.map((option) => {
+              const checked = value.includes(option.key);
+
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={checked}
+                  onClick={() => toggle(option.key)}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs text-white/65 transition-colors hover:bg-white/[0.04] hover:text-white"
+                >
+                  <span
+                    className={[
+                      'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                      checked
+                        ? 'border-orange/50 bg-orange/20 text-orange-light'
+                        : 'border-white/15 text-transparent',
+                    ].join(' ')}
+                  >
+                    <svg
+                      className="h-2.5 w-2.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="m5 13 4 4L19 7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span className="flex-1">{option.label}</span>
+                  <span className="text-[10px] tabular-nums text-white/30">
+                    {formatNumber(counts[option.key])}
+                  </span>
+                </button>
+              );
+            })}
+            {active && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange([]);
+                  setOpen(false);
+                }}
+                className="mt-1 w-full rounded-md border-t border-white/[0.06] px-2.5 py-1.5 text-left text-xs text-white/40 transition-colors hover:bg-white/[0.04] hover:text-white/70"
+              >
+                Clear {label.toLowerCase()}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CategoryMenu({
+  value,
+  options,
+  total,
+  onChange,
+}: {
+  value: string;
+  options: [string, number][];
+  total: number;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = value !== 'all';
+  const current = options.find(([name]) => name === value);
+
+  function select(next: string) {
+    onChange(next);
+    setOpen(false);
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={[
+          'flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors',
+          open || active
+            ? 'border-orange/35 bg-orange/[0.06] text-orange-light'
+            : 'border-white/10 text-white/55 hover:border-white/20 hover:text-white/80',
+        ].join(' ')}
+      >
+        <svg
+          className="h-3.5 w-3.5 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path
+            d="M20.6 13.6 13.6 20.6a2 2 0 0 1-2.8 0L4 13.8V4h9.8l6.8 6.8a2 2 0 0 1 0 2.8Z"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle cx="8" cy="8" r="1.2" />
+        </svg>
+        <span className="max-w-32 truncate capitalize">
+          {current?.[0] ?? 'Category'}
+        </span>
+        {active && current && (
+          <span className="rounded bg-orange/15 px-1 text-[10px] tabular-nums text-orange-light/80">
+            {formatNumber(current[1])}
+          </span>
+        )}
+        <svg
+          className="h-3 w-3 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label="Close category menu"
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-20 cursor-default"
+          />
+          <div
+            role="menu"
+            aria-label="Filter by category"
+            className="absolute left-0 z-30 mt-1 w-52 rounded-lg border border-white/10 bg-bg-card p-1 shadow-2xl"
+          >
+            <p className="px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-white/35">
+              Category
+            </p>
+            <button
+              type="button"
+              role="menuitemradio"
+              aria-checked={value === 'all'}
+              onClick={() => select('all')}
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs text-white/65 transition-colors hover:bg-white/[0.04] hover:text-white"
+            >
+              <span
+                className={[
+                  'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                  value === 'all'
+                    ? 'border-orange/50 bg-orange/20 text-orange-light'
+                    : 'border-white/15 text-transparent',
+                ].join(' ')}
+              >
+                <svg
+                  className="h-2.5 w-2.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="m5 13 4 4L19 7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+              <span className="flex-1">All categories</span>
+              <span className="text-[10px] tabular-nums text-white/30">
+                {formatNumber(total)}
+              </span>
+            </button>
+            {options.map(([name, count]) => {
+              const checked = value === name;
+
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={checked}
+                  onClick={() => select(name)}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs text-white/65 transition-colors hover:bg-white/[0.04] hover:text-white"
+                >
+                  <span
+                    className={[
+                      'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                      checked
+                        ? 'border-orange/50 bg-orange/20 text-orange-light'
+                        : 'border-white/15 text-transparent',
+                    ].join(' ')}
+                  >
+                    <svg
+                      className="h-2.5 w-2.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="m5 13 4 4L19 7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span className="flex-1 truncate capitalize">{name}</span>
+                  <span className="text-[10px] tabular-nums text-white/30">
+                    {formatNumber(count)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 const STATUS_STYLES: Record<TranslationStatus, string> = {
   approved: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
@@ -189,6 +655,67 @@ function TranslationCredit({
   );
 }
 
+function isLongNote(note: TranslationNote): boolean {
+  return note.text.length > 160 || note.text.split('\n').length > 2;
+}
+
+function NoteText({ text, clamp = false }: { text: string; clamp?: boolean }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+
+  return (
+    <p
+      className={[
+        'whitespace-pre-wrap break-words text-sm leading-relaxed text-white/70',
+        clamp ? 'line-clamp-3' : '',
+      ].join(' ')}
+    >
+      {parts.map((part, index) =>
+        /^https?:\/\//.test(part) ? (
+          <a
+            key={`${part}-${index}`}
+            href={part}
+            target="_blank"
+            rel="noreferrer"
+            className="text-orange-light underline underline-offset-2 hover:text-orange-warm"
+          >
+            {part}
+          </a>
+        ) : (
+          <span key={`text-${index}`}>{part}</span>
+        ),
+      )}
+    </p>
+  );
+}
+
+function NoteImage({
+  src,
+  alt,
+  className,
+  onClick,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  onClick?: () => void;
+}) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (!src || failedSrc === src) return null;
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onClick={onClick}
+      onError={() => setFailedSrc(src)}
+      className={className}
+    />
+  );
+}
+
 function lastNoteAt(entry: TranslationString): number {
   return entry.notes.reduce(
     (latest, note) => Math.max(latest, note.createdAt),
@@ -226,6 +753,63 @@ function sortMetaFor(entry: TranslationString, sort: SortKey): string | null {
   return null;
 }
 
+function sortTranslations(
+  list: TranslationString[],
+  sort: SortKey,
+): TranslationString[] {
+  const sorted = [...list];
+
+  switch (sort) {
+    case 'edited':
+      return sorted.sort(
+        (a, b) =>
+          lastEditedAt(b) - lastEditedAt(a) || a.key.localeCompare(b.key),
+      );
+    case 'approved':
+      return sorted.sort(
+        (a, b) => approvedAt(b) - approvedAt(a) || a.key.localeCompare(b.key),
+      );
+    case 'notes':
+      return sorted.sort(
+        (a, b) =>
+          b.notes.length - a.notes.length || a.key.localeCompare(b.key),
+      );
+    case 'noted':
+      return sorted.sort(
+        (a, b) =>
+          lastNoteAt(b) - lastNoteAt(a) ||
+          b.notes.length - a.notes.length ||
+          a.key.localeCompare(b.key),
+      );
+    case 'key':
+      return sorted.sort((a, b) => a.key.localeCompare(b.key));
+    default:
+      return sorted;
+  }
+}
+
+function matchesFilter(entry: TranslationString, filter: FilterKey): boolean {
+  if (filter === 'notes') return entry.notes.length > 0;
+  if (filter === 'images') return entry.notes.some((note) => note.imageUrl);
+  return entry.status === filter;
+}
+
+function applyFilterState(
+  entries: TranslationString[],
+  filters: FilterState,
+): TranslationString[] {
+  return entries.filter((entry) => {
+    if (
+      filters.include.length > 0 &&
+      !filters.include.some((filter) => matchesFilter(entry, filter))
+    ) {
+      return false;
+    }
+
+    return !filters.exclude.some((filter) => matchesFilter(entry, filter));
+  });
+}
+
 function SortValue({
   entry,
   sort,
@@ -240,6 +824,81 @@ function SortValue({
     <span className="text-[10px] tabular-nums text-white/30">{label}</span>
   );
 }
+
+const TranslationList = memo(function TranslationList({
+  entries,
+  selectedKey,
+  sort,
+  profiles,
+  onSelect,
+}: {
+  entries: TranslationString[];
+  selectedKey: string | null;
+  sort: SortKey;
+  profiles: Record<string, UserProfile | undefined>;
+  onSelect: (key: string) => void;
+}) {
+  if (entries.length === 0) {
+    return (
+      <div className="px-6 py-16 text-center">
+        <p className="text-sm font-medium text-white/55">
+          No strings match this view.
+        </p>
+        <p className="mt-1 text-xs text-white/35">
+          Try another filter, category, or search.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {entries.map((entry) => (
+        <button
+          key={entry.key}
+          type="button"
+          onClick={() => onSelect(entry.key)}
+          className={[
+            'w-full border-b border-white/[0.05] px-4 py-3 text-left transition-colors last:border-b-0',
+            selectedKey === entry.key
+              ? 'bg-orange/[0.08]'
+              : 'hover:bg-white/[0.03]',
+          ].join(' ')}
+        >
+          <div className="flex items-center gap-2">
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOTS[entry.status]}`}
+            />
+            <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-white/40">
+              {entry.key}
+            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              {entry.notes.length > 0 && (
+                <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] tabular-nums text-white/45">
+                  {entry.notes.length} note
+                  {entry.notes.length === 1 ? '' : 's'}
+                </span>
+              )}
+              <SortValue entry={entry} sort={sort} />
+            </div>
+          </div>
+          <p className="mt-1 truncate text-sm text-white/80">
+            {entry.baseValue}
+          </p>
+          {entry.value && entry.status !== 'untranslated' && (
+            <p className="mt-0.5 truncate text-xs text-orange-light/60">
+              {entry.value}
+            </p>
+          )}
+          <TranslationCredit
+            entry={entry}
+            profile={profiles[entry.translatedBy ?? entry.updatedBy ?? '']}
+          />
+        </button>
+      ))}
+    </>
+  );
+});
 
 interface Props {
   language: TranslationLanguageMeta;
@@ -264,7 +923,7 @@ export default function TranslationEditor({
 }: Props) {
   const [strings, setStrings] = useState<TranslationString[]>(initialStrings);
   const [stats, setStats] = useState<TranslationStats>(initialStats);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [category, setCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortKey>('default');
@@ -277,11 +936,20 @@ export default function TranslationEditor({
   const [reverting, setReverting] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState('');
+  const [noteImageUrl, setNoteImageUrl] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
+  const [noteViewId, setNoteViewId] = useState<string | null>(null);
+  const [notePage, setNotePage] = useState(0);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<TranslationBulkAction>('unreview');
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [bulkSearch, setBulkSearch] = useState('');
+  const [bulkFilters, setBulkFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [bulkSort, setBulkSort] = useState<SortKey>('default');
+  const [bulkNote, setBulkNote] = useState('');
+  const [bulkNoteImageUrl, setBulkNoteImageUrl] = useState('');
+  const [bulkAllLanguages, setBulkAllLanguages] = useState(false);
+  const [bulkLimit, setBulkLimit] = useState(BULK_RENDER_LIMIT);
   const [bulkSaving, setBulkSaving] = useState(false);
   const [previousOpen, setPreviousOpen] = useState(false);
   const [revertOpen, setRevertOpen] = useState(false);
@@ -328,12 +996,14 @@ export default function TranslationEditor({
 
   const counts = useMemo(
     () => ({
-      all: strings.length,
       untranslated: stats.untranslated,
       pending: stats.pending,
       approved: stats.approved,
       outdated: stats.outdated,
       notes: strings.filter((entry) => entry.notes.length > 0).length,
+      images: strings.filter((entry) =>
+        entry.notes.some((note) => Boolean(note.imageUrl)),
+      ).length,
     }),
     [strings, stats],
   );
@@ -343,53 +1013,20 @@ export default function TranslationEditor({
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return strings.filter((entry) => {
+    return applyFilterState(strings, filters).filter((entry) => {
       if (category !== 'all' && entry.category !== category) return false;
-      if (filter === 'notes' && entry.notes.length === 0) return false;
-      if (filter !== 'all' && filter !== 'notes' && entry.status !== filter) {
-        return false;
-      }
       if (query) {
         const haystack = `${entry.key} ${entry.baseValue} ${entry.value}`.toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
     });
-  }, [strings, category, filter, search]);
+  }, [strings, category, filters, search]);
 
-  const sortedVisible = useMemo(() => {
-    const list = [...visible];
-
-    switch (sort) {
-      case 'edited':
-        return list.sort(
-          (a, b) =>
-            lastEditedAt(b) - lastEditedAt(a) ||
-            a.key.localeCompare(b.key),
-        );
-      case 'approved':
-        return list.sort(
-          (a, b) =>
-            approvedAt(b) - approvedAt(a) || a.key.localeCompare(b.key),
-        );
-      case 'notes':
-        return list.sort(
-          (a, b) =>
-            b.notes.length - a.notes.length || a.key.localeCompare(b.key),
-        );
-      case 'noted':
-        return list.sort(
-          (a, b) =>
-            lastNoteAt(b) - lastNoteAt(a) ||
-            b.notes.length - a.notes.length ||
-            a.key.localeCompare(b.key),
-        );
-      case 'key':
-        return list.sort((a, b) => a.key.localeCompare(b.key));
-      default:
-        return list;
-    }
-  }, [visible, sort]);
+  const sortedVisible = useMemo(
+    () => sortTranslations(visible, sort),
+    [visible, sort],
+  );
 
   const currentSort = SORTS.find((option) => option.key === sort) ?? SORTS[0];
 
@@ -401,14 +1038,19 @@ export default function TranslationEditor({
 
   const bulkVisible = useMemo(() => {
     const query = bulkSearch.trim().toLowerCase();
-    if (!query) return bulkCandidates;
+    const filtered = applyFilterState(strings, bulkFilters).filter((entry) => {
+      if (query) {
+        const haystack =
+          `${entry.key} ${entry.baseValue} ${entry.value}`.toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      return true;
+    });
 
-    return bulkCandidates.filter((entry) =>
-      `${entry.key} ${entry.baseValue} ${entry.value}`
-        .toLowerCase()
-        .includes(query),
-    );
-  }, [bulkCandidates, bulkSearch]);
+    return sortTranslations(filtered, bulkSort);
+  }, [strings, bulkFilters, bulkSearch, bulkSort]);
+
+  const bulkRendered = bulkVisible.slice(0, bulkLimit);
 
   function applyResult(result: TranslationMutationResponse) {
     setStrings((previous) =>
@@ -421,29 +1063,56 @@ export default function TranslationEditor({
     caretRef.current = null;
   }
 
-  function selectString(key: string) {
-    setSelectedKey(key);
-    setDraft(strings.find((entry) => entry.key === key)?.value ?? '');
-    caretRef.current = null;
-    setNoteOpen(false);
-    setNoteText('');
-    setPreviousOpen(false);
-    setRevertOpen(false);
-    setConfirmDeleteNote(null);
+  const selectString = useCallback(
+    (key: string) => {
+      setSelectedKey(key);
+      setDraft(strings.find((entry) => entry.key === key)?.value ?? '');
+      caretRef.current = null;
+      setNoteOpen(false);
+      setNoteText('');
+      setNoteImageUrl('');
+      setNoteViewId(null);
+      setNotePage(0);
+      setPreviousOpen(false);
+      setRevertOpen(false);
+      setConfirmDeleteNote(null);
 
-    if (typeof window !== 'undefined' && window.innerWidth < 1280) {
-      window.setTimeout(() => {
-        document
-          .getElementById('translation-editor')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 60);
-    }
+      if (typeof window !== 'undefined' && window.innerWidth < 1280) {
+        window.setTimeout(() => {
+          document
+            .getElementById('translation-editor')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 60);
+      }
+    },
+    [strings],
+  );
+
+  function selectSeedKeys(allLanguages: boolean) {
+    setBulkSelected(
+      new Set(
+        strings
+          .filter((entry) => allLanguages || !entry.value.trim())
+          .map((entry) => entry.key),
+      ),
+    );
+  }
+
+  function changeBulkScope(allLanguages: boolean) {
+    setBulkAllLanguages(allLanguages);
+    if (bulkAction === 'seed') selectSeedKeys(allLanguages);
   }
 
   function openBulk() {
     setBulkAction('unreview');
     setBulkSelected(new Set(bulkCandidates.map((entry) => entry.key)));
     setBulkSearch('');
+    setBulkFilters(EMPTY_FILTERS);
+    setBulkSort('default');
+    setBulkNote('');
+    setBulkNoteImageUrl('');
+    setBulkAllLanguages(false);
+    setBulkLimit(BULK_RENDER_LIMIT);
     setBulkOpen(true);
   }
 
@@ -474,21 +1143,45 @@ export default function TranslationEditor({
       previous.map((entry) => updated.get(entry.key) ?? entry),
     );
     setStats(result.stats);
+
+    const updatedSelected = result.strings.find(
+      (entry) => entry.key === selectedKey,
+    );
+    if (updatedSelected) setDraft(updatedSelected.value);
   }
 
   async function applyBulk() {
     if (!canBulk || bulkSelected.size === 0 || bulkSaving) return;
+    if (
+      bulkAction === 'note' &&
+      !bulkNote.trim() &&
+      !bulkNoteImageUrl.trim()
+    ) {
+      return;
+    }
 
     setBulkSaving(true);
     try {
-      const res = await fetch(`/api/translations/${language.code}/bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: bulkAction,
-          keys: [...bulkSelected],
-        }),
-      });
+      const res = await fetch(
+        bulkAllLanguages
+          ? '/api/translations/bulk'
+          : `/api/translations/${language.code}/bulk`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: bulkAction,
+            keys: [...bulkSelected],
+            ...(bulkAction === 'note'
+              ? {
+                  note: bulkNote.trim(),
+                  imageUrl: bulkNoteImageUrl.trim(),
+                }
+              : {}),
+            ...(bulkAllLanguages ? { displayLanguage: language.code } : {}),
+          }),
+        },
+      );
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -501,10 +1194,13 @@ export default function TranslationEditor({
       const noun = result.changed === 1 ? 'string' : 'strings';
       const skipped =
         result.skipped > 0 ? ` · ${result.skipped} skipped` : '';
+      const touchedLanguages =
+        result.languages?.filter((entry) => entry.changed > 0).length ?? 1;
+      const scope = bulkAllLanguages
+        ? ` across ${touchedLanguages} languages`
+        : '';
       showToast(
-        `${result.changed} ${noun} ${
-          bulkAction === 'approve' ? 'approved' : 'marked unreviewed'
-        }${skipped}`,
+        `${result.changed} ${noun} ${BULK_RESULT_LABELS[bulkAction]}${scope}${skipped}`,
       );
       setBulkOpen(false);
     } catch (error) {
@@ -653,7 +1349,8 @@ export default function TranslationEditor({
     if (!selected || !canNote || !userId || noteSaving) return;
 
     const text = noteText.trim();
-    if (!text) return;
+    const imageUrl = noteImageUrl.trim();
+    if (!text && !imageUrl) return;
 
     setNoteSaving(true);
     try {
@@ -662,7 +1359,7 @@ export default function TranslationEditor({
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ text, ...(imageUrl ? { imageUrl } : {}) }),
         },
       );
       const data = await res.json().catch(() => ({}));
@@ -673,6 +1370,10 @@ export default function TranslationEditor({
 
       applyResult(data);
       setNoteText('');
+      setNoteImageUrl('');
+      setNotePage(
+        Math.max(0, Math.ceil((selected.notes.length + 1) / NOTE_PAGE_SIZE) - 1),
+      );
       showToast('Note added');
     } catch (error) {
       showErrorToast('Could not add note', {
@@ -688,6 +1389,7 @@ export default function TranslationEditor({
     if (!selected) return;
 
     setConfirmDeleteNote(null);
+    setNoteViewId(null);
     try {
       const res = await fetch(
         `/api/translations/${language.code}/${encodeURIComponent(selected.key)}/notes/${encodeURIComponent(noteId)}`,
@@ -700,6 +1402,12 @@ export default function TranslationEditor({
       }
 
       applyResult(data);
+      setNotePage((page) =>
+        Math.min(
+          page,
+          Math.max(0, Math.ceil((selected.notes.length - 1) / NOTE_PAGE_SIZE) - 1),
+        ),
+      );
       showToast('Note deleted');
     } catch (error) {
       showErrorToast('Could not delete note', {
@@ -747,6 +1455,21 @@ export default function TranslationEditor({
   }
 
   const previousVersion = getPreviousVersion();
+  const activeNote = useMemo(
+    () => selected?.notes.find((note) => note.id === noteViewId) ?? null,
+    [selected, noteViewId],
+  );
+  const notePageCount = Math.max(
+    1,
+    Math.ceil((selected?.notes.length ?? 0) / NOTE_PAGE_SIZE),
+  );
+  const currentNotePage = Math.min(notePage, notePageCount - 1);
+  const pagedNotes = selected
+    ? selected.notes.slice(
+        currentNotePage * NOTE_PAGE_SIZE,
+        currentNotePage * NOTE_PAGE_SIZE + NOTE_PAGE_SIZE,
+      )
+    : [];
   const canDiscardDraft = canEdit && dirty;
   const hasPreviousSnapshot = Boolean(selected?.previous?.value.trim());
   const undoingRevert = Boolean(
@@ -868,102 +1591,52 @@ export default function TranslationEditor({
           )}
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[200px_minmax(0,1fr)]">
-          <aside className="lg:sticky lg:top-24 lg:h-fit">
-            <div className="rounded-xl border border-white/10 bg-bg-card p-2">
-              <p className="px-2.5 pb-2 pt-1 text-xs font-medium uppercase tracking-wide text-white/40">
-                Categories
-              </p>
-              <div className="flex gap-1 overflow-x-auto lg:flex-col">
-                <button
-                  type="button"
-                  onClick={() => setCategory('all')}
-                  className={[
-                    'shrink-0 rounded-lg px-2.5 py-2 text-left text-sm transition-colors lg:w-full',
-                    category === 'all'
-                      ? 'bg-orange/10 text-orange-light'
-                      : 'text-white/60 hover:bg-white/[0.04] hover:text-white',
-                  ].join(' ')}
-                >
-                  <span className="flex items-center justify-between gap-3">
-                    <span>All strings</span>
-                    <span className="text-xs tabular-nums text-white/35">
-                      {formatNumber(strings.length)}
-                    </span>
-                  </span>
-                </button>
-
-                {categories.map(([name, count]) => (
-                  <button
-                    key={name}
-                    type="button"
-                    onClick={() => setCategory(name)}
-                    className={[
-                      'shrink-0 rounded-lg px-2.5 py-2 text-left text-sm capitalize transition-colors lg:w-full',
-                      category === name
-                        ? 'bg-orange/10 text-orange-light'
-                        : 'text-white/60 hover:bg-white/[0.04] hover:text-white',
-                    ].join(' ')}
-                  >
-                    <span className="flex items-center justify-between gap-3">
-                      <span className="truncate">{name}</span>
-                      <span className="text-xs tabular-nums text-white/35">
-                        {formatNumber(count)}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </aside>
-
+        <div className="mt-5">
           <div className="min-w-0">
             <div className="rounded-xl border border-white/10 bg-bg-card p-3">
-              <div className="flex flex-wrap gap-2">
-                {FILTERS.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => setFilter(item.key)}
-                    className={[
-                      'rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
-                      filter === item.key
-                        ? 'border-orange/40 bg-orange/10 text-orange-light'
-                        : 'border-white/10 text-white/55 hover:border-white/20 hover:text-white/80',
-                    ].join(' ')}
-                  >
-                    {item.label}
-                    <span
-                      className={[
-                        'ml-1.5 tabular-nums',
-                        filter === item.key ? 'text-orange-light/60' : 'text-white/30',
-                      ].join(' ')}
-                    >
-                      {formatNumber(counts[item.key])}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="relative mt-3">
-                <svg
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-                </svg>
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search keys and text"
-                  className="w-full rounded-lg border border-white/10 bg-black/20 py-2 pl-10 pr-3 text-sm text-white placeholder:text-white/30 focus:border-orange/45 focus:outline-none focus:ring-1 focus:ring-orange/30"
+              <div className="flex flex-wrap items-center gap-2">
+                <FilterMenu
+                  mode="include"
+                  value={filters.include}
+                  counts={counts}
+                  onChange={(include) =>
+                    setFilters((current) => ({ ...current, include }))
+                  }
                 />
+                <FilterMenu
+                  mode="exclude"
+                  value={filters.exclude}
+                  counts={counts}
+                  onChange={(exclude) =>
+                    setFilters((current) => ({ ...current, exclude }))
+                  }
+                />
+                <CategoryMenu
+                  value={category}
+                  options={categories}
+                  total={strings.length}
+                  onChange={setCategory}
+                />
+                <div className="relative min-w-[180px] flex-1">
+                  <svg
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden="true"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search keys and text"
+                    className="w-full rounded-lg border border-white/10 bg-black/20 py-2 pl-10 pr-3 text-sm text-white placeholder:text-white/30 focus:border-orange/45 focus:outline-none focus:ring-1 focus:ring-orange/30"
+                  />
+                </div>
               </div>
             </div>
 
@@ -976,8 +1649,8 @@ export default function TranslationEditor({
                       <button
                         type="button"
                         onClick={openBulk}
-                        title="Select strings to approve or mark unreviewed"
-                        className="inline-flex items-center gap-1.5 rounded-md border border-orange/25 bg-orange/[0.08] px-2 py-1 text-[11px] font-medium text-orange-light transition-colors hover:border-orange/45 hover:bg-orange/[0.14] hover:text-orange-warm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
+                        title="Bulk edit strings"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-2 py-1 text-[11px] font-medium text-white/55 transition-colors hover:border-white/20 hover:bg-white/[0.03] hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange"
                       >
                         <svg
                           className="h-3 w-3"
@@ -1109,64 +1782,13 @@ export default function TranslationEditor({
                 </div>
 
                 <div className="max-h-[60vh] overflow-y-auto xl:max-h-[calc(100vh-360px)]">
-                  {sortedVisible.length === 0 ? (
-                    <div className="px-6 py-16 text-center">
-                      <p className="text-sm font-medium text-white/55">
-                        No strings match this view.
-                      </p>
-                      <p className="mt-1 text-xs text-white/35">
-                        Try another filter, category, or search.
-                      </p>
-                    </div>
-                  ) : (
-                    sortedVisible.map((entry) => (
-                      <button
-                        key={entry.key}
-                        type="button"
-                        onClick={() => selectString(entry.key)}
-                        className={[
-                          'w-full border-b border-white/[0.05] px-4 py-3 text-left transition-colors last:border-b-0',
-                          selectedKey === entry.key
-                            ? 'bg-orange/[0.08]'
-                            : 'hover:bg-white/[0.03]',
-                        ].join(' ')}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOTS[entry.status]}`}
-                          />
-                          <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-white/40">
-                            {entry.key}
-                          </span>
-                          <div className="flex shrink-0 items-center gap-2">
-                            {entry.notes.length > 0 && (
-                              <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] tabular-nums text-white/45">
-                                {entry.notes.length} note
-                                {entry.notes.length === 1 ? '' : 's'}
-                              </span>
-                            )}
-                            <SortValue entry={entry} sort={sort} />
-                          </div>
-                        </div>
-                        <p className="mt-1 truncate text-sm text-white/80">
-                          {entry.baseValue}
-                        </p>
-                        {entry.value && entry.status !== 'untranslated' && (
-                          <p className="mt-0.5 truncate text-xs text-orange-light/60">
-                            {entry.value}
-                          </p>
-                        )}
-                        <TranslationCredit
-                          entry={entry}
-                          profile={
-                            translationProfiles[
-                              entry.translatedBy ?? entry.updatedBy ?? ''
-                            ]
-                          }
-                        />
-                      </button>
-                    ))
-                  )}
+                  <TranslationList
+                    entries={sortedVisible}
+                    selectedKey={selectedKey}
+                    sort={sort}
+                    profiles={translationProfiles}
+                    onSelect={selectString}
+                  />
                 </div>
               </div>
 
@@ -1469,14 +2091,29 @@ export default function TranslationEditor({
                         <textarea
                           value={noteText}
                           onChange={(event) => setNoteText(event.target.value)}
-                          rows={3}
-                          maxLength={500}
-                          placeholder="Leave context for other translators…"
+                          rows={4}
+                          maxLength={2000}
+                          placeholder="Add context, a link, or an image…"
                           className="w-full resize-y rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm leading-relaxed text-white placeholder:text-white/30 focus:border-orange/45 focus:outline-none focus:ring-1 focus:ring-orange/30"
                         />
+                        <input
+                          type="url"
+                          value={noteImageUrl}
+                          onChange={(event) => setNoteImageUrl(event.target.value)}
+                          placeholder="Image URL (optional)"
+                          aria-label="Note image URL"
+                          className="mt-2 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-orange/45 focus:outline-none focus:ring-1 focus:ring-orange/30"
+                        />
+                        {noteImageUrl.trim() && (
+                          <NoteImage
+                            src={noteImageUrl.trim()}
+                            alt="Note attachment preview"
+                            className="mt-2 max-h-40 w-full rounded-lg border border-white/10 bg-black/20 object-contain"
+                          />
+                        )}
                         <div className="mt-2 flex items-center justify-between gap-2">
                           <span className="text-xs tabular-nums text-white/35">
-                            {noteText.length} / 500
+                            {noteText.length} / 2000
                           </span>
                           <div className="flex gap-2">
                             <button
@@ -1489,7 +2126,10 @@ export default function TranslationEditor({
                             <button
                               type="button"
                               onClick={handleAddNote}
-                              disabled={!noteText.trim() || noteSaving}
+                              disabled={
+                                (!noteText.trim() && !noteImageUrl.trim()) ||
+                                noteSaving
+                              }
                               className="rounded-lg bg-orange px-2.5 py-1.5 text-sm font-medium text-white hover:bg-orange-bright disabled:cursor-not-allowed disabled:opacity-35"
                             >
                               {noteSaving ? 'Adding…' : 'Add note'}
@@ -1501,11 +2141,18 @@ export default function TranslationEditor({
 
                     {selected.notes.length > 0 && (
                       <div className="mt-4 border-t border-white/10 pt-3">
-                        <p className="text-xs font-medium uppercase tracking-wide text-white/45">
-                          Notes
-                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-medium uppercase tracking-wide text-white/45">
+                            Notes
+                          </p>
+                          {notePageCount > 1 && (
+                            <span className="text-xs tabular-nums text-white/35">
+                              Page {currentNotePage + 1} of {notePageCount}
+                            </span>
+                          )}
+                        </div>
                         <ul className="mt-2 space-y-2">
-                          {selected.notes.map((note) => (
+                          {pagedNotes.map((note) => (
                             <li
                               key={note.id}
                               className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2"
@@ -1564,12 +2211,68 @@ export default function TranslationEditor({
                                     </button>
                                   ))}
                               </div>
-                              <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-white/70">
-                                {note.text}
-                              </p>
+                              {note.text && (
+                                <div className="mt-1">
+                                  <NoteText
+                                    text={note.text}
+                                    clamp={isLongNote(note)}
+                                  />
+                                </div>
+                              )}
+                              {note.imageUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setNoteViewId(note.id)}
+                                  className="mt-2 block w-full overflow-hidden rounded-md border border-white/10 bg-black/20"
+                                >
+                                  <NoteImage
+                                    src={note.imageUrl}
+                                    alt="Note attachment"
+                                    className="max-h-40 w-full object-cover"
+                                  />
+                                </button>
+                              )}
+                              {(isLongNote(note) || note.imageUrl) && (
+                                <button
+                                  type="button"
+                                  onClick={() => setNoteViewId(note.id)}
+                                  className="mt-1.5 text-xs font-medium text-orange-light/80 transition-colors hover:text-orange-warm"
+                                >
+                                  View full note
+                                </button>
+                              )}
                             </li>
                           ))}
                         </ul>
+                        {notePageCount > 1 && (
+                          <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/[0.06] pt-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setNotePage((page) => Math.max(0, page - 1))
+                              }
+                              disabled={currentNotePage === 0}
+                              className="rounded-md border border-white/10 px-2 py-1 text-xs font-medium text-white/55 transition-colors hover:border-white/20 hover:text-white/80 disabled:cursor-not-allowed disabled:opacity-30"
+                            >
+                              Previous
+                            </button>
+                            <span className="text-xs tabular-nums text-white/30">
+                              {selected.notes.length} notes
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setNotePage((page) =>
+                                  Math.min(notePageCount - 1, page + 1),
+                                )
+                              }
+                              disabled={currentNotePage >= notePageCount - 1}
+                              className="rounded-md border border-white/10 px-2 py-1 text-xs font-medium text-white/55 transition-colors hover:border-white/20 hover:text-white/80 disabled:cursor-not-allowed disabled:opacity-30"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1579,6 +2282,68 @@ export default function TranslationEditor({
           </div>
         </div>
       </div>
+
+      {activeNote && (
+        <div
+          onClick={() => setNoteViewId(null)}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Full note"
+            onClick={(event) => event.stopPropagation()}
+            className="flex max-h-[85vh] w-full max-w-xl flex-col rounded-xl border border-white/10 bg-bg-card shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 p-4">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                {noteProfiles[activeNote.userId] ? (
+                  <UserBadge
+                    userId={activeNote.userId}
+                    profile={noteProfiles[activeNote.userId]}
+                    showId={false}
+                    inline
+                  />
+                ) : (
+                  <span className="text-xs text-white/45">
+                    {activeNote.userId === userId
+                      ? 'You'
+                      : `Translator ${activeNote.userId.slice(-4)}`}
+                  </span>
+                )}
+                <span className="text-xs text-white/35">
+                  · {formatNoteDate(activeNote.createdAt)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNoteViewId(null)}
+                aria-label="Close note"
+                className="rounded-lg border border-white/10 px-2 py-0.5 text-sm text-white/50 transition-colors hover:border-white/25 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              {activeNote.text && <NoteText text={activeNote.text} />}
+              {activeNote.imageUrl && (
+                <a
+                  href={activeNote.imageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 block"
+                >
+                  <NoteImage
+                    src={activeNote.imageUrl}
+                    alt="Note attachment"
+                    className="max-h-[55vh] w-full rounded-lg border border-white/10 bg-black/20 object-contain"
+                  />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {bulkOpen && canBulk && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -1594,12 +2359,41 @@ export default function TranslationEditor({
                   id="bulk-edit-title"
                   className="text-lg font-semibold text-white"
                 >
-                  Bulk edit {language.native}
+                  Bulk edit {bulkAllLanguages ? 'all languages' : language.native}
                 </h2>
-                <p className="mt-1 text-sm leading-relaxed text-white/50">
-                  Change the review status of many strings at once. Uncheck any
-                  string you don&apos;t want to change.
-                </p>
+                <div className="mt-2 inline-flex rounded-lg border border-white/10 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => changeBulkScope(false)}
+                    aria-pressed={!bulkAllLanguages}
+                    className={[
+                      'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                      !bulkAllLanguages
+                        ? 'bg-white/[0.07] text-white'
+                        : 'text-white/40 hover:text-white/70',
+                    ].join(' ')}
+                  >
+                    This language
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => changeBulkScope(true)}
+                    aria-pressed={bulkAllLanguages}
+                    className={[
+                      'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                      bulkAllLanguages
+                        ? 'bg-white/[0.07] text-white'
+                        : 'text-white/40 hover:text-white/70',
+                    ].join(' ')}
+                  >
+                    All languages
+                  </button>
+                </div>
+                {bulkAllLanguages && (
+                  <p className="mt-2 text-xs text-white/35">
+                    Same keys across every target language.
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -1612,43 +2406,85 @@ export default function TranslationEditor({
             </div>
 
             <div className="border-b border-white/10 p-5">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setBulkAction('unreview')}
-                  aria-pressed={bulkAction === 'unreview'}
-                  className={[
-                    'rounded-lg border p-3 text-left transition-colors',
-                    bulkAction === 'unreview'
-                      ? 'border-orange/45 bg-orange/10'
-                      : 'border-white/10 hover:border-white/20',
-                  ].join(' ')}
-                >
-                  <span className="text-sm font-medium text-white/85">
-                    Mark unreviewed
-                  </span>
-                  <span className="mt-0.5 block text-xs text-white/45">
-                    Send translated strings back to the review queue.
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBulkAction('approve')}
-                  aria-pressed={bulkAction === 'approve'}
-                  className={[
-                    'rounded-lg border p-3 text-left transition-colors',
-                    bulkAction === 'approve'
-                      ? 'border-emerald-500/40 bg-emerald-500/10'
-                      : 'border-white/10 hover:border-white/20',
-                  ].join(' ')}
-                >
-                  <span className="text-sm font-medium text-white/85">
-                    Approve
-                  </span>
-                  <span className="mt-0.5 block text-xs text-white/45">
-                    Approve translated strings that keep source placeholders.
-                  </span>
-                </button>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {BULK_ACTIONS.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => {
+                      setBulkAction(option.key);
+                      if (option.key === 'seed') {
+                        selectSeedKeys(bulkAllLanguages);
+                      }
+                    }}
+                    aria-pressed={bulkAction === option.key}
+                    className={[
+                      'rounded-lg border px-2 py-2.5 text-center text-xs font-medium leading-tight transition-colors',
+                      bulkAction === option.key
+                        ? 'border-white/25 bg-white/[0.07] text-white'
+                        : 'border-white/10 text-white/65 hover:border-white/20 hover:text-white',
+                    ].join(' ')}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              {bulkAction === 'seed' && (
+                <p className="mt-3 text-xs leading-relaxed text-white/40">
+                  Fills blank selected strings with the English source. Existing translations are skipped.
+                </p>
+              )}
+
+              {bulkAction === 'note' && (
+                <div className="mt-3">
+                  <textarea
+                    value={bulkNote}
+                    onChange={(event) => setBulkNote(event.target.value)}
+                    rows={3}
+                    maxLength={2000}
+                    placeholder="Note for selected strings…"
+                    className="w-full resize-y rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm leading-relaxed text-white placeholder:text-white/30 focus:border-orange/45 focus:outline-none focus:ring-1 focus:ring-orange/30"
+                  />
+                  <input
+                    type="url"
+                    value={bulkNoteImageUrl}
+                    onChange={(event) =>
+                      setBulkNoteImageUrl(event.target.value)
+                    }
+                    placeholder="Image URL (optional)"
+                    aria-label="Bulk note image URL"
+                    className="mt-2 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-orange/45 focus:outline-none focus:ring-1 focus:ring-orange/30"
+                  />
+                  {bulkNoteImageUrl.trim() && (
+                    <NoteImage
+                      src={bulkNoteImageUrl.trim()}
+                      alt="Bulk note attachment preview"
+                      className="mt-2 max-h-40 w-full rounded-lg border border-white/10 bg-black/20 object-contain"
+                    />
+                  )}
+                </div>
+              )}
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <FilterMenu
+                  mode="include"
+                  value={bulkFilters.include}
+                  counts={counts}
+                  onChange={(include) => {
+                    setBulkFilters((current) => ({ ...current, include }));
+                    setBulkLimit(BULK_RENDER_LIMIT);
+                  }}
+                />
+                <FilterMenu
+                  mode="exclude"
+                  value={bulkFilters.exclude}
+                  counts={counts}
+                  onChange={(exclude) => {
+                    setBulkFilters((current) => ({ ...current, exclude }));
+                    setBulkLimit(BULK_RENDER_LIMIT);
+                  }}
+                />
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1656,11 +2492,21 @@ export default function TranslationEditor({
                   <input
                     type="search"
                     value={bulkSearch}
-                    onChange={(event) => setBulkSearch(event.target.value)}
+                    onChange={(event) => {
+                      setBulkSearch(event.target.value);
+                      setBulkLimit(BULK_RENDER_LIMIT);
+                    }}
                     placeholder="Search strings"
                     className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-orange/45 focus:outline-none focus:ring-1 focus:ring-orange/30"
                   />
                 </div>
+                <SortMenu
+                  value={bulkSort}
+                  onChange={(value) => {
+                    setBulkSort(value);
+                    setBulkLimit(BULK_RENDER_LIMIT);
+                  }}
+                />
                 <button
                   type="button"
                   onClick={selectAllBulk}
@@ -1684,10 +2530,10 @@ export default function TranslationEditor({
             <div className="min-h-0 flex-1 overflow-y-auto p-2">
               {bulkVisible.length === 0 ? (
                 <p className="px-4 py-10 text-center text-sm text-white/45">
-                  No translated strings match this search.
+                  No strings match this view.
                 </p>
               ) : (
-                bulkVisible.map((entry) => (
+                bulkRendered.map((entry) => (
                   <label
                     key={entry.key}
                     className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-white/[0.03]"
@@ -1713,12 +2559,29 @@ export default function TranslationEditor({
                   </label>
                 ))
               )}
+              {bulkVisible.length > bulkLimit && (
+                <div className="p-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBulkLimit((current) => current + BULK_RENDER_LIMIT)
+                    }
+                    className="w-full rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-white/55 transition-colors hover:border-white/20 hover:text-white"
+                  >
+                    Show{' '}
+                    {formatNumber(
+                      Math.min(
+                        BULK_RENDER_LIMIT,
+                        bulkVisible.length - bulkLimit,
+                      ),
+                    )}{' '}
+                    more
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 p-4">
-              <p className="text-xs text-white/40">
-                Untranslated strings are skipped.
-              </p>
+            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-white/10 p-4">
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -1730,12 +2593,24 @@ export default function TranslationEditor({
                 <button
                   type="button"
                   onClick={applyBulk}
-                  disabled={bulkSaving || bulkSelected.size === 0}
+                  disabled={
+                    bulkSaving ||
+                    bulkSelected.size === 0 ||
+                    (bulkAction === 'note' &&
+                      !bulkNote.trim() &&
+                      !bulkNoteImageUrl.trim())
+                  }
                   className="rounded-lg bg-orange px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-bright disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   {bulkSaving
                     ? 'Applying…'
-                    : `Apply to ${formatNumber(bulkSelected.size)}`}
+                    : bulkAction === 'note'
+                      ? bulkAllLanguages
+                        ? 'Add note to all languages'
+                        : `Add note to ${formatNumber(bulkSelected.size)}`
+                      : bulkAllLanguages
+                        ? `Apply ${formatNumber(bulkSelected.size)} to all languages`
+                        : `Apply to ${formatNumber(bulkSelected.size)}`}
                 </button>
               </div>
             </div>

@@ -17,12 +17,15 @@ export async function POST(req: NextRequest, { params }: Params) {
   try {
     const body = await req.json().catch(() => ({}));
     const text = typeof body?.text === 'string' ? body.text : '';
+    const imageUrl =
+      typeof body?.imageUrl === 'string' ? body.imageUrl.trim() : '';
 
     const result = await addTranslationNote(
       String(session.user.id),
       language,
       key,
       text,
+      imageUrl || undefined,
     );
 
     return NextResponse.json(result);

@@ -174,12 +174,12 @@ export default async function TranslatePage() {
               </a>
             )}
 
-            {permissions?.developer && (
+            {(permissions?.developer || permissions?.moderator) && (
               <Link
                 href="/translate/developers"
                 className="rounded-lg border border-white/15 bg-white/[0.03] px-4 py-2.5 text-sm font-medium text-white/75 transition-colors hover:border-orange/40 hover:text-white"
               >
-                Developer console
+                {permissions?.developer ? 'Developer console' : 'Moderation console'}
               </Link>
             )}
           </div>

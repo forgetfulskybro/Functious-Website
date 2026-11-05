@@ -4,6 +4,7 @@ export interface TranslationNote {
   id: string;
   userId: string;
   text: string;
+  imageUrl?: string | null;
   createdAt: number;
 }
 
@@ -62,6 +63,7 @@ export interface TranslationPermissions {
   languages: string[];
   requestedLanguages: string[];
   proofreader: boolean;
+  moderator: boolean;
   developer: boolean;
 }
 
@@ -85,6 +87,29 @@ export interface Translator {
   };
 }
 
+export interface TranslatorContribution {
+  language: string;
+  key: string;
+  baseValue: string;
+  value: string;
+  status: TranslationStatus;
+  updatedAt: number | null;
+  translatedBy: string | null;
+  updatedBy: string | null;
+  ownsTranslation: boolean;
+  notes: TranslationNote[];
+}
+
+export type TranslatorBulkDeleteAction = 'notes' | 'translations';
+
+export interface TranslatorBulkDeleteResult {
+  ok: boolean;
+  action: TranslatorBulkDeleteAction;
+  removedNotes: number;
+  removedTranslations: number;
+  updated: number;
+}
+
 export interface TranslationMutationResponse {
   ok: boolean;
   string: TranslationString;
@@ -106,7 +131,19 @@ export interface TranslationImportResult {
   errors: string[];
 }
 
-export type TranslationBulkAction = 'unreview' | 'approve';
+export type TranslationBulkAction =
+  | 'unreview'
+  | 'approve'
+  | 'outdated'
+  | 'untranslated'
+  | 'seed'
+  | 'note';
+
+export interface TranslationBulkLanguageResult extends TranslationLanguageMeta {
+  changed: number;
+  skipped: number;
+  stats: TranslationStats;
+}
 
 export interface TranslationBulkResult {
   ok: boolean;
@@ -115,4 +152,5 @@ export interface TranslationBulkResult {
   skipped: number;
   stats: TranslationStats;
   strings: TranslationString[];
+  languages?: TranslationBulkLanguageResult[];
 }

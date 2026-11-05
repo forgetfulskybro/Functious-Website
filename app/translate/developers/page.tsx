@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Translation developers',
-  description: 'Manage Functious translators and export language files.',
+  description: 'Manage Functious translators, moderation, and language files.',
 };
 
 export default async function TranslationDevelopersPage() {
@@ -27,7 +27,7 @@ export default async function TranslationDevelopersPage() {
   const userId = String(session.user.id);
 
   const permissions = await getTranslationPermissions(userId).catch(() => null);
-  if (!permissions?.developer) {
+  if (!permissions?.developer && !permissions?.moderator) {
     redirect('/translate');
   }
 
@@ -62,12 +62,18 @@ export default async function TranslationDevelopersPage() {
     );
   }
 
+  const currentTranslator = translators.find(
+    (translator) => translator.userId === userId,
+  );
+
   return (
     <main className="min-h-screen bg-bg-dark pb-20 pt-24">
       <DeveloperPanel
         initialTranslators={translators}
         languages={languages.filter((language) => !language.isBase)}
         currentUserId={userId}
+        canManageAccess={Boolean(permissions.developer)}
+        isOwner={Boolean(currentTranslator?.owner)}
       />
     </main>
   );

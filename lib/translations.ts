@@ -8,6 +8,9 @@ import type {
   TranslationMutationResponse,
   TranslationPermissions,
   Translator,
+  TranslatorBulkDeleteAction,
+  TranslatorBulkDeleteResult,
+  TranslatorContribution,
 } from './translationTypes';
 
 const BOT_API_URL = process.env.BOT_API_URL ?? 'http://localhost:4000';
@@ -122,6 +125,17 @@ export async function saveTranslation(
   );
 }
 
+export async function removeTranslation(
+  userId: string,
+  language: string,
+  key: string,
+): Promise<TranslationMutationResponse> {
+  return botRequest<TranslationMutationResponse>(
+    `/api/translations/${encodeURIComponent(language)}/${encodeURIComponent(key)}`,
+    { method: 'DELETE', userId },
+  );
+}
+
 export async function approveTranslation(
   userId: string,
   language: string,
@@ -149,10 +163,11 @@ export async function addTranslationNote(
   language: string,
   key: string,
   text: string,
+  imageUrl?: string,
 ): Promise<TranslationMutationResponse> {
   return botRequest<TranslationMutationResponse>(
     `/api/translations/${encodeURIComponent(language)}/${encodeURIComponent(key)}/notes`,
-    { method: 'POST', userId, body: { text } },
+    { method: 'POST', userId, body: { text, ...(imageUrl ? { imageUrl } : {}) } },
   );
 }
 
@@ -236,11 +251,43 @@ export async function bulkUpdateTranslations(
   language: string,
   action: TranslationBulkAction,
   keys: string[],
+  note?: string,
+  imageUrl?: string,
 ): Promise<TranslationBulkResult> {
   return botRequest<TranslationBulkResult>(
     `/api/translations/${encodeURIComponent(language)}/bulk`,
-    { method: 'POST', userId, body: { action, keys } },
+    {
+      method: 'POST',
+      userId,
+      body: {
+        action,
+        keys,
+        ...(note ? { note } : {}),
+        ...(imageUrl ? { imageUrl } : {}),
+      },
+    },
   );
+}
+
+export async function bulkUpdateAllTranslations(
+  userId: string,
+  action: TranslationBulkAction,
+  keys: string[],
+  note?: string,
+  imageUrl?: string,
+  displayLanguage?: string,
+): Promise<TranslationBulkResult> {
+  return botRequest<TranslationBulkResult>('/api/translations/bulk', {
+    method: 'POST',
+    userId,
+    body: {
+      action,
+      keys,
+      ...(note ? { note } : {}),
+      ...(imageUrl ? { imageUrl } : {}),
+      ...(displayLanguage ? { displayLanguage } : {}),
+    },
+  });
 }
 
 export async function getTranslators(userId: string): Promise<Translator[]> {
@@ -251,12 +298,36 @@ export async function getTranslators(userId: string): Promise<Translator[]> {
   return data.translators ?? [];
 }
 
+export async function getTranslatorContributions(
+  userId: string,
+  translatorId: string,
+): Promise<TranslatorContribution[]> {
+  const data = await botRequest<{ contributions: TranslatorContribution[] }>(
+    `/api/translations/translators/${encodeURIComponent(translatorId)}/contributions`,
+    { userId },
+  );
+  return data.contributions ?? [];
+}
+
+export async function bulkDeleteTranslatorContributions(
+  userId: string,
+  translatorId: string,
+  action: TranslatorBulkDeleteAction,
+  items: { language: string; key: string }[],
+): Promise<TranslatorBulkDeleteResult> {
+  return botRequest<TranslatorBulkDeleteResult>(
+    `/api/translations/translators/${encodeURIComponent(translatorId)}/bulk-delete`,
+    { method: 'POST', userId, body: { action, items } },
+  );
+}
+
 export async function updateTranslator(
   userId: string,
   translatorId: string,
   updates: {
     languages?: string[];
     proofreader?: boolean;
+    moderator?: boolean;
     developer?: boolean;
   },
 ): Promise<Translator> {

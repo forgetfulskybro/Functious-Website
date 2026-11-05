@@ -23,6 +23,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const updates: {
       languages?: string[];
       proofreader?: boolean;
+      moderator?: boolean;
       developer?: boolean;
     } = {};
 
@@ -30,6 +31,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       updates.languages = body.languages.map((code: unknown) => String(code));
     }
     if (typeof body?.proofreader === 'boolean') updates.proofreader = body.proofreader;
+    if (typeof body?.moderator === 'boolean') updates.moderator = body.moderator;
     if (typeof body?.developer === 'boolean') updates.developer = body.developer;
 
     const translator = await updateTranslator(
