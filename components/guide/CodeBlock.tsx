@@ -3,29 +3,83 @@
 import { useState, useEffect, useRef, Fragment, ReactNode } from 'react';
 import { runTagSafe } from '@/app/interpreter';
 import Image from 'next/image';
+import type { FluxerUser } from '@/lib/types';
+import { useSessionUser } from '@/hooks/useSessionUser';
 
 interface CodeBlockProps {
   code: string;
   title?: string;
+  replyToUser?: boolean;
 }
 
-function buildDemoContext(args: string[] = []) {
+interface GuideDemoUser {
+  id: string;
+  username: string;
+  discriminator: string;
+  tag: string;
+  display_name: string;
+  global_name: string;
+  avatar: string | null;
+  avatar_url: string | null;
+  banner: string | null;
+  bot: boolean;
+  system: boolean;
+  created_at: string;
+}
+
+const DEFAULT_GUIDE_USER: GuideDemoUser = {
+  id: '123456789012345678',
+  username: 'GuideUser',
+  discriminator: '0000',
+  tag: 'GuideUser#0000',
+  display_name: 'Guide User',
+  global_name: 'Guide User',
+  avatar: null,
+  avatar_url: 'https://fluxerstatic.com/avatars/0.png',
+  banner: null,
+  bot: false,
+  system: false,
+  created_at: '2021-05-14T18:32:00.000Z',
+};
+
+const GUIDE_MESSAGE = '!tag example';
+
+function avatarUrl(user: FluxerUser): string {
+  if (!user.avatar) {
+    const index = Number(BigInt(user.id) >> BigInt(22)) % 6;
+    return `https://fluxerstatic.com/avatars/${index}.png`;
+  }
+  const ext = user.avatar.startsWith('a_') ? 'gif' : 'webp';
+  return `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.${ext}?size=160`;
+}
+
+function isGif(src: string): boolean {
+  return src.includes('.gif') || src.endsWith('.gif');
+}
+
+function guideUserFromSession(user: FluxerUser): GuideDemoUser {
+  const displayName = user.global_name || user.username;
+  const discriminator = user.discriminator || '0';
+  return {
+    id: user.id,
+    username: user.username,
+    discriminator,
+    tag: `${user.username}#${discriminator}`,
+    display_name: displayName,
+    global_name: displayName,
+    avatar: user.avatar,
+    avatar_url: avatarUrl(user),
+    banner: null,
+    bot: false,
+    system: false,
+    created_at: '2021-05-14T18:32:00.000Z',
+  };
+}
+
+function buildDemoContext(args: string[] = [], user = DEFAULT_GUIDE_USER) {
   return {
     args,
-    user: {
-      id: '123456789012345678',
-      username: 'GuideUser',
-      discriminator: '0000',
-      tag: 'GuideUser#0000',
-      display_name: 'Guide User',
-      global_name: 'Guide User',
-      avatar: null,
-      avatar_url: null,
-      banner: null,
-      bot: false,
-      system: false,
-      created_at: '2021-05-14T18:32:00.000Z',
-    },
+    user,
     channel: {
       id: '987654321098765432',
       name: 'general',
@@ -40,8 +94,8 @@ function buildDemoContext(args: string[] = []) {
     },
     message: {
       id: '111222333444555666',
-      content: '!tag example',
-      author_id: '123456789012345678',
+      content: GUIDE_MESSAGE,
+      author_id: user.id,
       channel_id: '987654321098765432',
       guild_id: '555666777888999000',
       created_at: new Date().toISOString(),
@@ -65,7 +119,7 @@ function buildDemoContext(args: string[] = []) {
       banner: null,
       banner_url: null,
       description: null,
-      owner_id: '123456789012345678',
+      owner_id: user.id,
       features: [],
       premium_tier: 0,
       member_count: 128,
@@ -398,12 +452,88 @@ function renderInline(text: string): ReactNode[] {
   return nodes;
 }
 
+function GuideAvatar({ user, size }: { user: GuideDemoUser; size: 16 | 32 }) {
+  const dimension = size === 32 ? 'h-8 w-8' : 'h-4 w-4';
+  if (user.avatar_url) {
+    return (
+      <Image
+        src={user.avatar_url}
+        alt=""
+        width={size}
+        height={size}
+        unoptimized={isGif(user.avatar_url)}
+        className={`${dimension} flex-shrink-0 rounded-full`}
+      />
+    );
+  }
+  return (
+    <span
+      className={`${dimension} flex flex-shrink-0 items-center justify-center rounded-full bg-orange/25 font-bold text-orange-warm ${
+        size === 32 ? 'text-xs' : 'text-[9px]'
+      }`}
+    >
+      {(user.username || 'U')[0]}
+    </span>
+  );
+}
+
+function GuideUserMessage({ user, text }: { user: GuideDemoUser; text: string }) {
+  return (
+    <div className="flex gap-3">
+      <div className="mt-0.5">
+        <GuideAvatar user={user} size={32} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <span className="text-sm font-semibold text-white/80">{user.display_name}</span>
+        <div className="mt-0.5 break-words text-sm leading-relaxed text-white/70">
+          <Markdown text={text} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuideReplyPreview({ user, text }: { user: GuideDemoUser; text: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-1.5 text-sm leading-5">
+      <GuideAvatar user={user} size={16} />
+      <span className="flex-shrink-0 font-medium text-white/70">{user.display_name}</span>
+      <span className="min-w-0 truncate text-white/45">{text}</span>
+    </div>
+  );
+}
+
+function ReplyConnector() {
+  return (
+    <svg
+      className="pointer-events-none absolute left-0 top-0 h-[22px] w-10 text-white/20"
+      viewBox="0 0 40 22"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M40 10H22a6 6 0 0 0-6 6v6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 const LINE_HEIGHT_PX = 22.75;
 const VERTICAL_PADDING_PX = 32;
 const MAX_VISIBLE_LINES = 20;
 
-export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
+export default function CodeBlock({
+  code,
+  title = 'rune',
+  replyToUser = false,
+}: CodeBlockProps) {
   const isRune = /rune/i.test(title);
+  const sessionUser = useSessionUser();
+  const replyUser =
+    replyToUser && sessionUser ? guideUserFromSession(sessionUser) : DEFAULT_GUIDE_USER;
   const [copied, setCopied] = useState(false);
   const [value, setValue] = useState(code);
   const [running, setRunning] = useState(false);
@@ -465,7 +595,7 @@ export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
   const run = () => {
     setRunning(true);
     try {
-      const out = runTagSafe(value || ' ', buildDemoContext([]));
+      const out = runTagSafe(value || ' ', buildDemoContext([], replyUser));
       if (out.ok) {
         setResult({
           ok: true,
@@ -642,86 +772,90 @@ export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
               </button>
             </div>
 
-            <div className="px-4 py-4">
+            <div className="space-y-4 px-4 py-4">
               {result.ok ? (
-                <div className="flex gap-3">
-                  <Image
-                    src="/Functious.png"
-                    alt="Functious bot"
-                    width={32}
-                    height={32}
-                    className="mt-0.5 h-8 w-8 flex-shrink-0 rounded-full"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-orange-light">Functious</span>
-                      <span className="rounded bg-orange/20 px-1 py-0.5 text-[10px] leading-none text-white/35">
-                        BOT
-                      </span>
-                    </div>
-
-                    {result.reply && (
-                      <div className="mt-1 flex items-center gap-1 text-[11px] text-white/30">
-                        <span aria-hidden="true">↩</span>
-                        Replying to a message
+                <>
+                  {result.reply && replyToUser && (
+                    <GuideUserMessage user={replyUser} text={GUIDE_MESSAGE} />
+                  )}
+                  <div className="relative grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3">
+                    {result.reply && replyToUser && <ReplyConnector />}
+                    {result.reply && replyToUser && (
+                      <div className="col-start-2 row-start-1 pb-0.5">
+                        <GuideReplyPreview user={replyUser} text={GUIDE_MESSAGE} />
                       </div>
                     )}
-
-                    {result.text?.trim() && (
-                      <div className="mt-0.5 text-sm leading-relaxed text-white/70 break-words">
-                        <Markdown text={result.text} />
+                    <Image
+                      src="/Functious.png"
+                      alt="Functious bot"
+                      width={32}
+                      height={32}
+                      className="col-start-1 row-start-2 mt-0.5 h-8 w-8 flex-shrink-0 rounded-full"
+                    />
+                    <div className="col-start-2 row-start-2 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm font-semibold text-orange-light">Functious</span>
+                        <span className="rounded bg-orange/20 px-1 py-0.5 text-[10px] leading-none text-white/35">
+                          BOT
+                        </span>
                       </div>
-                    )}
 
-                    {result.embeds?.map((emb, i) => (
-                      <div
-                        key={i}
-                        className="mt-2 rounded overflow-hidden border-l-4 max-w-md"
-                        style={{
-                          borderColor: emb.color
-                            ? `#${Number(emb.color).toString(16).padStart(6, '0')}`
-                            : '#A52F05',
-                          background: 'rgba(255,255,255,0.03)',
-                        }}
-                      >
-                        <div className="p-3 space-y-1.5">
-                          {emb.author?.name && (
-                            <p className="text-white/60 text-xs font-medium">{emb.author.name}</p>
-                          )}
-                          {emb.title && (
-                            <p className="text-white font-semibold text-sm">{emb.title}</p>
-                          )}
-                          {emb.description && (
-                            <div className="text-white/75 text-sm leading-relaxed">
-                              <Markdown text={emb.description} />
-                            </div>
-                          )}
-                          {Array.isArray(emb.fields) && emb.fields.length > 0 && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                              {emb.fields.map((f: any, fi: number) => (
-                                <div key={fi}>
-                                  <p className="text-white/50 text-[10px] font-semibold uppercase tracking-wider">
-                                    {f.name}
-                                  </p>
-                                  <div className="text-white/80 text-xs mt-0.5">
-                                    <Markdown text={String(f.value ?? '')} />
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {emb.footer?.text && (
-                            <p className="text-white/40 text-[10px] mt-2">{emb.footer.text}</p>
-                          )}
+                      {result.text?.trim() && (
+                        <div className="mt-0.5 text-sm leading-relaxed text-white/70 break-words">
+                          <Markdown text={result.text} />
                         </div>
-                      </div>
-                    ))}
+                      )}
 
-                    {!result.text?.trim() && (!result.embeds || result.embeds.length === 0) && (
-                      <p className="text-white/25 text-xs italic mt-1">Script produced no output</p>
-                    )}
+                      {result.embeds?.map((emb, i) => (
+                        <div
+                          key={i}
+                          className="mt-2 rounded overflow-hidden border-l-4 max-w-md"
+                          style={{
+                            borderColor: emb.color
+                              ? `#${Number(emb.color).toString(16).padStart(6, '0')}`
+                              : '#A52F05',
+                            background: 'rgba(255,255,255,0.03)',
+                          }}
+                        >
+                          <div className="p-3 space-y-1.5">
+                            {emb.author?.name && (
+                              <p className="text-white/60 text-xs font-medium">{emb.author.name}</p>
+                            )}
+                            {emb.title && (
+                              <p className="text-white font-semibold text-sm">{emb.title}</p>
+                            )}
+                            {emb.description && (
+                              <div className="text-white/75 text-sm leading-relaxed">
+                                <Markdown text={emb.description} />
+                              </div>
+                            )}
+                            {Array.isArray(emb.fields) && emb.fields.length > 0 && (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                {emb.fields.map((f: any, fi: number) => (
+                                  <div key={fi}>
+                                    <p className="text-white/50 text-[10px] font-semibold uppercase tracking-wider">
+                                      {f.name}
+                                    </p>
+                                    <div className="text-white/80 text-xs mt-0.5">
+                                      <Markdown text={String(f.value ?? '')} />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {emb.footer?.text && (
+                              <p className="text-white/40 text-[10px] mt-2">{emb.footer.text}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {!result.text?.trim() && (!result.embeds || result.embeds.length === 0) && (
+                        <p className="text-white/25 text-xs italic mt-1">Script produced no output</p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </>
               ) : (
                 <p className="text-red-400/70 text-xs">Fix the error and run again</p>
               )}

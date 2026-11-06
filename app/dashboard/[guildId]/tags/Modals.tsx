@@ -34,7 +34,13 @@ interface ChatMessage {
   kind: 'user' | 'bot' | 'system' | 'error';
   content?: string;
   embeds?: any[];
-  reply?: boolean;
+  replyTo?: string;
+}
+
+interface ReplyTarget {
+  name: string;
+  avatarUrl: string | null;
+  content: string;
 }
 
 type CtxKind = 'user' | 'channel' | 'message' | 'guild' | 'args';
@@ -374,10 +380,16 @@ function BotEmbed({ emb }: { emb: any }) {
   );
 }
 
+function userAvatarSrc(user: FluxerUser) {
+  if (!user.avatar) {
+    return `https://fluxerstatic.com/avatars/${Number(BigInt(user.id) >> BigInt(22)) % 6}.png`;
+  }
+  const ext = user.avatar.startsWith('a_') ? 'gif' : 'webp';
+  return `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.${ext}?size=160`;
+}
+
 function UserMessage({ user, text }: { user: FluxerUser; text: string }) {
-  const avatarUrl = user.avatar
-    ? `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.png`
-    : null;
+  const avatarUrl = userAvatarSrc(user);
   return (
     <div className="flex gap-3">
       {avatarUrl ? (
@@ -405,30 +417,78 @@ function UserMessage({ user, text }: { user: FluxerUser; text: string }) {
   );
 }
 
-function BotMessage({ text, embeds, reply }: { text?: string; embeds?: any[]; reply?: boolean }) {
+function ReplyPreview({ target }: { target: ReplyTarget }) {
+  return (
+    <div className="flex min-w-0 items-center gap-1.5 text-sm leading-5">
+      {target.avatarUrl ? (
+        <Image
+          src={target.avatarUrl}
+          alt=""
+          width={16}
+          height={16}
+          className="h-4 w-4 flex-shrink-0 rounded-full"
+        />
+      ) : (
+        <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-orange/25 text-[9px] font-bold text-orange-warm">
+          {(target.name || 'U')[0]}
+        </span>
+      )}
+      <span className="flex-shrink-0 font-medium text-white/70">{target.name}</span>
+      <span className="min-w-0 truncate text-white/45">{target.content}</span>
+    </div>
+  );
+}
+
+function ReplyConnector() {
+  return (
+    <svg
+      className="pointer-events-none absolute left-0 top-0 h-[22px] w-10 text-white/20"
+      viewBox="0 0 40 22"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M40 10H22a6 6 0 0 0-6 6v6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function BotMessage({
+  text,
+  embeds,
+  replyTo,
+}: {
+  text?: string;
+  embeds?: any[];
+  replyTo?: ReplyTarget;
+}) {
   const empty = !text?.trim() && (!embeds || embeds.length === 0);
   return (
-    <div className="flex gap-3">
+    <div className="relative grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3">
+      {replyTo && <ReplyConnector />}
+      {replyTo && (
+        <div className="col-start-2 row-start-1 pb-0.5">
+          <ReplyPreview target={replyTo} />
+        </div>
+      )}
       <Image
         src="/Functious.png"
         alt="Functious"
         width={32}
         height={32}
-        className="mt-0.5 h-8 w-8 flex-shrink-0 rounded-full"
+        className="col-start-1 row-start-2 mt-0.5 h-8 w-8 flex-shrink-0 rounded-full"
       />
-      <div className="min-w-0 flex-1">
+      <div className="col-start-2 row-start-2 min-w-0">
         <div className="flex items-baseline gap-2">
           <span className="text-sm font-semibold text-orange-300">Functious</span>
           <span className="rounded bg-orange/20 px-1 py-0.5 text-[10px] leading-none text-white/35">
             BOT
           </span>
         </div>
-        {reply && (
-          <div className="mt-1 flex items-center gap-1 text-[11px] text-white/30">
-            <span aria-hidden="true">↩</span>
-            Replying to a message
-          </div>
-        )}
         {text?.trim() && (
           <div className="mt-0.5 break-words text-sm leading-relaxed text-white/70">
             <Markdown text={text} />
@@ -730,7 +790,7 @@ export function TagModal({
             kind: 'bot',
             content: result.result!.text,
             embeds: result.result!.embeds || [],
-            reply: result.result!.reply === true,
+            replyTo: result.result!.reply === true ? userMsg.id : undefined,
           },
       ]);
     } catch (e: any) {
@@ -813,9 +873,11 @@ export function TagModal({
     }
   };
 
-  const userAvatarUrl = user.avatar
-    ? `https://fluxerusercontent.com/avatars/${user.id}/${user.avatar}.png`
-    : null;
+  const userAvatarUrl = userAvatarSrc(user);
+  const userName = user.global_name || user.username;
+  const previewReplyTo: ReplyTarget | undefined = previewResult?.reply
+    ? { name: userName, avatarUrl: userAvatarUrl, content: previewMessage }
+    : undefined;
 
   const padY = VERTICAL_PADDING_PX / 2;
 
@@ -1212,13 +1274,13 @@ export function TagModal({
                           </p>
                         ) : previewResult.ok ? (
                           <>
-                            {triggerEnabled && cleanName && (
+                            {(triggerEnabled && cleanName) || previewReplyTo ? (
                               <UserMessage user={user} text={previewMessage} />
-                            )}
+                            ) : null}
                             <BotMessage
                               text={previewResult.text}
                               embeds={previewResult.embeds}
-                              reply={previewResult.reply}
+                              replyTo={previewReplyTo}
                             />
                           </>
                         ) : (
@@ -1256,12 +1318,23 @@ export function TagModal({
                             );
                           }
                           if (msg.kind === 'bot') {
+                            const replyTarget = msg.replyTo
+                              ? chatMessages.find((m) => m.id === msg.replyTo)
+                              : undefined;
                             return (
                               <BotMessage
                                 key={msg.id}
                                 text={msg.content}
                                 embeds={msg.embeds}
-                                reply={msg.reply}
+                                replyTo={
+                                  replyTarget
+                                    ? {
+                                        name: userName,
+                                        avatarUrl: userAvatarUrl,
+                                        content: replyTarget.content ?? '',
+                                      }
+                                    : undefined
+                                }
                               />
                             );
                           }

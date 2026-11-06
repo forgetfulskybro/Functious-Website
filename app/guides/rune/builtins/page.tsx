@@ -63,7 +63,7 @@ export default function RuneBuiltinsPage() {
           sent as a reply to the message that invoked the tag.
         </p>
         <CodeBlock title="rune" code={'say("one message")\nsay("second", "and", "third")'} />
-        <CodeBlock title="rune" code={'reply("this message is a reply")'} />
+        <CodeBlock title="rune" code={'reply("this message is a reply")'} replyToUser />
         <ProseTable
           headers={['function', 'does']}
           rows={[
