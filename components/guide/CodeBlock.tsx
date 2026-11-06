@@ -411,6 +411,7 @@ export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
     ok: boolean;
     text?: string;
     embeds?: any[];
+    reply?: boolean;
     error?: any;
   } | null>(null);
 
@@ -470,6 +471,7 @@ export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
           ok: true,
           text: out.result!.text,
           embeds: out.result!.embeds,
+          reply: out.result!.reply,
         });
       } else {
         setResult({ ok: false, error: out.error });
@@ -657,6 +659,13 @@ export default function CodeBlock({ code, title = 'rune' }: CodeBlockProps) {
                         BOT
                       </span>
                     </div>
+
+                    {result.reply && (
+                      <div className="mt-1 flex items-center gap-1 text-[11px] text-white/30">
+                        <span aria-hidden="true">↩</span>
+                        Replying to a message
+                      </div>
+                    )}
 
                     {result.text?.trim() && (
                       <div className="mt-0.5 text-sm leading-relaxed text-white/70 break-words">

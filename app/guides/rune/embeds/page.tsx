@@ -25,7 +25,8 @@ export default function RuneEmbedsPage() {
         <p>
           Build an embed with <code className="font-mono text-orange-light">embed()</code> and
           chain setters. Pass the finished embed to{" "}
-          <code className="font-mono text-orange-light">say(...)</code> to send it.
+          <code className="font-mono text-orange-light">say(...)</code> or{" "}
+          <code className="font-mono text-orange-light">reply(...)</code> to send it.
         </p>
         <CodeBlock
           title="rune"

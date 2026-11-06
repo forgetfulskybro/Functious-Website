@@ -59,12 +59,16 @@ export default function RuneBuiltinsPage() {
           Send text with <code className="font-mono text-orange-light">say</code>. It accepts
           any number of values. Pass an embed built with{" "}
           <code className="font-mono text-orange-light">embed()</code> to send an embed instead.
+          Use <code className="font-mono text-orange-light">reply</code> for the same output,
+          sent as a reply to the message that invoked the tag.
         </p>
         <CodeBlock title="rune" code={'say("one message")\nsay("second", "and", "third")'} />
+        <CodeBlock title="rune" code={'reply("this message is a reply")'} />
         <ProseTable
           headers={['function', 'does']}
           rows={[
             ['say(...)', 'sends the values as a message'],
+            ['reply(...)', 'sends the values as a reply to the invoking message'],
             ['echo(...)', 'same as say'],
           ]}
         />

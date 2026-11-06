@@ -34,6 +34,7 @@ interface ChatMessage {
   kind: 'user' | 'bot' | 'system' | 'error';
   content?: string;
   embeds?: any[];
+  reply?: boolean;
 }
 
 type CtxKind = 'user' | 'channel' | 'message' | 'guild' | 'args';
@@ -404,7 +405,7 @@ function UserMessage({ user, text }: { user: FluxerUser; text: string }) {
   );
 }
 
-function BotMessage({ text, embeds }: { text?: string; embeds?: any[] }) {
+function BotMessage({ text, embeds, reply }: { text?: string; embeds?: any[]; reply?: boolean }) {
   const empty = !text?.trim() && (!embeds || embeds.length === 0);
   return (
     <div className="flex gap-3">
@@ -422,6 +423,12 @@ function BotMessage({ text, embeds }: { text?: string; embeds?: any[] }) {
             BOT
           </span>
         </div>
+        {reply && (
+          <div className="mt-1 flex items-center gap-1 text-[11px] text-white/30">
+            <span aria-hidden="true">↩</span>
+            Replying to a message
+          </div>
+        )}
         {text?.trim() && (
           <div className="mt-0.5 break-words text-sm leading-relaxed text-white/70">
             <Markdown text={text} />
@@ -478,6 +485,7 @@ export function TagModal({
     ok: boolean;
     text?: string;
     embeds?: any[];
+    reply?: boolean;
     error?: any;
   } | null>(null);
   const [validating, setValidating] = useState(false);
@@ -549,7 +557,12 @@ export function TagModal({
         );
         setPreviewResult(
           result.ok
-            ? { ok: true, text: result.result!.text, embeds: result.result!.embeds }
+            ? {
+                ok: true,
+                text: result.result!.text,
+                embeds: result.result!.embeds,
+                reply: result.result!.reply,
+              }
             : { ok: false, error: result.error }
         );
       } catch (e: any) {
@@ -712,13 +725,13 @@ export function TagModal({
       }
       setChatMessages((p) => [
         ...p,
-        userMsg,
-        {
-          id: `b-${Date.now()}`,
-          kind: 'bot',
-          content: result.result!.text,
-          embeds: result.result!.embeds || [],
-        },
+        userMsg,          {
+            id: `b-${Date.now()}`,
+            kind: 'bot',
+            content: result.result!.text,
+            embeds: result.result!.embeds || [],
+            reply: result.result!.reply === true,
+          },
       ]);
     } catch (e: any) {
       setChatMessages((p) => [
@@ -1202,7 +1215,11 @@ export function TagModal({
                             {triggerEnabled && cleanName && (
                               <UserMessage user={user} text={previewMessage} />
                             )}
-                            <BotMessage text={previewResult.text} embeds={previewResult.embeds} />
+                            <BotMessage
+                              text={previewResult.text}
+                              embeds={previewResult.embeds}
+                              reply={previewResult.reply}
+                            />
                           </>
                         ) : (
                           <p className="text-xs text-red-400/70">Fix the error to see a preview</p>
@@ -1240,7 +1257,12 @@ export function TagModal({
                           }
                           if (msg.kind === 'bot') {
                             return (
-                              <BotMessage key={msg.id} text={msg.content} embeds={msg.embeds} />
+                              <BotMessage
+                                key={msg.id}
+                                text={msg.content}
+                                embeds={msg.embeds}
+                                reply={msg.reply}
+                              />
                             );
                           }
                           if (msg.kind === 'error') {
