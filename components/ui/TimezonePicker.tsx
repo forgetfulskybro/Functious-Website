@@ -123,9 +123,11 @@ export function tzLabel(value: string): string {
 export default function TimezonePicker({
   value,
   onChangeAction,
+  disabled = false,
 }: {
   value: string;
   onChangeAction: (v: string) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -162,8 +164,11 @@ export default function TimezonePicker({
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/8"
+        onClick={() => {
+          if (!disabled) setOpen((open) => !open);
+        }}
+        disabled={disabled}
+        className="w-full flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/8 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <div className="flex items-center gap-2 min-w-0">
           <svg

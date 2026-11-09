@@ -18,8 +18,10 @@ import type {
 } from '@/lib/types';
 import { RoleRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
+import ItemActions from '@/components/ui/ItemActions';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import UserBadge from '@/components/ui/UserBadge';
 import { useState, useEffect, useRef } from 'react';
@@ -172,52 +174,22 @@ function StickyRolesPanel({
                             (entry.roles.length > 3 ? ` +${entry.roles.length - 3}` : '')}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setEditEntry(entry)}
-                        className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
-                        title="Edit roles"
-                      >
-                        <svg
-                          className="w-3.5 h-3.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path
-                            d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(entry.user)}
-                        className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        title="Delete entry"
-                      >
-                        <svg
-                          className="w-3.5 h-3.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                          <path d="M10 11v6M14 11v6" />
-                          <path
-                            d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
+                    <ItemActions
+                      label="Sticky role actions"
+                      actions={[
+                        {
+                          label: 'Edit saved roles',
+                          icon: 'edit',
+                          onSelect: () => setEditEntry(entry),
+                        },
+                        {
+                          label: 'Delete saved roles',
+                          icon: 'delete',
+                          danger: true,
+                          onSelect: () => handleDelete(entry.user),
+                        },
+                      ]}
+                    />
                   </div>
                 </li>
               ))}
@@ -374,28 +346,7 @@ export default function RolesClient({
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
     : null;
 
-  const shownLoading = useRef(false);
-  const shownError = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (loading && !shownLoading.current) {
-      shownLoading.current = true;
-      showToast('Loading', { description: 'Loading data...' });
-    }
-    if (!loading) {
-      shownLoading.current = false;
-    }
-  }, [loading]);
-
-  useEffect(() => {
-    if (error && error !== shownError.current) {
-      shownError.current = error;
-      showErrorToast('Error', { description: error });
-    }
-    if (!error) {
-      shownError.current = null;
-    }
-  }, [error]);
+  useDashboardToasts(loading, error);
 
   return (
     <div className="min-h-screen bg-bg-dark flex">
@@ -521,52 +472,23 @@ export default function RolesClient({
                             : 'Automatically assigned'}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          type="button"
-                          onClick={() => setJoinModal(entry)}
-                          className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                            <path
-                              d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            persistJoinRoles((prev) => prev.filter((_, x) => x !== i))
-                          }
-                          className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                            <path d="M10 11v6M14 11v6" />
-                            <path
-                              d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-                      </div>
+                      <ItemActions
+                        label="Join role actions"
+                        actions={[
+                          {
+                            label: 'Edit join role',
+                            icon: 'edit',
+                            onSelect: () => setJoinModal(entry),
+                          },
+                          {
+                            label: 'Delete join role',
+                            icon: 'delete',
+                            danger: true,
+                            onSelect: () =>
+                              persistJoinRoles((prev) => prev.filter((_, x) => x !== i)),
+                          },
+                        ]}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -636,56 +558,28 @@ export default function RolesClient({
                             : entry.commands.join(', ')}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          type="button"
-                          onClick={() => setBypassModal(entry)}
-                          className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                            <path
-                              d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBypass((prev) => {
-                              const next = prev.filter((_, x) => x !== i);
-                              handleSave({ bypassRoles: next as any });
-                              return next;
-                            });
-                          }}
-                          className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                        >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                            <path d="M10 11v6M14 11v6" />
-                            <path
-                              d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-                      </div>
+                      <ItemActions
+                        label="Bypass role actions"
+                        actions={[
+                          {
+                            label: 'Edit bypass role',
+                            icon: 'edit',
+                            onSelect: () => setBypassModal(entry),
+                          },
+                          {
+                            label: 'Delete bypass role',
+                            icon: 'delete',
+                            danger: true,
+                            onSelect: () => {
+                              setBypass((prev) => {
+                                const next = prev.filter((_, x) => x !== i);
+                                handleSave({ bypassRoles: next as any });
+                                return next;
+                              });
+                            },
+                          },
+                        ]}
+                      />
                     </li>
                   ))}
                 </ul>

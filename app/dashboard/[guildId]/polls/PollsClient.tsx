@@ -3,15 +3,16 @@ import { PollEntry, totalVotes, CreatePollModal, PollResultsModal, DeletePollMod
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
 import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import ChannelBadge from '@/components/ui/ChannelBadge';
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PollRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
+import ItemActions from '@/components/ui/ItemActions';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toggle } from '@/components/ui/Toggle';
 import Image from 'next/image';
-
 function mapPoll(p: any): PollEntry {
   const names: string[] = Array.isArray(p.options?.name)
     ? p.options.name
@@ -30,7 +31,10 @@ function mapPoll(p: any): PollEntry {
 
   let users: { user: string; option: number }[] = [];
   if (Array.isArray(p.users)) {
-    users = p.users.map((u: any) => ({ user: String(u.user ?? ''), option: Number(u.option ?? 0) }));
+    users = p.users.map((u: any) => ({
+      user: String(u.user ?? ''),
+      option: Number(u.option ?? 0),
+    }));
   } else if (p.users && typeof p.users === 'object') {
     users = Object.entries(p.users as Record<string, number>).map(([user, option]) => ({ user, option: Number(option) }));
   }
@@ -80,7 +84,7 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
       setPollPerm((data as any).pollPerm);
     }
   }, [data, saving]);
-  
+
   async function togglePollPerm(next: boolean) {
     setPollPerm(next);
     try {
@@ -95,27 +99,13 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
       showErrorToast('Error', { description: 'Failed to update poll permission.' });
     }
   }
-  
+
   useEffect(() => {
     const raw = (data as any).activePolls;
     if (Array.isArray(raw)) setPolls(raw.map(mapPoll));
   }, [data]);
 
-  const shownLoading = useRef(false);
-  const shownError   = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (loading && !shownLoading.current) { shownLoading.current = true; }
-    if (!loading) shownLoading.current = false;
-  }, [loading]);
-
-  useEffect(() => {
-    if (error && error !== shownError.current) {
-      shownError.current = error;
-      showErrorToast('Error', { description: error });
-    }
-    if (!error) shownError.current = null;
-  }, [error]);
+  useDashboardToasts(loading, error);
 
   const createPoll = useCallback(async (payload: { channelId: string; question: string; duration: string; options: string[]; thread: boolean }) => {
     setBusy(true);
@@ -261,24 +251,19 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
                         {poll.ended && ' · Ended'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setViewPoll(poll)}
-                        className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors" title="View results">
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                          <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                      </button>
-                      <button onClick={() => setDeleteItem(poll)} disabled={busy}
-                        className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50" title="Delete poll">
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6"/>
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                          <path d="M10 11v6M14 11v6"/>
-                          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
-                    </div>
+                    <ItemActions
+                      label="Poll actions"
+                      actions={[
+                        { label: 'View results', icon: 'view', onSelect: () => setViewPoll(poll) },
+                        {
+                          label: 'Delete poll',
+                          icon: 'delete',
+                          danger: true,
+                          disabled: busy,
+                          onSelect: () => setDeleteItem(poll),
+                        },
+                      ]}
+                    />
                   </li>
                 );
               })}
@@ -313,6 +298,7 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
           onClose={() => setDeleteItem(null)}
         />
       )}
+
     </div>
   );
 }

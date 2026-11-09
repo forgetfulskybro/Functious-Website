@@ -1,29 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getSessionGuilds, canManageGuild } from '@/lib/auth';
 import { createReactionRoles } from '@/lib/api';
+import { botApiError, requireGuildManager } from '@/lib/dashboardRouteAuth';
 
 type Params = { params: Promise<{ guildId: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { guildId } = await params;
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+  const auth = await requireGuildManager(guildId);
+  if (auth.error) return auth.error;
 
-  const guilds = await getSessionGuilds(session.accessToken);
-  const userGuild = guilds.find((g) => g.id === guildId);
-  if (!userGuild || !canManageGuild(userGuild, String(session.user.id))) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
 
   try {
-    const result = await createReactionRoles(guildId, body, session.user.id);
+    const result = await createReactionRoles(guildId, body, auth.session.user.id);
     return NextResponse.json(result, { status: result?.error ? 400 : 201 });
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || 'Failed to create giveaway' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return botApiError(error, 'Failed to create reaction roles');
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireSession } from "@/lib/dashboardRouteAuth";
 
 const BOT_API_URL = process.env.BOT_API_URL ?? "http://localhost:4000";
 const BOT_API_KEY = process.env.BOT_API_KEY ?? "";
@@ -22,8 +22,8 @@ async function safeBotFetch(url: string, options?: RequestInit) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.error) return auth.error;
 
   try {
     const body = await req.json();

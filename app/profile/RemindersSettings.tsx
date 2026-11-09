@@ -3,8 +3,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showToast, showErrorToast } from '@/components/ui/Toast';
+import ItemActions from '@/components/ui/ItemActions';
+import ChannelBadge from '@/components/ui/ChannelBadge';
 import NumberInput from '@/components/ui/NumberInput';
 import SelectDropdown from '@/components/ui/SelectDropdown';
+import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import { ReminderModal, Reminder } from './Modals';
 
 export interface ReactionReminder {
@@ -221,49 +224,6 @@ function Pager({
   );
 }
 
-function EditButton({ onClick, label }: { onClick: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="p-1.5 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors focus-visible:outline-none"
-      aria-label={label}
-    >
-      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </button>
-  );
-}
-
-function DeleteButton({
-  onClick,
-  disabled,
-  label,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors focus-visible:outline-none disabled:opacity-50"
-      aria-label={label}
-    >
-      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        <polyline points="3 6 5 6 21 6" />
-        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-        <path d="M10 11v6M14 11v6" />
-        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </button>
-  );
-}
-
 const LIST_VARIANTS = {
   enter: (dir: number) => ({ x: dir > 0 ? 32 : -32, opacity: 0 }),
   center: { x: 0, opacity: 1 },
@@ -277,6 +237,11 @@ function RegularRemindersSection({ userId }: { userId: string }) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState(0);
+
+  const guildChannelIds = reminders.flatMap((r) =>
+    r.type === 'guild' && r.channelId ? [r.channelId] : []
+  );
+  const channelProfiles = useChannelProfiles(guildChannelIds);
 
   useEffect(() => {
     fetch('/api/users/reminders', { credentials: 'include' })
@@ -448,6 +413,23 @@ function RegularRemindersSection({ userId }: { userId: string }) {
                             )}
                           </div>
                           <p className="text-white/85 text-sm leading-snug break-words">{r.message}</p>
+                          {isGuild && r.channelId && (
+                            <div className="flex items-center gap-1.5 mt-1.5 min-w-0 text-[11px] text-white/35">
+                              <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                                <rect x="3" y="4" width="18" height="7" rx="1.5" />
+                                <rect x="3" y="13" width="18" height="7" rx="1.5" />
+                                <path d="M7 7.5h.01M7 16.5h.01" strokeLinecap="round" />
+                              </svg>
+                              <span className="truncate">{channelProfiles[r.channelId]?.guildName ?? 'Unknown server'}</span>
+                              <span className="text-white/15">·</span>
+                              <ChannelBadge
+                                channelId={r.channelId}
+                                profile={channelProfiles[r.channelId]}
+                                showId={false}
+                                inline
+                              />
+                            </div>
+                          )}
                           <div className="flex items-center gap-2 mt-1.5">
                             <p className={['text-xs tabular-nums', isPast ? 'text-white/30' : 'text-orange-light/60'].join(' ')}>
                               {formatRelative(r.timestamp)}
@@ -458,14 +440,23 @@ function RegularRemindersSection({ userId }: { userId: string }) {
                         </div>
 
                         {!isPast && (
-                          <div className="flex items-center gap-0.5 mt-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                            <EditButton onClick={() => setModal(r)} label="Edit reminder" />
-                            <DeleteButton
-                              onClick={() => handleDelete(r.id)}
-                              disabled={deleting === r.id}
-                              label="Delete reminder"
-                            />
-                          </div>
+                          <ItemActions
+                            label="Reminder actions"
+                            actions={[
+                              {
+                                label: 'Edit reminder',
+                                icon: 'edit',
+                                onSelect: () => setModal(r),
+                              },
+                              {
+                                label: 'Delete reminder',
+                                icon: 'delete',
+                                danger: true,
+                                disabled: deleting === r.id,
+                                onSelect: () => handleDelete(r.id),
+                              },
+                            ]}
+                          />
                         )}
                       </li>
                     );
@@ -556,15 +547,27 @@ function ReactionReminderModal({
           </button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          <div className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] px-3.5 py-2.5">
-            <svg className="w-3.5 h-3.5 text-white/30 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <div className="min-w-0">
-              <p className="text-white/40 text-[10px] uppercase tracking-widest font-semibold">Channel</p>
-              <p className="text-white/70 text-xs truncate">{targetLabel(initial)}</p>
+          <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] divide-y divide-white/5">
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+              <svg className="w-3.5 h-3.5 text-white/30 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="7" rx="1.5" />
+                <rect x="3" y="13" width="18" height="7" rx="1.5" />
+                <path d="M7 7.5h.01M7 16.5h.01" strokeLinecap="round" />
+              </svg>
+              <div className="min-w-0 flex-1">
+                <p className="text-white/40 text-[10px] uppercase tracking-widest font-semibold">Server</p>
+                <p className="text-white/70 text-xs truncate">{initial.guildName || 'Unknown server'}</p>
+              </div>
             </div>
-            <span className="ml-auto text-[10px] text-white/25 shrink-0">Can’t be changed</span>
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-white/40 text-[10px] uppercase tracking-widest font-semibold">Channel</p>
+                <p className="text-white/70 text-xs truncate">
+                  {initial.channelName ? `#${initial.channelName}` : initial.channelId}
+                </p>
+              </div>
+              <span className="ml-auto text-[10px] text-white/25 shrink-0">Can’t be changed</span>
+            </div>
           </div>
 
           <div>
@@ -783,14 +786,23 @@ function ReactionRemindersSection() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-0.5 mt-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                          <EditButton onClick={() => setEditing(item)} label="Edit reaction reminder" />
-                          <DeleteButton
-                            onClick={() => handleDelete(item.id)}
-                            disabled={deleting === item.id}
-                            label="Delete reaction reminder"
-                          />
-                        </div>
+                        <ItemActions
+                          label="Reaction reminder actions"
+                          actions={[
+                            {
+                              label: 'Edit reaction reminder',
+                              icon: 'edit',
+                              onSelect: () => setEditing(item),
+                            },
+                            {
+                              label: 'Delete reaction reminder',
+                              icon: 'delete',
+                              danger: true,
+                              disabled: deleting === item.id,
+                              onSelect: () => handleDelete(item.id),
+                            },
+                          ]}
+                        />
                       </li>
                     );
                   })}

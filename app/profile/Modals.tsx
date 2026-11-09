@@ -1,6 +1,8 @@
 import Image from 'next/image';
 import { DateTimePicker } from "@/components/ui/DateTimerPicker";
 import SelectDropdown from '@/components/ui/SelectDropdown';
+import ChannelBadge from '@/components/ui/ChannelBadge';
+import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import { useState } from "react";
 
 export interface Reminder {
@@ -226,8 +228,8 @@ export function BirthdayPreviewModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl bg-[#160a0a] border border-white/5 shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/5">
+      <div className="relative w-full max-w-2xl max-h-[90dvh] overflow-y-auto rounded-2xl bg-[#160a0a] border border-white/5 shadow-2xl">
+        <div className="flex items-center justify-between px-5 sm:px-7 pt-5 pb-4 border-b border-white/5">
           <div>
             <h2 className="text-white font-bold text-base">Preview announcement</h2>
             <p className="text-white/30 text-xs mt-0.5">
@@ -245,7 +247,7 @@ export function BirthdayPreviewModal({
           </button>
         </div>
 
-        <div className="px-6 py-5">
+        <div className="px-5 sm:px-7 py-5 sm:py-6">
           <div className="overflow-hidden rounded-xl border border-white/10 bg-[#1e1e24]">
             <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
               <span className="text-sm font-medium text-white/40">#</span>
@@ -290,10 +292,10 @@ export function BirthdayPreviewModal({
                   )}
 
                   <div
-                    className="mt-2 max-w-md overflow-hidden rounded border-l-4 p-3"
+                    className="mt-2 w-full overflow-hidden rounded border-l-4 p-4"
                     style={{ borderColor: '#A52F05', background: 'rgba(255,255,255,0.03)' }}
                   >
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <p className="flex items-center gap-1.5 text-xs font-medium text-white/60">
                         {avatarUrl && (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -302,7 +304,7 @@ export function BirthdayPreviewModal({
                         {displayName}
                       </p>
                       <p className="text-sm font-semibold text-white">Member Birthday</p>
-                      <div className="text-sm leading-relaxed text-white/75">
+                      <div className="break-words text-sm leading-relaxed text-white/75">
                         Happy {ageText}birthday from the <strong className="text-white">{guildName}</strong> community!
                       </div>
                     </div>
@@ -342,6 +344,9 @@ export function ReminderModal({
   const [datetime, setDatetime] = useState(defaultDt);
   const [saving, setSaving] = useState(false);
   const isGuild = initial?.type === 'guild';
+  const channelProfiles = useChannelProfiles(
+    isGuild && initial?.channelId ? [initial.channelId] : []
+  );
 
   async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
@@ -370,12 +375,7 @@ export function ReminderModal({
               <p className="text-white/30 text-xs mt-0.5">Will be sent to you via DM</p>
             )}
             {isGuild && (
-              <p className="text-white/30 text-xs mt-0.5">
-                Guild reminder · sent in{' '}
-                <span className="font-mono text-orange-light/60">
-                  #{initial?.channelId ?? 'channel'}
-                </span>
-              </p>
+              <p className="text-white/30 text-xs mt-0.5">Guild reminder</p>
             )}
           </div>
           <button
@@ -395,6 +395,35 @@ export function ReminderModal({
           </button>
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {isGuild && initial?.channelId && (
+            <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] divide-y divide-white/5">
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+                <svg className="w-3.5 h-3.5 text-white/30 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="7" rx="1.5" />
+                  <rect x="3" y="13" width="18" height="7" rx="1.5" />
+                  <path d="M7 7.5h.01M7 16.5h.01" strokeLinecap="round" />
+                </svg>
+                <div className="min-w-0 flex-1">
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest font-semibold">Server</p>
+                  <p className="text-white/70 text-xs truncate">
+                    {channelProfiles[initial.channelId]?.guildName ?? 'Unknown server'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest font-semibold">Channel</p>
+                  <ChannelBadge
+                    channelId={initial.channelId}
+                    profile={channelProfiles[initial.channelId]}
+                    showId={false}
+                    inline
+                  />
+                </div>
+                <span className="ml-auto text-[10px] text-white/25 shrink-0">Can’t be changed</span>
+              </div>
+            </div>
+          )}
           <div>
             <label className="block text-white/50 text-xs font-medium mb-1.5">Message</label>
             <textarea

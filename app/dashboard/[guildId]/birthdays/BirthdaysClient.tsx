@@ -2,9 +2,12 @@
 
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, GuildBirthdayEntry } from '@/lib/types';
 import { showToast, showErrorToast } from '@/components/ui/Toast';
+import ItemActions from '@/components/ui/ItemActions';
 import { SettingRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
 import { SettingRow } from '@/components/ui/SettingRow';
+import { Pagination } from '@/components/ui/Pagination';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toggle } from '@/components/ui/Toggle';
@@ -12,6 +15,7 @@ import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import RolesDropdown from '@/components/ui/RolesDropdown';
 import UserBadge from '@/components/ui/UserBadge';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
+import CommunityBirthdaySection from './CommunityBirthdaySection';
 import Image from 'next/image';
 
 const MONTHS = [
@@ -20,6 +24,7 @@ const MONTHS = [
 ];
 
 const UPCOMING_PAGE_SIZE = 5;
+const BLACKLIST_PAGE_SIZE = 5;
 
 function orderDay(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -115,11 +120,7 @@ export default function BirthdaysClient({
     });
   }
 
-  useEffect(() => {
-    if (error) {
-      showErrorToast('Error', { description: error });
-    }
-  }, [error]);
+  useDashboardToasts(loading, error);
 
   const loadList = useCallback(async () => {
     setListLoading(true);
@@ -132,6 +133,7 @@ export default function BirthdaysClient({
       }
     } catch (err) {
       console.error('[birthdays list]', err);
+      showErrorToast('Failed to load birthdays', { description: 'Please try again.' });
     } finally {
       setListLoading(false);
     }
@@ -157,16 +159,28 @@ export default function BirthdaysClient({
     return name.includes(q) || entry.userId.includes(q);
   });
 
-  const upcomingTotalPages = Math.max(1, Math.ceil(filteredList.length / UPCOMING_PAGE_SIZE));
   const [upcomingPage, setUpcomingPage] = useState(0);
+  const [blacklistPage, setBlacklistPage] = useState(0);
+  const upcomingTotalPages = Math.max(1, Math.ceil(filteredList.length / UPCOMING_PAGE_SIZE));
+  const upcomingPageSafe = Math.min(upcomingPage, upcomingTotalPages - 1);
   const upcomingPaginated = filteredList.slice(
-    upcomingPage * UPCOMING_PAGE_SIZE,
-    upcomingPage * UPCOMING_PAGE_SIZE + UPCOMING_PAGE_SIZE,
+    upcomingPageSafe * UPCOMING_PAGE_SIZE,
+    upcomingPageSafe * UPCOMING_PAGE_SIZE + UPCOMING_PAGE_SIZE,
+  );
+  const blacklistTotalPages = Math.max(1, Math.ceil(filteredBlacklist.length / BLACKLIST_PAGE_SIZE));
+  const blacklistPageSafe = Math.min(blacklistPage, blacklistTotalPages - 1);
+  const blacklistPaginated = filteredBlacklist.slice(
+    blacklistPageSafe * BLACKLIST_PAGE_SIZE,
+    blacklistPageSafe * BLACKLIST_PAGE_SIZE + BLACKLIST_PAGE_SIZE,
   );
 
   useEffect(() => {
     setUpcomingPage(0);
   }, [listSearch, list.length]);
+
+  useEffect(() => {
+    setBlacklistPage(0);
+  }, [search, blacklist.length]);
 
   async function handleSave(updates: Partial<GuildData>) {
     try {
@@ -318,9 +332,9 @@ export default function BirthdaysClient({
           )}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-5 items-start">
-          <div className="w-full lg:w-96 lg:flex-shrink-0 space-y-5">
-            <section className="rounded-2xl bg-bg-card p-5 flex flex-col gap-4">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+          <div className="contents">
+            <section className="order-4 min-w-0 rounded-2xl bg-bg-card p-5 flex flex-col gap-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-white/45 text-xs font-semibold uppercase tracking-widest">
@@ -421,84 +435,37 @@ export default function BirthdaysClient({
                                 <span className="text-orange-light/60">{formatRelative(entry.nextTs)}</span>
                               </p>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleForce(entry.userId)}
-                              disabled={!channelSet || forcing === entry.userId}
-                              title={channelSet ? 'Announce now' : 'Set an announcement channel first'}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 px-2.5 py-1 rounded-md text-[10px] font-medium bg-orange/10 text-orange-warm hover:bg-orange/20 disabled:opacity-0 focus-visible:outline-none"
-                            >
-                              {forcing === entry.userId ? '…' : 'Announce'}
-                            </button>
+                            <ItemActions
+                              label="Birthday actions"
+                              actions={[
+                                {
+                                  label: forcing === entry.userId ? 'Announcing…' : 'Announce now',
+                                  icon: 'bell',
+                                  disabled: !channelSet || forcing === entry.userId,
+                                  onSelect: () => handleForce(entry.userId),
+                                },
+                              ]}
+                            />
                           </div>
                         </li>
                       );
                     })}
                   </ul>
 
-                  {upcomingTotalPages > 1 && (
-                    <div className="flex items-center justify-between pt-1">
-                      <p className="text-white/20 text-[10px]">
-                        {upcomingPage * UPCOMING_PAGE_SIZE + 1}–
-                        {Math.min((upcomingPage + 1) * UPCOMING_PAGE_SIZE, filteredList.length)} of{' '}
-                        {filteredList.length}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setUpcomingPage((p) => Math.max(0, p - 1))}
-                          disabled={upcomingPage === 0}
-                          className="p-1 rounded-md text-white/30 hover:text-white/70 disabled:opacity-20 transition-colors"
-                        >
-                          <svg
-                            className="w-3 h-3"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                          >
-                            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
-                        {Array.from({ length: upcomingTotalPages }, (_, i) => (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => setUpcomingPage(i)}
-                            className={[
-                              'w-5 h-5 rounded text-[10px] font-medium transition-colors',
-                              i === upcomingPage
-                                ? 'bg-orange/20 text-orange-warm'
-                                : 'text-white/25 hover:text-white/60 hover:bg-white/5',
-                            ].join(' ')}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => setUpcomingPage((p) => Math.min(upcomingTotalPages - 1, p + 1))}
-                          disabled={upcomingPage === upcomingTotalPages - 1}
-                          className="p-1 rounded-md text-white/30 hover:text-white/70 disabled:opacity-20 transition-colors"
-                        >
-                          <svg
-                            className="w-3 h-3"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                          >
-                            <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <div className="pt-1">
+                    <Pagination
+                      page={upcomingPageSafe}
+                      totalPages={upcomingTotalPages}
+                      total={filteredList.length}
+                      pageSize={UPCOMING_PAGE_SIZE}
+                      onChange={setUpcomingPage}
+                    />
+                  </div>
                 </>
               )}
             </section>
 
-            <section className="rounded-2xl bg-bg-card p-5">
+            <section className="order-5 min-w-0 rounded-2xl bg-bg-card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-white/45 text-xs font-semibold uppercase tracking-widest">
@@ -565,8 +532,9 @@ export default function BirthdaysClient({
                   <p className="text-white/25 text-xs">No blacklisted users match “{search.trim()}”.</p>
                 </div>
               ) : (
+                <>
                 <ul className="space-y-1.5">
-                  {filteredBlacklist.map((userId) => (
+                  {blacklistPaginated.map((userId) => (
                     <li key={userId} className="rounded-xl px-3 py-2.5 flex items-center gap-2.5 bg-white/[0.03] group">
                       <UserBadge userId={userId} profile={profiles[userId]} className="flex-1 min-w-0" />
                       <button
@@ -596,12 +564,34 @@ export default function BirthdaysClient({
                     </li>
                   ))}
                 </ul>
+                <div className="pt-1">
+                  <Pagination
+                    page={blacklistPageSafe}
+                    totalPages={blacklistTotalPages}
+                    total={filteredBlacklist.length}
+                    pageSize={BLACKLIST_PAGE_SIZE}
+                    onChange={setBlacklistPage}
+                  />
+                </div>
+                </>
               )}
             </section>
           </div>
 
-          <div className="flex-1 min-w-0 space-y-5">
-            <section className="rounded-2xl bg-bg-card p-6">
+          <div className="contents">
+            <div className="order-1 min-w-0 lg:col-span-2">
+              <CommunityBirthdaySection
+                value={data.communityBirthday ?? null}
+                channels={guildChannels}
+                roles={guildRoles}
+                saving={saving}
+                onSave={(communityBirthday) =>
+                  handleSave({ communityBirthday } as Partial<GuildData>)
+                }
+              />
+            </div>
+
+            <section className="order-2 min-w-0 rounded-2xl bg-bg-card p-6">
               <div className="mb-5">
                 <h2 className="text-white/45 text-xs font-semibold uppercase tracking-widest">
                   Announcement Channel & Role
@@ -644,7 +634,7 @@ export default function BirthdaysClient({
               )}
             </section>
 
-            <section className="rounded-2xl bg-bg-card p-6">
+            <section className="order-3 min-w-0 rounded-2xl bg-bg-card p-6">
               <div className="mb-5">
                 <h2 className="text-white/45 text-xs font-semibold uppercase tracking-widest">
                   Announcement Message
@@ -654,7 +644,7 @@ export default function BirthdaysClient({
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <label className="text-white/60 text-xs font-medium">With age</label>

@@ -219,6 +219,9 @@ export async function importTranslations(
   const result: TranslationImportResult = {
     ok: true,
     strings: 0,
+    added: 0,
+    updated: 0,
+    removed: 0,
     skipped: 0,
     languages: [],
     errors: [],
@@ -231,6 +234,9 @@ export async function importTranslations(
     );
 
     result.strings += chunk.strings ?? 0;
+    result.added += chunk.added ?? 0;
+    result.updated += chunk.updated ?? 0;
+    result.removed += chunk.removed ?? 0;
     result.skipped += chunk.skipped ?? 0;
     result.errors.push(...(chunk.errors ?? []));
 
@@ -238,8 +244,19 @@ export async function importTranslations(
       const existing = result.languages.find(
         (entry) => entry.code === language.code,
       );
-      if (existing) existing.strings += language.strings;
-      else result.languages.push({ ...language });
+      if (existing) {
+        existing.strings += language.strings;
+        existing.added += language.added ?? 0;
+        existing.updated += language.updated ?? 0;
+        existing.removed += language.removed ?? 0;
+      } else {
+        result.languages.push({
+          ...language,
+          added: language.added ?? 0,
+          updated: language.updated ?? 0,
+          removed: language.removed ?? 0,
+        });
+      }
     }
   }
 

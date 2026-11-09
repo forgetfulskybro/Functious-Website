@@ -42,7 +42,7 @@ interface UseGuildDataResult {
   loading: boolean;
   error: string | null;
   refresh: () => void;
-  save: (updates: Partial<GuildData>) => Promise<void>;
+  save: (updates: Partial<GuildData>) => Promise<Partial<GuildData>>;
   saving: boolean;
   setupTempChannels: (options?: TempSetupOptions) => Promise<void>;
   resetTempChannels: () => Promise<void>;
@@ -102,6 +102,7 @@ export function useGuildData(guildId: string): UseGuildDataResult {
     async (updates: Partial<GuildData>) => {
       setSaving(true);
       setError(null);
+      const previous = getCached(guildId);
       setGuild(prev => (prev ? { ...prev, ...updates } : prev));
       patchCached(guildId, updates);
 
@@ -113,10 +114,25 @@ export function useGuildData(guildId: string): UseGuildDataResult {
           body: JSON.stringify(updates),
         });
         if (!res.ok) {
-          const rollback = getCached(guildId);
-          if (rollback) setGuild(rollback);
+          if (previous) {
+            setGuild(previous);
+            setCached(guildId, previous);
+          }
           throw new Error('Save failed');
         }
+
+        const result = await res.json().catch(() => ({}));
+        const persisted: Partial<GuildData> = {};
+        if (result && typeof result === 'object' && !Array.isArray(result)) {
+          for (const [key, value] of Object.entries(result)) {
+            if (key !== 'ok') (persisted as Record<string, unknown>)[key] = value;
+          }
+        }
+        if (Object.keys(persisted).length > 0) {
+          setGuild(prev => (prev ? { ...prev, ...persisted } : prev));
+          patchCached(guildId, persisted);
+        }
+        return persisted;
       } catch {
         setError('Failed to save changes. Please try again.');
         throw new Error('Save failed');

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { requireSession } from '@/lib/dashboardRouteAuth';
 
 const BOT_API_URL = process.env.BOT_API_URL ?? 'http://localhost:4000';
 const BOT_API_KEY = process.env.BOT_API_KEY ?? '';
@@ -17,8 +17,8 @@ async function botFetch(url: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.error) return auth.error;
 
   const raw = req.nextUrl.searchParams.get('guilds') ?? '';
   const guildIds = [...new Set(raw.split(',').map((s) => s.trim()).filter((s) => s))];
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const res = await botFetch(
-      `${BOT_API_URL}/api/users/${session.user.id}/birthdays/blacklist-status?guilds=${encodeURIComponent(valid.join(','))}`,
+      `${BOT_API_URL}/api/users/${auth.session.user.id}/birthdays/blacklist-status?guilds=${encodeURIComponent(valid.join(','))}`,
     );
     const data = await res.json();
     return NextResponse.json({ blacklisted: data.blacklisted ?? {} });

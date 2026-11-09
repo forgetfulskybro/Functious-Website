@@ -18,7 +18,7 @@ const NAV_LINKS = [
 const SUPPORT_LINKS = [
   {
     label: 'Support Community',
-    href: 'https://fluxer.gg/YnINU09E',
+    href: 'https://fluxer.gg/functious',
     external: true,
     description: 'Join the community',
   },

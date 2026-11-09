@@ -13,6 +13,7 @@ interface SingleProps {
   options: Option[];
   label: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 interface MultiProps {
@@ -22,12 +23,13 @@ interface MultiProps {
   options: Option[];
   label: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 type SelectDropdownProps = SingleProps | MultiProps;
 
 export default function SelectDropdown(props: SelectDropdownProps) {
-  const { options, label, placeholder, multiple = false } = props;
+  const { options, label, placeholder, multiple = false, disabled = false } = props;
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -42,6 +44,7 @@ export default function SelectDropdown(props: SelectDropdownProps) {
   }
 
   function toggleOpen() {
+    if (disabled) return;
     if (!open) measure();
     setOpen((o) => !o);
   }
@@ -243,7 +246,8 @@ export default function SelectDropdown(props: SelectDropdownProps) {
         ref={buttonRef}
         type="button"
         onClick={toggleOpen}
-        className="w-full flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2.5 text-left hover:bg-white/8 transition-colors"
+        disabled={disabled}
+        className="w-full flex items-center justify-between gap-2 bg-white/5 rounded-lg px-3 py-2.5 text-left hover:bg-white/8 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className="flex-1 min-w-0">{triggerLabel()}</span>
         <svg

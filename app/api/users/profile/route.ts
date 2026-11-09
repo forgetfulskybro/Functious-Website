@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { requireSession } from "@/lib/dashboardRouteAuth";
 
 const BOT_API_URL = process.env.BOT_API_URL ?? "http://localhost:4000";
 const BOT_API_KEY = process.env.BOT_API_KEY ?? "";
@@ -22,11 +22,11 @@ async function safeBotFetch(url: string, options?: RequestInit) {
 }
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.error) return auth.error;
 
   try {
-    const res = await safeBotFetch(`${BOT_API_URL}/api/users/${session.user.id}`, {
+    const res = await safeBotFetch(`${BOT_API_URL}/api/users/${auth.session.user.id}`, {
       headers: botHeaders(),
       cache: "no-store",
     });
@@ -42,8 +42,8 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.error) return auth.error;
 
   try {
     const body = await req.json();
@@ -56,7 +56,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
 
-    const res = await safeBotFetch(`${BOT_API_URL}/api/users/${session.user.id}`, {
+    const res = await safeBotFetch(`${BOT_API_URL}/api/users/${auth.session.user.id}`, {
       method: "PATCH",
       headers: botHeaders(),
       body: JSON.stringify(payload),

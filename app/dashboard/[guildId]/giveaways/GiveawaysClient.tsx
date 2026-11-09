@@ -4,9 +4,11 @@ import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } fro
 import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import ChannelBadge from '@/components/ui/ChannelBadge';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import ItemActions from '@/components/ui/ItemActions';
+import { useState, useEffect, useCallback } from 'react';
 import { GiveawayRowSkeleton } from '@/components/ui/Skeletons';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import Sidebar from '@/components/layout/Sidebar';
 import Image from 'next/image';
 
@@ -159,24 +161,7 @@ export default function GiveawaysClient({
     [activeGuildId]
   );
 
-  const shownLoading = useRef(false);
-  const shownError = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (loading && !shownLoading.current) {
-      shownLoading.current = true;
-      showToast('Loading', { description: 'Loading data...' });
-    }
-    if (!loading) shownLoading.current = false;
-  }, [loading]);
-
-  useEffect(() => {
-    if (error && error !== shownError.current) {
-      shownError.current = error;
-      showErrorToast('Error', { description: error });
-    }
-    if (!error) shownError.current = null;
-  }, [error]);
+  useDashboardToasts(loading, error);
 
   return (
     <div className="min-h-screen bg-bg-dark flex">
@@ -268,31 +253,19 @@ export default function GiveawaysClient({
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => setViewGiveaway(gw)}
-                      className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/5"
-                      title="View"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => setDeleteItem(gw)}
-                      disabled={busy}
-                      className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
-                      title="Delete"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                        <path d="M10 11v6M14 11v6" />
-                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                  </div>
+                  <ItemActions
+                    label="Giveaway actions"
+                    actions={[
+                      { label: 'View giveaway', icon: 'view', onSelect: () => setViewGiveaway(gw) },
+                      {
+                        label: 'Delete giveaway',
+                        icon: 'delete',
+                        danger: true,
+                        disabled: busy,
+                        onSelect: () => setDeleteItem(gw),
+                      },
+                    ]}
+                  />
                 </li>
               ))}
             </ul>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { requireSession } from '@/lib/dashboardRouteAuth';
 
 const BOT_API_URL = process.env.BOT_API_URL ?? 'http://localhost:4000';
 const BOT_API_KEY = process.env.BOT_API_KEY ?? '';
@@ -21,13 +21,13 @@ type Params = { params: Promise<{ watcherId: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { watcherId } = await params;
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.error) return auth.error;
 
   try {
     const body = await req.json();
     const res = await safeBotFetch(
-      `${BOT_API_URL}/api/users/${session.user.id}/reaction-reminders/${watcherId}`,
+      `${BOT_API_URL}/api/users/${auth.session.user.id}/reaction-reminders/${watcherId}`,
       {
         method: 'PATCH',
         headers: botHeaders(),
@@ -44,12 +44,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
   const { watcherId } = await params;
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+  const auth = await requireSession();
+  if (auth.error) return auth.error;
 
   try {
     const res = await safeBotFetch(
-      `${BOT_API_URL}/api/users/${session.user.id}/reaction-reminders/${watcherId}`,
+      `${BOT_API_URL}/api/users/${auth.session.user.id}/reaction-reminders/${watcherId}`,
       { method: 'DELETE', headers: botHeaders() }
     );
     const data = await res.json();

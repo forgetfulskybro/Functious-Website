@@ -2,11 +2,13 @@
 import { TagEntry, DeleteTagModal, TagViewModal, TagModal } from './Modals';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import ItemActions from '@/components/ui/ItemActions';
+import { useState, useEffect, useCallback } from 'react';
 import { TagRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { Toggle } from '@/components/ui/Toggle';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import UserBadge from '@/components/ui/UserBadge';
 import Sidebar from '@/components/layout/Sidebar';
@@ -18,38 +20,6 @@ interface Props {
   activeGuildId: string;
   userGuild: FluxerGuild & { botPresent: boolean };
   initialData: GuildData;
-}
-
-function IconBtn({
-  children,
-  onClick,
-  title,
-  disabled,
-  danger,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  title: string;
-  disabled?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      disabled={disabled}
-      onClick={onClick}
-      className={`rounded-md p-1.5 transition-colors disabled:opacity-50 ${
-        danger
-          ? 'text-white/30 hover:bg-red-500/10 hover:text-red-400'
-          : 'text-white/30 hover:bg-white/5 hover:text-white/70'
-      }`}
-    >
-      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        {children}
-      </svg>
-    </button>
-  );
 }
 
 function mapTags(raw: any[]): TagEntry[] {
@@ -125,29 +95,14 @@ export default function TagsClient({
         showToast('Settings saved', {
           description: `Bot trigger words ${value ? 'enabled' : 'disabled'}.`,
         });
-      } catch { }
+      } catch {
+        showErrorToast('Error', { description: 'Failed to update tag settings.' });
+      }
     },
     [save]
   );
 
-  const shownLoading = useRef(false);
-  const shownError = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (loading && !shownLoading.current) {
-      shownLoading.current = true;
-      showToast('Loading', { description: 'Loading data...' });
-    }
-    if (!loading) shownLoading.current = false;
-  }, [loading]);
-
-  useEffect(() => {
-    if (error && error !== shownError.current) {
-      shownError.current = error;
-      showErrorToast('Error', { description: error });
-    }
-    if (!error) shownError.current = null;
-  }, [error]);
+  useDashboardToasts(loading, error);
 
   const iconUrl = userGuild.icon
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
@@ -269,39 +224,25 @@ export default function TagsClient({
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <IconBtn title="View" onClick={() => setViewTag(tag)}>
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </IconBtn>
-                    <IconBtn
-                      title="Edit"
-                      disabled={saving}
-                      onClick={() => setModal(tag)}
-                    >
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path
-                        d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </IconBtn>
-                    <IconBtn
-                      title="Delete"
-                      disabled={saving}
-                      danger
-                      onClick={() => setDeleteTag(tag)}
-                    >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                      <path d="M10 11v6M14 11v6" />
-                      <path
-                        d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </IconBtn>
-                  </div>
+                  <ItemActions
+                    label="Tag actions"
+                    actions={[
+                      { label: 'View tag', icon: 'view', onSelect: () => setViewTag(tag) },
+                      {
+                        label: 'Edit tag',
+                        icon: 'edit',
+                        disabled: saving,
+                        onSelect: () => setModal(tag),
+                      },
+                      {
+                        label: 'Delete tag',
+                        icon: 'delete',
+                        danger: true,
+                        disabled: saving,
+                        onSelect: () => setDeleteTag(tag),
+                      },
+                    ]}
+                  />
                 </li>
               ))}
             </ul>

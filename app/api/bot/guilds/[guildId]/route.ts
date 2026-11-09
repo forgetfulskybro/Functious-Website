@@ -1,49 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getSessionGuilds, canManageGuild } from '@/lib/auth';
 import { getBotGuild, updateBotGuild } from '@/lib/api';
+import { botApiError, requireGuildManager } from '@/lib/dashboardRouteAuth';
 
 type Params = { params: Promise<{ guildId: string }> };
 
 export async function GET(_req: NextRequest, { params }: Params) {
   const { guildId } = await params;
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
-  }
+  const auth = await requireGuildManager(guildId);
+  if (auth.error) return auth.error;
 
-  const guilds = await getSessionGuilds(session.accessToken);
-  const userGuild = guilds.find(g => g.id === guildId);
-  if (!userGuild || !canManageGuild(userGuild, String(session.user.id))) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  try {
+    const guild = await getBotGuild(guildId);
+    if (!guild) {
+      return NextResponse.json({ error: 'Bot is not in this community' }, { status: 404 });
+    }
 
-  const guild = await getBotGuild(guildId);
-  if (!guild) {
-    return NextResponse.json({ error: 'Bot is not in this community' }, { status: 404 });
+    return NextResponse.json(guild);
+  } catch (error) {
+    return botApiError(error, 'Failed to load settings');
   }
-
-  return NextResponse.json(guild);
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { guildId } = await params;
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
-  }
+  const auth = await requireGuildManager(guildId);
+  if (auth.error) return auth.error;
 
-  const guilds = await getSessionGuilds(session.accessToken);
-  const userGuild = guilds.find(g => g.id === guildId);
-  if (!userGuild || !canManageGuild(userGuild, String(session.user.id))) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
 
   try {
-    const result = await updateBotGuild(guildId, body, session.user.id);
+    const result = await updateBotGuild(guildId, body, auth.session.user.id);
     return NextResponse.json(result);
-  } catch {
-    return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
+  } catch (error) {
+    return botApiError(error, 'Failed to update settings');
   }
 }

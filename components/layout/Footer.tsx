@@ -65,7 +65,7 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3">
               {[
-                { label: 'Support Community', href: 'https://fluxer.gg/YnINU09E' },
+                { label: 'Support Community', href: 'https://fluxer.gg/functious' },
                 { label: 'GitHub',         href: 'https://github.com/forgetfulskybro/Fluxer-Functious' },
                 { label: 'Ko-Fi',          href: 'https://ko-fi.com/forgetfulskybro' },
               ].map(({ label, href }) => (

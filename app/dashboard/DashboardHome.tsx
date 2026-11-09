@@ -109,8 +109,8 @@ export default function DashboardHome({ user, guilds, currentPage }: Props) {
     <div className="min-h-screen bg-bg-dark flex">
       <Sidebar user={user} guilds={guilds} currentPage="dashboard" />
 
-      <main className="flex-1 px-6 py-8 max-w-4xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-8">
+      <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 max-w-4xl mx-auto w-full">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
             <h1 className="text-2xl font-extrabold text-white">
               Your communities
@@ -124,7 +124,7 @@ export default function DashboardHome({ user, guilds, currentPage }: Props) {
           <button
             onClick={handleRefresh}
             disabled={!ready || cooldownLeft > 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/90 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/60"
+            className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/90 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-white/60"
           >
             <svg
               className={`w-3.5 h-3.5 ${cooldownLeft > 0 ? "animate-spin" : ""}`}

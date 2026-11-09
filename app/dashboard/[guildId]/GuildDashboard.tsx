@@ -1,9 +1,10 @@
 'use client';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
-import { showErrorToast, showToast } from '@/components/ui/Toast';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { showToast } from '@/components/ui/Toast';
+import { useEffect, useState, useCallback } from 'react';
 import { useBotPresence } from '@/hooks/useBotPresence';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import Sidebar from '@/components/layout/Sidebar';
 import Image from 'next/image';
@@ -162,6 +163,58 @@ const icons = {
       <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
   ),
+  stickies: (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z"/>
+      <path d="M12 14v7"/>
+    </svg>
+  ),
+  reactions: (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 10.5h.01M15.5 10.5h.01" />
+      <path d="M8.8 14.5c1.2 1.4 3.2 1.8 5.4 0" />
+      <path d="M18 4.5l1.2 2.4 2.6.4-1.9 1.9.5 2.6L18 10.5l-2.4 1.3.5-2.6-1.9-1.9 2.6-.4L18 4.5z" />
+    </svg>
+  ),
+  media: (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="3" y="3" width="18" height="14" rx="2" />
+      <path d="M10 8l5 3-5 3V8z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 21h8M12 17v4" strokeLinecap="round" />
+    </svg>
+  ),
+  birthdays: (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 21h16M5 21v-7a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 11V7M12 11V6M15 11V7" strokeLinecap="round" />
+      <path d="M5 17c1.5 1 3 1 4.5 0s3-1 4.5 0 3 1 5 0" strokeLinecap="round" />
+    </svg>
+  ),
+  events: (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <path d="M8 15h.01M12 15h.01M16 15h.01M8 18h.01M12 18h.01" />
+    </svg>
+  ),
+  forms: (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+      <rect x="9" y="3" width="6" height="4" rx="1" />
+      <path d="M9 12h6M9 16h4" />
+    </svg>
+  ),
+  audit: (
+    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+      <rect x="9" y="3" width="6" height="4" rx="1" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+      <line x1="8" y1="16" x2="14" y2="16" />
+    </svg>
+  ),
 };
 
 export default function GuildDashboard({
@@ -225,16 +278,12 @@ export default function GuildDashboard({
   const totalPolls = ((data as any).activePolls ?? []).length;
   const totalGiveaways = ((data as any).activeGiveaways ?? []).length;
   const totalSchedules = (data.scheduledMessages ?? []).length;
+  const totalStickies = (data.stickies ?? []).length;
   const totalTags = (data.tags ?? []).length;
+  const totalReactionRoles = Array.isArray((data as any).roles) ? (data as any).roles.length : 0;
+  const totalMediaChannels = Array.isArray((data as any).mediaChannels) ? (data as any).mediaChannels.length : 0;
 
-  const shownError = useRef<string | null>(null);
-  useEffect(() => {
-    if (error && error !== shownError.current) {
-      shownError.current = error;
-      showErrorToast('Error', { description: error });
-    }
-    if (!error) shownError.current = null;
-  }, [error]);
+  useDashboardToasts(loading, error);
 
   const base = `/dashboard/${activeGuildId}`;
 
@@ -242,8 +291,8 @@ export default function GuildDashboard({
     <div className="min-h-screen bg-bg-dark flex">
       <Sidebar user={user} guilds={liveGuilds} activeGuildId={activeGuildId} currentPage="dashboard" />
 
-      <main className="flex-1 px-6 py-10 w-full max-w-3xl mx-auto">
-        <div className="flex items-center gap-5 mb-10 pb-7 border-b border-white/5">
+      <main className="flex-1 px-4 py-6 sm:px-6 sm:py-10 w-full max-w-3xl mx-auto">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-5 mb-8 sm:mb-10 pb-6 sm:pb-7 border-b border-white/5">
           {iconUrl ? (
             <Image src={iconUrl} alt={userGuild.name ?? 'Community'} width={52} height={52} className="rounded-2xl flex-shrink-0" />
           ) : (
@@ -252,10 +301,10 @@ export default function GuildDashboard({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-extrabold text-white leading-tight truncate">{userGuild.name}</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white leading-tight truncate">{userGuild.name}</h1>
             <p className="text-white/30 text-xs font-mono mt-0.5">{userGuild.id}</p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex w-full sm:w-auto items-center gap-2 flex-shrink-0">
             <SyncButton
               label="Sync Channels"
               cooldownUntil={getSyncCooldowns(activeGuildId).channels}
@@ -279,9 +328,9 @@ export default function GuildDashboard({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-10">
           {loading ? (
-            Array.from({ length: 4 }).map((_, i) => (
+            Array.from({ length: 7 }).map((_, i) => (
               <div key={i} className="bg-white/[0.03] rounded-2xl px-5 py-4">
                 <Sk className="h-2.5 w-16 mb-3" />
                 <Sk className="h-7 w-10" />
@@ -292,7 +341,10 @@ export default function GuildDashboard({
               <StatCard label="Active Polls" value={totalPolls} />
               <StatCard label="Giveaways" value={totalGiveaways} />
               <StatCard label="Schedules" value={totalSchedules} />
+              <StatCard label="Stickies" value={totalStickies} />
               <StatCard label="Tags" value={totalTags} />
+              <StatCard label="Reaction Roles" value={totalReactionRoles} />
+              <StatCard label="Media Channels" value={totalMediaChannels} />
             </>
           )}
         </div>
@@ -383,6 +435,32 @@ export default function GuildDashboard({
         </div>
 
         <div className="mb-8">
+          <p className="text-white/35 text-[10px] font-semibold uppercase tracking-widest mb-4">Community</p>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/[0.03]">
+                  <Sk className="w-9 h-9 rounded-xl flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Sk className="h-3.5 w-28" />
+                    <Sk className="h-3 w-44" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <NavCard href={`${base}/birthdays`} label="Birthdays" desc="Member and community birthday announcements" icon={icons.birthdays} />
+              <NavCard href={`${base}/events`} label="Events" desc="RSVP events with reminders and recurrence" icon={icons.events} />
+              <NavCard href={`${base}/forms`} label="Forms" desc="Private applications with reviewer workflows" icon={icons.forms} />
+              <NavCard href={`${base}/reaction-roles`} label="Reaction Roles" desc="Self-assignable roles from reactions" icon={icons.reactions} />
+              <NavCard href={`${base}/media-channels`} label="Media Channels" desc="Attachment rules, ratings and sticky posts" icon={icons.media} />
+              <NavCard href={`${base}/audit-logs`} label="Audit Logs" desc="Review every dashboard configuration change" icon={icons.audit} />
+            </div>
+          )}
+        </div>
+
+        <div className="mb-8">
           <p className="text-white/35 text-[10px] font-semibold uppercase tracking-widest mb-4">Setup</p>
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -398,7 +476,7 @@ export default function GuildDashboard({
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <NavCard href={`${base}/configuration`} label="Configuration" desc="Prefix, language, DM settings" icon={icons.config} />
+              <NavCard href={`${base}/configuration`} label="Configuration" desc="Prefix, language, health checkup and command policies" icon={icons.config} />
               <NavCard href={`${base}/roles-permissions`} label="Roles & Permissions"  desc="Join roles, bypass, sticky roles" icon={icons.roles} />
               <NavCard href={`${base}/tempchannels`} label="Temp Channels"  desc="Voice channels that auto-create on join" icon={icons.channels} />
               <NavCard href={`${base}/tags`} label="Tags" desc="Custom community shortcuts and commands" icon={icons.tags} />
@@ -410,7 +488,7 @@ export default function GuildDashboard({
           <p className="text-white/35 text-[10px] font-semibold uppercase tracking-widest mb-4">Features</p>
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {Array.from({ length: 3 }).map((_, i) => (
+              {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/[0.03]">
                   <Sk className="w-9 h-9 rounded-xl flex-shrink-0" />
                   <div className="flex-1 space-y-2">
@@ -425,6 +503,7 @@ export default function GuildDashboard({
               <NavCard href={`${base}/giveaways`} label="Giveaways" desc="Create & manage giveaways" icon={icons.giveaways} />
               <NavCard href={`${base}/polls`} label="Polls" desc="Live polls with reactions" icon={icons.polls} />
               <NavCard href={`${base}/schedules`} label="Schedules" desc="Automated scheduled messages" icon={icons.schedules} />
+              <NavCard href={`${base}/stickies`} label="Stickies" desc="Messages that stay at the bottom of a channel" icon={icons.stickies} />
             </div>
           )}
         </div>

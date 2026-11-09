@@ -1,6 +1,35 @@
 const BOT_API_URL = process.env.BOT_API_URL;
 const BOT_API_KEY = process.env.BOT_API_KEY ?? "";
 
+export class BotApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'BotApiError';
+    this.status = status;
+  }
+}
+
+async function botRequest(path: string, options: RequestInit) {
+  let res: Response;
+  try {
+    res = await fetch(`${BOT_API_URL}${path}`, options);
+  } catch {
+    throw new Error('Bot is currently offline or unreachable.');
+  }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new BotApiError(
+      (data as { error?: string }).error || `Bot API error ${res.status}`,
+      res.status,
+    );
+  }
+
+  return res.json();
+}
+
 function botHeaders(userId?: string): HeadersInit {
   return {
     "Content-Type": "application/json",
@@ -61,6 +90,7 @@ export function emptyGuildData(guildId: string) {
     prefix: '!',
     language: 'en_EN',
     dm: false,
+    pollPerm: true,
     emojis: [],
     timezoneConvert: false,
     stickyRolesEnabled: false,
@@ -72,6 +102,9 @@ export function emptyGuildData(guildId: string) {
     tags: [],
     tagTriggerBots: false,
     scheduledMessages: [],
+    stickies: [],
+    commandSettings: [],
+    commandCatalog: [],
     mediaChannels: [],
     userTimezones: [],
     parentChannel: null,
@@ -96,6 +129,7 @@ export function emptyGuildData(guildId: string) {
     birthdayBlacklist: [],
     birthdayMessageWithAge: null,
     birthdayMessageNoAge: null,
+    communityBirthday: null,
   };
 }
 
@@ -345,6 +379,14 @@ export async function getBotHealth() {
   return res.json();
 }
 
+export async function runBotCheckup(guildId: string) {
+  return botRequest(`/api/guilds/${guildId}/checkup`, {
+    method: 'POST',
+    headers: botHeaders(),
+    cache: 'no-store',
+  });
+}
+
 export async function getUserReminders() {
   const res = await safeFetch(`${BOT_API_URL}/api/reminders`, {
     headers: botHeaders(),
@@ -400,6 +442,174 @@ export async function searchBotGuildMembers(guildId: string, query?: string) {
     cache: "no-store",
   });
   return res.json();
+}
+
+export async function getBotEvents(guildId: string, filter = 'upcoming') {
+  return botRequest(
+    `/api/guilds/${guildId}/events?filter=${encodeURIComponent(filter)}`,
+    { headers: botHeaders(), cache: 'no-store' },
+  );
+}
+
+export async function createBotEvent(
+  guildId: string,
+  body: Record<string, unknown>,
+  userId?: string,
+) {
+  return botRequest(`/api/guilds/${guildId}/events`, {
+    method: 'POST',
+    headers: botHeaders(userId),
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+}
+
+export async function getBotEvent(guildId: string, eventId: string) {
+  return botRequest(`/api/guilds/${guildId}/events/${encodeURIComponent(eventId)}`, {
+    headers: botHeaders(),
+    cache: 'no-store',
+  });
+}
+
+export async function updateBotEvent(
+  guildId: string,
+  eventId: string,
+  body: Record<string, unknown>,
+  userId?: string,
+) {
+  return botRequest(`/api/guilds/${guildId}/events/${encodeURIComponent(eventId)}`, {
+    method: 'PATCH',
+    headers: botHeaders(userId),
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+}
+
+export async function deleteBotEvent(
+  guildId: string,
+  eventId: string,
+  userId?: string,
+) {
+  return botRequest(`/api/guilds/${guildId}/events/${encodeURIComponent(eventId)}`, {
+    method: 'DELETE',
+    headers: botHeaders(userId),
+    cache: 'no-store',
+  });
+}
+
+export async function getBotForms(guildId: string) {
+  return botRequest(`/api/guilds/${guildId}/forms`, {
+    headers: botHeaders(),
+    cache: 'no-store',
+  });
+}
+
+export async function createBotForm(
+  guildId: string,
+  body: Record<string, unknown>,
+  userId?: string,
+) {
+  return botRequest(`/api/guilds/${guildId}/forms`, {
+    method: 'POST',
+    headers: botHeaders(userId),
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+}
+
+export async function getBotForm(guildId: string, formId: string) {
+  return botRequest(`/api/guilds/${guildId}/forms/${encodeURIComponent(formId)}`, {
+    headers: botHeaders(),
+    cache: 'no-store',
+  });
+}
+
+export async function updateBotForm(
+  guildId: string,
+  formId: string,
+  body: Record<string, unknown>,
+  userId?: string,
+) {
+  return botRequest(`/api/guilds/${guildId}/forms/${encodeURIComponent(formId)}`, {
+    method: 'PATCH',
+    headers: botHeaders(userId),
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+}
+
+export async function deleteBotForm(
+  guildId: string,
+  formId: string,
+  userId?: string,
+) {
+  return botRequest(`/api/guilds/${guildId}/forms/${encodeURIComponent(formId)}`, {
+    method: 'DELETE',
+    headers: botHeaders(userId),
+    cache: 'no-store',
+  });
+}
+
+export async function getBotFormSubmissions(
+  guildId: string,
+  formId: string,
+  status = 'all',
+) {
+  return botRequest(
+    `/api/guilds/${guildId}/forms/${encodeURIComponent(formId)}/submissions?status=${encodeURIComponent(status)}`,
+    { headers: botHeaders(), cache: 'no-store' },
+  );
+}
+
+export async function updateBotFormSubmission(
+  guildId: string,
+  formId: string,
+  submissionId: string,
+  body: Record<string, unknown>,
+  userId?: string,
+) {
+  return botRequest(
+    `/api/guilds/${guildId}/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`,
+    {
+      method: 'PATCH',
+      headers: botHeaders(userId),
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    },
+  );
+}
+
+export async function deleteBotFormSubmission(
+  guildId: string,
+  formId: string,
+  submissionId: string,
+  userId?: string,
+) {
+  return botRequest(
+    `/api/guilds/${guildId}/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`,
+    {
+      method: 'DELETE',
+      headers: botHeaders(userId),
+      cache: 'no-store',
+    },
+  );
+}
+
+export async function publishBotForm(
+  guildId: string,
+  formId: string,
+  body: Record<string, unknown>,
+  userId?: string,
+) {
+  return botRequest(
+    `/api/guilds/${guildId}/forms/${encodeURIComponent(formId)}/publish`,
+    {
+      method: 'POST',
+      headers: botHeaders(userId),
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    },
+  );
 }
 
 export async function getBotUserProfiles(ids: string[]) {

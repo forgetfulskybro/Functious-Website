@@ -15,7 +15,7 @@ export default function ScheduleCommands() {
           prefix it with <code className="font-mono text-orange-light">f!schedule poll</code>. The bot asks for the
           send time after you provide the arguments.
         </p>
-        <CodeBlock title="Fluxer" code="f!schedule poll 1h | Favourite colour? | Red | Blue | Green" />
+        <CodeBlock title="Fluxer" code="f!schedule poll 1h | Favourite color? | Red | Blue | Green" />
         <Callout>
           The poll duration starts from the scheduled send time, not from when you run the
           command. A 1h poll scheduled for tomorrow will run for 1 hour starting tomorrow.

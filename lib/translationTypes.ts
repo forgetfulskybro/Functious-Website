@@ -121,11 +121,17 @@ export interface TranslationImportLanguage {
   name: string;
   native: string;
   strings: number;
+  added: number;
+  updated: number;
+  removed: number;
 }
 
 export interface TranslationImportResult {
   ok: boolean;
   strings: number;
+  added: number;
+  updated: number;
+  removed: number;
   skipped: number;
   languages: TranslationImportLanguage[];
   errors: string[];

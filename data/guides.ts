@@ -126,6 +126,56 @@ export const GIVEAWAY_GUIDE: Guide = {
   ],
 };
 
+export const FORMS_GUIDE: Guide = {
+  slug: 'forms',
+  title: 'Forms',
+  tagline: 'Private applications with a reaction-powered editor.',
+  description:
+    'Create application forms, build and edit questions with Form Menu, collect answers in DMs, and review submissions with your team.',
+  chapters: [
+    { slug: '', title: 'Overview', short: 'What forms do, their limits, and a quick start.' },
+    { slug: 'menu', title: 'Form Menu', short: 'Build and edit forms with paginated reaction controls.' },
+    { slug: 'commands', title: 'Command Reference', short: 'Every setup, editing, publishing, and review command.' },
+    { slug: 'publishing', title: 'Publishing & Review', short: 'Open a form, publish its panel, and review submissions.' },
+  ],
+};
+
+export const EVENTS_GUIDE: Guide = {
+  slug: 'events',
+  title: 'Events',
+  tagline: 'RSVP events with capacity, reminders, and recurrence.',
+  description:
+    'Create community events, collect Going, Maybe, and Declined RSVPs, manage capacity and waitlists, and keep attendees updated.',
+  chapters: [
+    { slug: '', title: 'Overview', short: 'Create an event, set its time, and configure RSVPs.' },
+    { slug: 'managing', title: 'Managing Events', short: 'Edit, remind, cancel, delete, and review attendees.' },
+  ],
+};
+
+export const STICKIES_GUIDE: Guide = {
+  slug: 'stickies',
+  title: 'Sticky Messages',
+  tagline: 'Keep a message at the bottom of a channel.',
+  description:
+    'Create text, embed, or Rune sticky messages that repost themselves whenever a channel gets new messages.',
+  chapters: [
+    { slug: '', title: 'Overview', short: 'Create a sticky and choose its format, mentions, and delay.' },
+    { slug: 'editing', title: 'Editing & Managing', short: 'Change content, move, pause, refresh, and delete stickies.' },
+  ],
+};
+
+export const POLICIES_GUIDE: Guide = {
+  slug: 'policies',
+  title: 'Command Policies',
+  tagline: 'Per-command access, cooldowns, and cleanup.',
+  description:
+    'Configure command availability, allowed channels and roles, custom cooldowns, and trigger-message cleanup.',
+  chapters: [
+    { slug: '', title: 'Overview', short: 'What policies control and how to open a command\'s settings.' },
+    { slug: 'editor', title: 'Policy Editor', short: 'Use the reaction menu to configure and reset a command.' },
+  ],
+};
+
 export const GENERAL_GUIDE: Guide = {
   slug: 'general',
   title: 'General Commands',
@@ -134,7 +184,7 @@ export const GENERAL_GUIDE: Guide = {
     'A reference for the everyday Functious commands that do not need a dedicated guide.',
   chapters: [
     { slug: '', title: 'Overview', short: 'What is covered in this guide.' },
-    { slug: 'theme', title: 'Theme', short: 'Change the bot colour, avatar, and banner.' },
+    { slug: 'theme', title: 'Theme', short: 'Change the bot color, avatar, and banner.' },
     { slug: 'polls', title: 'Polls', short: 'Create and manage timed polls.' },
     { slug: 'bypass', title: 'Bypass Roles', short: 'Grant roles access to permission-locked commands.' },
     { slug: 'autoroles', title: 'Autoroles', short: 'Join roles, sticky roles, and timed roles.' },
@@ -150,6 +200,10 @@ export const GUIDES: Guide[] = [
   TEMP_CHANNELS_GUIDE,
   SCHEDULE_GUIDE,
   GIVEAWAY_GUIDE,
+  FORMS_GUIDE,
+  EVENTS_GUIDE,
+  STICKIES_GUIDE,
+  POLICIES_GUIDE,
   GENERAL_GUIDE,
 ];
 

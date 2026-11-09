@@ -6,6 +6,8 @@ import SelectDropdown from '@/components/ui/SelectDropdown';
 import { showErrorToast } from '@/components/ui/Toast';
 import ChannelBadge from '@/components/ui/ChannelBadge';
 import { useChannelProfiles, KnownChannel } from '@/hooks/useChannelProfiles';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
+import UserBadge from '@/components/ui/UserBadge';
 
 export interface ScheduledEntry {
   id: string;
@@ -25,6 +27,22 @@ export interface ScheduledEntry {
 
 function makeScheduleId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function formatRelative(ts: number): string {
+  const diff = ts - Math.floor(Date.now() / 1000);
+  const abs = Math.abs(diff);
+  if (abs < 60) return diff >= 0 ? 'in a moment' : 'just now';
+  if (abs < 3600) {
+    const m = Math.floor(abs / 60);
+    return diff >= 0 ? `in ${m}m` : `${m}m ago`;
+  }
+  if (abs < 86400) {
+    const h = Math.floor(abs / 3600);
+    return diff >= 0 ? `in ${h}h` : `${h}h ago`;
+  }
+  const d = Math.floor(abs / 86400);
+  return diff >= 0 ? `in ${d}d` : `${d}d ago`;
 }
 
 export function DeleteConfirmModal({
@@ -234,6 +252,11 @@ export function ScheduleModal({
     e.preventDefault();
     if (!channelId || (type === 'command' && !commandName) || submitting || saving) return;
 
+    if (type === 'content' && !content.trim()) {
+      showErrorToast('Error', { description: 'Message content is required.' });
+      return;
+    }
+
     const ts = Math.floor(new Date(timestampStr).getTime() / 1000);
     if (!Number.isFinite(ts) || ts <= Math.floor(Date.now() / 1000)) {
       showErrorToast('Error', { description: 'Please choose a time in the future.' });
@@ -380,7 +403,9 @@ export function ScheduleModal({
 
           {type === 'content' && (
             <div>
-              <label className="block text-white/50 text-xs font-medium mb-1.5">Content</label>
+              <label className="block text-white/50 text-xs font-medium mb-1.5">
+                Content <span className="text-orange-light/60">*</span>
+              </label>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
@@ -652,6 +677,7 @@ export function ScheduleModal({
               type="submit"
               disabled={
                 !channelId ||
+                (type === 'content' && !content.trim()) ||
                 (type === 'command' && !commandName) ||
                 (type === 'command' &&
                   commandName === 'polls' &&
@@ -692,6 +718,16 @@ export function ViewModal({
     item.channelId ? [item.channelId] : [],
     guildChannels
   );
+  const createdByProfiles = useUserProfiles(item.createdBy ? [item.createdBy] : []);
+  const isPast = item.timestamp * 1000 <= Date.now();
+  const isRecurring = !!item.recurring && item.recurring !== 'none';
+  const statusLabel = isPast ? (isRecurring ? 'Active' : 'Delivered') : 'Scheduled';
+  const createdDate = item.createdAt
+    ? new Date(item.createdAt * 1000).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : null;
 
   function buildCommandPreview(): string | null {
     if (item.type !== 'command' || !item.commandName || !item.commandArgs) return null;
@@ -760,54 +796,99 @@ export function ViewModal({
       aria-modal="true"
     >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-[#160a0a] rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between p-5 border-b border-[#2A1313]">
-          <div>
-            <h2 className="text-white text-lg font-bold">Scheduled Message</h2>
+      <div className="relative bg-[#160a0a] rounded-2xl w-full max-w-lg max-h-[92dvh] flex flex-col overflow-hidden shadow-2xl border border-white/5">
+        <div className="flex items-start justify-between gap-3 px-4 sm:px-6 pt-5 pb-4 border-b border-[#2A1313]">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-white text-lg font-bold">Scheduled Message</h2>
+              <span
+                className={[
+                  'text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md',
+                  isPast
+                    ? isRecurring
+                      ? 'bg-green-500/10 text-green-400'
+                      : 'bg-white/5 text-white/35'
+                    : 'bg-orange/10 text-orange-light/80',
+                ].join(' ')}
+              >
+                {statusLabel}
+              </span>
+            </div>
             <p className="text-white/30 text-xs mt-0.5">{typeLabel[item.type] ?? item.type}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-white/40 hover:text-white text-xl"
+            className="p-1.5 -mr-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 text-lg leading-none flex-shrink-0"
+            aria-label="Close"
           >
             ✕
           </button>
         </div>
 
-        <div className="p-5 space-y-4 overflow-y-auto text-sm">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Channel</p>
-              <ChannelBadge
-                channelId={item.channelId}
-                profile={channelProfiles[item.channelId]}
-              />
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto text-sm">
+          <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] divide-y divide-white/5">
+            <div className="px-3.5 py-3">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Channel</p>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-5 h-5 rounded bg-orange/10 flex items-center justify-center text-orange-warm text-xs font-bold flex-shrink-0">
+                  #
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-white/85 text-sm font-medium truncate">
+                    {channelProfiles[item.channelId]?.name ?? 'Unknown channel'}
+                  </p>
+                  <p className="text-white/30 text-[11px] font-mono break-all">{item.channelId}</p>
+                </div>
+              </div>
             </div>
-            <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Fires at</p>
-              <p className="text-white font-medium">
-                {new Date(item.timestamp * 1000).toLocaleString(undefined, {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}
-              </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-white/5">
+              <div className="px-3.5 py-3">
+                <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Fires at</p>
+                <p className="text-white text-sm font-medium break-words">
+                  {new Date(item.timestamp * 1000).toLocaleString(undefined, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                </p>
+                <p className="text-white/30 text-[11px] mt-0.5">{formatRelative(item.timestamp)}</p>
+              </div>
+              <div className="px-3.5 py-3">
+                <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Repeats</p>
+                <p className="text-white text-sm font-medium capitalize">
+                  {isRecurring ? item.recurring : 'One time'}
+                </p>
+                <p className="text-white/30 text-[11px] mt-0.5">
+                  {isRecurring ? 'Runs on a schedule' : 'Sends once'}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-white/5">
+              <div className="px-3.5 py-3">
+                <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Times sent</p>
+                <p className="text-white text-sm font-medium">{item.sendCount ?? 1}</p>
+              </div>
+              <div className="px-3.5 py-3">
+                <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Created</p>
+                <p className="text-white text-sm font-medium">{createdDate ?? 'Unknown'}</p>
+              </div>
+            </div>
+
+            <div className="px-3.5 py-3">
+              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Created by</p>
+              {item.createdBy ? (
+                <UserBadge
+                  userId={item.createdBy}
+                  profile={createdByProfiles[item.createdBy]}
+                  inline
+                />
+              ) : (
+                <p className="text-white/50 text-xs">Unknown</p>
+              )}
             </div>
           </div>
-
-          {item.recurring && item.recurring !== 'none' && (
-            <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Recurring</p>
-              <p className="text-white capitalize font-medium">{item.recurring}</p>
-            </div>
-          )}
-
-          {item.sendCount !== undefined && item.sendCount > 1 && (
-            <div className="rounded-xl bg-white/[0.03] px-3 py-2.5">
-              <p className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Send count</p>
-              <p className="text-white font-medium">{item.sendCount}</p>
-            </div>
-          )}
 
           {item.type === 'content' && item.content && (
             <div>
@@ -943,10 +1024,10 @@ export function ViewModal({
           )}
         </div>
 
-        <div className="p-4 border-t border-[#2A1313] flex justify-end">
+        <div className="p-4 sm:p-6 border-t border-[#2A1313] flex justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white text-sm transition-colors"
+            className="w-full sm:w-auto px-6 py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-white text-sm transition-colors"
           >
             Close
           </button>

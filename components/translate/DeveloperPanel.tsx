@@ -58,6 +58,169 @@ const PERMISSION_OPTIONS: {
   },
 ];
 
+type ImportSummaryStatKey = 'added' | 'updated' | 'removed';
+
+const IMPORT_SUMMARY_STATS: {
+  key: ImportSummaryStatKey;
+  label: string;
+  valueClass: string;
+  boxClass: string;
+}[] = [
+  {
+    key: 'added',
+    label: 'Added',
+    valueClass: 'text-emerald-300',
+    boxClass: 'border-emerald-500/20 bg-emerald-500/[0.06]',
+  },
+  {
+    key: 'updated',
+    label: 'Updated',
+    valueClass: 'text-sky-300',
+    boxClass: 'border-sky-500/20 bg-sky-500/[0.06]',
+  },
+  {
+    key: 'removed',
+    label: 'Removed',
+    valueClass: 'text-rose-300',
+    boxClass: 'border-rose-500/20 bg-rose-500/[0.06]',
+  },
+];
+
+function ImportSummaryModal({
+  result,
+  onClose,
+}: {
+  result: TranslationImportResult;
+  onClose: () => void;
+}) {
+  const totalChanges = result.added + result.updated + result.removed;
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="import-summary-title"
+        onClick={(event) => event.stopPropagation()}
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-xl border border-white/10 bg-bg-card p-5 shadow-2xl"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-orange-light/75">
+              Import complete
+            </p>
+            <h2
+              id="import-summary-title"
+              className="mt-1 text-lg font-semibold text-white"
+            >
+              Translation summary
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close import summary"
+            className="rounded-lg border border-white/10 px-2 py-0.5 text-sm text-white/50 transition-colors hover:border-white/25 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+
+        <p className="mt-2 text-sm leading-relaxed text-white/45">
+          {totalChanges === 0
+            ? 'No translation rows changed.'
+            : 'These changes were written to the translation database.'}
+        </p>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {IMPORT_SUMMARY_STATS.map((stat) => (
+            <div
+              key={stat.key}
+              className={`rounded-lg border px-3 py-2.5 ${stat.boxClass}`}
+            >
+              <p
+                className={`text-xl font-semibold tabular-nums ${stat.valueClass}`}
+              >
+                {result[stat.key].toLocaleString('en-US')}
+              </p>
+              <p className="mt-0.5 text-[11px] text-white/40">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {result.languages.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-white/35">
+              By language
+            </p>
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-white/10">
+              {result.languages.map((language) => (
+                <div
+                  key={language.code}
+                  className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-3 py-2 last:border-b-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-white/70">
+                      {language.native}
+                    </p>
+                    <p className="text-[11px] text-white/30">{language.code}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 text-[11px] font-medium tabular-nums">
+                    <span className="text-emerald-300">
+                      +{language.added.toLocaleString('en-US')}
+                    </span>
+                    <span className="text-sky-300">
+                      ~{language.updated.toLocaleString('en-US')}
+                    </span>
+                    <span className="text-rose-300">
+                      −{language.removed.toLocaleString('en-US')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {result.errors.length > 0 && (
+          <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5">
+            <p className="text-xs font-medium text-amber-200/75">Warnings</p>
+            <ul className="mt-1.5 max-h-24 space-y-1 overflow-y-auto text-[11px] leading-relaxed text-amber-100/55">
+              {result.errors.slice(0, 4).map((error, index) => (
+                <li key={`${index}-${error}`}>{error}</li>
+              ))}
+            </ul>
+            {result.errors.length > 4 && (
+              <p className="mt-1 text-[11px] text-amber-100/40">
+                +{result.errors.length - 4} more
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="mt-5 flex items-center justify-between gap-3 border-t border-white/10 pt-4">
+          <p className="text-[11px] text-white/35">
+            {result.strings.toLocaleString('en-US')} accepted
+            {result.skipped > 0
+              ? ` · ${result.skipped.toLocaleString('en-US')} skipped`
+              : ''}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-orange px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-bright"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PermissionMenu({
   value,
   owner,
@@ -664,6 +827,7 @@ export default function DeveloperPanel({
   const [newUserId, setNewUserId] = useState('');
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<TranslationImportResult | null>(null);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(
     languages.map((language) => language.code),
   );
@@ -816,6 +980,7 @@ export default function DeveloperPanel({
 
     if (chosen.length === 0) return;
 
+    setImportResult(null);
     setImporting(true);
     try {
       const form = new FormData();
@@ -831,14 +996,7 @@ export default function DeveloperPanel({
         throw new Error(data?.error ?? 'Import failed');
       }
 
-      const result = data as TranslationImportResult;
-      const stringCount = result.strings ?? 0;
-      const languageCount = result.languages?.length ?? 0;
-      const warnings = result.errors?.length ?? 0;
-
-      showToast(
-        `Imported ${stringCount.toLocaleString('en-US')} string${stringCount === 1 ? '' : 's'} across ${languageCount} language${languageCount === 1 ? '' : 's'}${warnings > 0 ? ` · ${warnings} warning${warnings === 1 ? '' : 's'}` : ''}`,
-      );
+      setImportResult(data as TranslationImportResult);
       router.refresh();
     } catch (error) {
       showErrorToast('Could not import translations', {
@@ -1060,6 +1218,10 @@ export default function DeveloperPanel({
               {refreshing ? 'Refreshing…' : 'Refresh translation files'}
             </button>
 
+            <p className="mt-2.5 text-[11px] leading-relaxed text-white/30">
+              Keys missing from an imported file are removed from that
+              language&apos;s database entries.
+            </p>
 
           </section>
         </aside>
@@ -1073,6 +1235,13 @@ export default function DeveloperPanel({
             currentUserId={currentUserId}
           />
         </div>
+      )}
+
+      {importResult && (
+        <ImportSummaryModal
+          result={importResult}
+          onClose={() => setImportResult(null)}
+        />
       )}
     </div>
   );

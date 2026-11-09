@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild, Channels } from '@/lib/types';
 import { MediaChannelEntry, MediaChannelModal, DeleteMediaChannelModal } from './Modals';
 import { showErrorToast, showToast } from '@/components/ui/Toast';
+import ItemActions from '@/components/ui/ItemActions';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import ChannelBadge from '@/components/ui/ChannelBadge';
 import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import Sidebar from '@/components/layout/Sidebar';
@@ -116,24 +118,7 @@ export default function MediaChannelsClient({
     [entries, save]
   );
 
-  const shownLoading = useRef(false);
-  const shownError = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (loading && !shownLoading.current) {
-      shownLoading.current = true;
-      showToast('Loading', { description: 'Loading data...' });
-    }
-    if (!loading) shownLoading.current = false;
-  }, [loading]);
-
-  useEffect(() => {
-    if (error && error !== shownError.current) {
-      shownError.current = error;
-      showErrorToast('Error', { description: error });
-    }
-    if (!error) shownError.current = null;
-  }, [error]);
+  useDashboardToasts(loading, error);
 
   const iconUrl = userGuild.icon
     ? `https://fluxerusercontent.com/icons/${userGuild.id}/${userGuild.icon}.png?size=64`
@@ -254,54 +239,25 @@ export default function MediaChannelsClient({
                       {!entry.threads && entry.desc && <BadgePill label="post text" />}
                     </div>
 
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
-                        type="button"
-                        title="Edit"
-                        disabled={saving}
-                        onClick={() => setModal(entry)}
-                        className="rounded-md p-1.5 text-white/30 transition-colors hover:bg-white/5 hover:text-white/70 disabled:opacity-50"
-                      >
-                        <svg
-                          className="h-3.5 w-3.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                          <path
-                            d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        title="Remove"
-                        disabled={saving}
-                        onClick={() => setDeleteEntry(entry)}
-                        className="rounded-md p-1.5 text-white/30 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
-                      >
-                        <svg
-                          className="h-3.5 w-3.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                          <path d="M10 11v6M14 11v6" />
-                          <path
-                            d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
+                    <ItemActions
+                      label="Media channel actions"
+                      className="self-end sm:self-auto"
+                      actions={[
+                        {
+                          label: 'Edit media channel',
+                          icon: 'edit',
+                          disabled: saving,
+                          onSelect: () => setModal(entry),
+                        },
+                        {
+                          label: 'Remove media channel',
+                          icon: 'delete',
+                          danger: true,
+                          disabled: saving,
+                          onSelect: () => setDeleteEntry(entry),
+                        },
+                      ]}
+                    />
                   </li>
                 ))}
             </ul>

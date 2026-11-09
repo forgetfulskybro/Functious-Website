@@ -94,7 +94,7 @@ export default function CommandCard({
                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/35">
                   Usage
                 </p>
-                <code className="font-mono text-[13px] text-orange-light">
+                <code className="block max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-[13px] leading-relaxed text-orange-light">
                   f!{usage}
                 </code>
               </div>

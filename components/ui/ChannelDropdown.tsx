@@ -93,11 +93,21 @@ export default function ChannelDropdown({
   function updateDropdownStyle() {
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
+    const margin = 8;
+    const viewportWidth = window.innerWidth;
+    const width = Math.min(
+      Math.max(rect.width, viewportWidth < 640 ? 240 : 0),
+      viewportWidth - margin * 2
+    );
+    const left = Math.min(
+      Math.max(margin, rect.left),
+      viewportWidth - width - margin
+    );
     setDropdownStyle({
       position: "fixed",
       top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
+      left,
+      width,
       zIndex: 9999,
     });
   }

@@ -7,6 +7,7 @@ import ChannelBadge from '@/components/ui/ChannelBadge';
 import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import { useState, useEffect, useRef } from 'react';
 import { useGuildData } from '@/hooks/useGuildData';
+import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import Sidebar from '@/components/layout/Sidebar';
 import { ConfirmModal } from './Modals';
 import Image from 'next/image';
@@ -108,24 +109,7 @@ export default function TempChannelsClient({
     };
   }, [config.channelName, config.channelLimit, config.counting, config.customParent, config.managevc, dirty]);
 
-  const shownLoading = useRef(false);
-  const shownError = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (loading && !shownLoading.current) {
-      shownLoading.current = true;
-      showToast('Loading', { description: 'Loading data...' });
-    }
-    if (!loading) shownLoading.current = false;
-  }, [loading]);
-
-  useEffect(() => {
-    if (error && error !== shownError.current) {
-      shownError.current = error;
-      showErrorToast('Error', { description: error });
-    }
-    if (!error) shownError.current = null;
-  }, [error]);
+  useDashboardToasts(loading, error);
 
   const handleLimitChange = (raw: string) => {
     const digits = raw.replace(/\D/g, '').slice(0, 2);
