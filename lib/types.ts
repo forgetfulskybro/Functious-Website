@@ -149,6 +149,7 @@ export interface GuildData {
   id: string;
   name: string | null;
   icon: string | null;
+  guildCreatedAt?: number | null;
   owner_id: string | null;
   prefix: string;
   language: string;

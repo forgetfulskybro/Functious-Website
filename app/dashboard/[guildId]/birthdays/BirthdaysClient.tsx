@@ -333,7 +333,63 @@ export default function BirthdaysClient({
         </div>
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
-          <div className="contents">
+          <div className="min-w-0 lg:col-span-2">
+            <CommunityBirthdaySection
+              value={data.communityBirthday ?? null}
+              channels={guildChannels}
+              roles={guildRoles}
+              guildCreatedAt={data.guildCreatedAt ?? null}
+              saving={saving}
+              onSave={(communityBirthday) =>
+                handleSave({ communityBirthday } as Partial<GuildData>)
+              }
+            />
+          </div>
+
+          <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
+            <section className="order-2 min-w-0 rounded-2xl bg-bg-card p-6">
+              <div className="mb-5">
+                <h2 className="text-white/45 text-xs font-semibold uppercase tracking-widest">
+                  Announcement Channel & Role
+                </h2>
+                <p className="text-white/20 text-[10px] mt-0.5">
+                  Where announcements are sent and the role given on birthdays
+                </p>
+              </div>
+              {loading ? (
+                <>
+                  <SettingRowSkeleton controlWidth="w-48" />
+                  <SettingRowSkeleton controlWidth="w-48" />
+                </>
+              ) : (
+                <>
+                  <div className="py-4 border-b border-white/5">
+                    <p className="text-white/80 text-sm font-medium">Announcement Channel</p>
+                    <p className="text-white/30 text-xs mt-0.5">Where birthday announcements are sent.</p>
+                    <div className="mt-3 w-full">
+                      <ChannelDropdown
+                        channels={guildChannels}
+                        value={data.birthdayChannel ?? ''}
+                        onChangeAction={(id) => handleSave({ birthdayChannel: id || null })}
+                      />
+                    </div>
+                  </div>
+                  <div className="pt-4">
+                    <p className="text-white/80 text-sm font-medium">Birthday Role</p>
+                    <p className="text-white/30 text-xs mt-0.5">Role temporarily added on birthdays.</p>
+                    <div className="mt-3 w-full">
+                      <RolesDropdown
+                        roles={guildRoles.map((r: any) => ({ id: String(r.id), name: String(r.name), color: Number(r.color ?? 0) }))}
+                        value={data.birthdayRole ?? ''}
+                        onChange={(id) => handleSave({ birthdayRole: id || null })}
+                        placeholder="Select a role…"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
+
             <section className="order-4 min-w-0 rounded-2xl bg-bg-card p-5 flex flex-col gap-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -465,175 +521,9 @@ export default function BirthdaysClient({
               )}
             </section>
 
-            <section className="order-5 min-w-0 rounded-2xl bg-bg-card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-white/45 text-xs font-semibold uppercase tracking-widest">
-                    Blacklist
-                  </h2>
-                  <p className="text-white/20 text-[10px] mt-0.5">
-                    Members excluded from birthday announcements
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange/10 hover:bg-orange/20 text-orange-warm text-xs font-medium transition-colors focus-visible:outline-none"
-                >
-                  <svg
-                    className="w-3 h-3"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  Add user
-                </button>
-              </div>
-
-              {blacklist.length > 0 && (
-                <div className="relative mb-4">
-                  <svg
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    aria-hidden="true"
-                  >
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="M20 20l-3-3" strokeLinecap="round" />
-                  </svg>
-                  <input
-                    type="search"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search blacklisted users…"
-                    className="w-full rounded-xl bg-white/[0.04] border border-white/5 hover:border-white/10 focus:border-orange/40 focus:ring-1 focus:ring-orange/30 outline-none text-xs text-white placeholder:text-white/25 pl-9 pr-3 py-2 transition-colors"
-                  />
-                </div>
-              )}
-
-              {blacklist.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-white/25 text-xs">No one is blacklisted yet.</p>
-                  <button
-                    type="button"
-                    onClick={() => setAddOpen(true)}
-                    className="mt-1.5 text-orange-warm/70 hover:text-orange-warm text-xs transition-colors"
-                  >
-                    Add one →
-                  </button>
-                </div>
-              ) : filteredBlacklist.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-white/25 text-xs">No blacklisted users match “{search.trim()}”.</p>
-                </div>
-              ) : (
-                <>
-                <ul className="space-y-1.5">
-                  {blacklistPaginated.map((userId) => (
-                    <li key={userId} className="rounded-xl px-3 py-2.5 flex items-center gap-2.5 bg-white/[0.03] group">
-                      <UserBadge userId={userId} profile={profiles[userId]} className="flex-1 min-w-0" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveBlacklist(userId)}
-                        disabled={blacklisting}
-                        title="Remove from blacklist"
-                        className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 focus-visible:outline-none flex-shrink-0"
-                      >
-                        <svg
-                          className="w-3.5 h-3.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                          <path d="M10 11v6M14 11v6" />
-                          <path
-                            d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <div className="pt-1">
-                  <Pagination
-                    page={blacklistPageSafe}
-                    totalPages={blacklistTotalPages}
-                    total={filteredBlacklist.length}
-                    pageSize={BLACKLIST_PAGE_SIZE}
-                    onChange={setBlacklistPage}
-                  />
-                </div>
-                </>
-              )}
-            </section>
           </div>
 
-          <div className="contents">
-            <div className="order-1 min-w-0 lg:col-span-2">
-              <CommunityBirthdaySection
-                value={data.communityBirthday ?? null}
-                channels={guildChannels}
-                roles={guildRoles}
-                saving={saving}
-                onSave={(communityBirthday) =>
-                  handleSave({ communityBirthday } as Partial<GuildData>)
-                }
-              />
-            </div>
-
-            <section className="order-2 min-w-0 rounded-2xl bg-bg-card p-6">
-              <div className="mb-5">
-                <h2 className="text-white/45 text-xs font-semibold uppercase tracking-widest">
-                  Announcement Channel & Role
-                </h2>
-                <p className="text-white/20 text-[10px] mt-0.5">
-                  Where announcements are sent and the role given on birthdays
-                </p>
-              </div>
-              {loading ? (
-                <>
-                  <SettingRowSkeleton controlWidth="w-48" />
-                  <SettingRowSkeleton controlWidth="w-48" />
-                </>
-              ) : (
-                <>
-                  <div className="py-4 border-b border-white/5">
-                    <p className="text-white/80 text-sm font-medium">Announcement Channel</p>
-                    <p className="text-white/30 text-xs mt-0.5">Where birthday announcements are sent.</p>
-                    <div className="mt-3 w-full">
-                      <ChannelDropdown
-                        channels={guildChannels}
-                        value={data.birthdayChannel ?? ''}
-                        onChangeAction={(id) => handleSave({ birthdayChannel: id || null })}
-                      />
-                    </div>
-                  </div>
-                  <div className="pt-4">
-                    <p className="text-white/80 text-sm font-medium">Birthday Role</p>
-                    <p className="text-white/30 text-xs mt-0.5">Role temporarily added on birthdays.</p>
-                    <div className="mt-3 w-full">
-                      <RolesDropdown
-                        roles={guildRoles.map((r: any) => ({ id: String(r.id), name: String(r.name), color: Number(r.color ?? 0) }))}
-                        value={data.birthdayRole ?? ''}
-                        onChange={(id) => handleSave({ birthdayRole: id || null })}
-                        placeholder="Select a role…"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </section>
-
+          <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
             <section className="order-3 min-w-0 rounded-2xl bg-bg-card p-6">
               <div className="mb-5">
                 <h2 className="text-white/45 text-xs font-semibold uppercase tracking-widest">
@@ -745,6 +635,119 @@ export default function BirthdaysClient({
                 </div>
               </div>
             </section>
+
+            <section className="order-5 min-w-0 rounded-2xl bg-bg-card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-white/45 text-xs font-semibold uppercase tracking-widest">
+                    Blacklist
+                  </h2>
+                  <p className="text-white/20 text-[10px] mt-0.5">
+                    Members excluded from birthday announcements
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAddOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange/10 hover:bg-orange/20 text-orange-warm text-xs font-medium transition-colors focus-visible:outline-none"
+                >
+                  <svg
+                    className="w-3 h-3"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Add user
+                </button>
+              </div>
+
+              {blacklist.length > 0 && (
+                <div className="relative mb-4">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/25 pointer-events-none"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden="true"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M20 20l-3-3" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search blacklisted users…"
+                    className="w-full rounded-xl bg-white/[0.04] border border-white/5 hover:border-white/10 focus:border-orange/40 focus:ring-1 focus:ring-orange/30 outline-none text-xs text-white placeholder:text-white/25 pl-9 pr-3 py-2 transition-colors"
+                  />
+                </div>
+              )}
+
+              {blacklist.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-white/25 text-xs">No one is blacklisted yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => setAddOpen(true)}
+                    className="mt-1.5 text-orange-warm/70 hover:text-orange-warm text-xs transition-colors"
+                  >
+                    Add one →
+                  </button>
+                </div>
+              ) : filteredBlacklist.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-white/25 text-xs">No blacklisted users match “{search.trim()}”.</p>
+                </div>
+              ) : (
+                <>
+                <ul className="space-y-1.5">
+                  {blacklistPaginated.map((userId) => (
+                    <li key={userId} className="rounded-xl px-3 py-2.5 flex items-center gap-2.5 bg-white/[0.03] group">
+                      <UserBadge userId={userId} profile={profiles[userId]} className="flex-1 min-w-0" />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBlacklist(userId)}
+                        disabled={blacklisting}
+                        title="Remove from blacklist"
+                        className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 focus-visible:outline-none flex-shrink-0"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path
+                            d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="pt-1">
+                  <Pagination
+                    page={blacklistPageSafe}
+                    totalPages={blacklistTotalPages}
+                    total={filteredBlacklist.length}
+                    pageSize={BLACKLIST_PAGE_SIZE}
+                    onChange={setBlacklistPage}
+                  />
+                </div>
+                </>
+              )}
+            </section>
+
           </div>
         </div>
       </main>

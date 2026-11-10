@@ -343,7 +343,7 @@ export const FEATURES: FeatureData[] = [
     name: 'Birthdays & Anniversaries',
     shortDescription: "Celebrate member birthdays and your community's anniversary with automatic announcements.",
     fullDescription:
-      'Birthdays stores member birthdays and your community\'s founding date, then announces each automatically with the right timezone and wording. Members opt in per community, can keep their age private, and can be given a birthday role that is removed a day later. Staff choose the announcement channel and wording, configure a community anniversary, or blacklist members who would rather not be listed.',
+      'Birthdays stores member birthdays and automatically uses your community\'s creation date for its anniversary, then announces each with the right timezone and wording. Members opt in per community, can keep their age private, and can be given a birthday role that is removed a day later. Staff choose the announcement channel and wording, enable community anniversary announcements, or blacklist members who would rather not be listed.',
     capabilities: [
       'Automatic birthday announcements at midnight in each member\'s own timezone',
       'Flexible date input ("12th of June", "June 12", "6/12")',
@@ -351,7 +351,7 @@ export const FEATURES: FeatureData[] = [
       'Optional age, announced as an ordinal like "31st birthday"',
       'Birthday role granted automatically and removed 24 hours later',
       'Custom announcement text with {user} and {age} placeholders',
-      'Community anniversary announcements from your founding date, with an optional year',
+      'Community anniversary announcements from your server\'s creation date, with years calculated automatically',
       'Separate channel, ping role, timezone, and custom message for community anniversaries',
       'Preview the announcement, force one early, or enable and disable community celebrations',
     ],
@@ -361,7 +361,7 @@ export const FEATURES: FeatureData[] = [
       'f!bday enable',
       'f!bday preview',
       'f!bday channel #birthdays',
-      'f!bday server set 12th of June 2020',
+      'f!bday server set',
       'f!bday server channel #announcements',
       'f!bday server preview',
     ],

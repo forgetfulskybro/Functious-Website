@@ -27,8 +27,8 @@ export const COMMANDS: CommandEntry[] = [
   },
   {
     name: 'birthday',
-    description: "Store member birthdays and your community's founding date, and announce both automatically.",
-    usage: 'birthday <help|set <date>|edit <date>|age <number|remove>|view|remove|preview|ping|enable|disable|servers|settings|channel <#channel>|role <@role>|annping|list|force <@user>|blacklist [@user|remove @user|clear]|message [withage <text>|noage <text>|reset]|server set <date> [year]|server channel [#channel|clear]|server role [@role|clear]|server message [<text>|reset]|server timezone <IANA>|server preview|server enable|disable|clear>',
+    description: "Store member birthdays and celebrate your community's anniversary automatically from its creation date.",
+    usage: 'birthday <help|set <date>|edit <date>|age <number|remove>|view|remove|preview|ping|enable|disable|servers|settings|channel <#channel>|role <@role>|annping|list|force <@user>|blacklist [@user|remove @user|clear]|message [withage <text>|noage <text>|reset]|server set|server channel [#channel|clear]|server role [@role|clear]|server message [<text>|reset]|server timezone <IANA>|server preview|server enable|disable|clear>',
     aliases: ['bday', 'bd'],
     cooldown: 3000,
     permissions: null,

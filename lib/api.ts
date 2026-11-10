@@ -86,6 +86,7 @@ export function emptyGuildData(guildId: string) {
     id: guildId,
     name: null,
     icon: null,
+    guildCreatedAt: null,
     owner_id: null,
     prefix: '!',
     language: 'en_EN',

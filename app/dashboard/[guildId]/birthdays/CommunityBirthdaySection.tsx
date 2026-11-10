@@ -7,9 +7,7 @@ import type {
   GuildRole,
 } from '@/lib/types';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
-import NumberInput from '@/components/ui/NumberInput';
 import RolesDropdown from '@/components/ui/RolesDropdown';
-import SelectDropdown from '@/components/ui/SelectDropdown';
 import TimezonePicker from '@/components/ui/TimezonePicker';
 import { Toggle } from '@/components/ui/Toggle';
 import { showErrorToast } from '@/components/ui/Toast';
@@ -29,13 +27,7 @@ const MONTHS = [
   'December',
 ];
 
-const MONTH_OPTIONS = MONTHS.map((label, index) => ({
-  value: String(index + 1),
-  label,
-}));
-
 const DEFAULT_TIMEZONE = 'America/New_York';
-const CURRENT_YEAR = new Date().getFullYear();
 
 function emptySettings(): CommunityBirthdaySettings {
   return {
@@ -62,21 +54,57 @@ function normalizeSettings(
   };
 }
 
-function daysInMonth(month: number | null) {
-  if (!month) return 31;
-  return new Date(Date.UTC(2024, month, 0)).getUTCDate();
+function datePartsInTimeZone(timestamp: number, timeZone: string) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timeZone || DEFAULT_TIMEZONE,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    }).formatToParts(new Date(timestamp));
+    const get = (type: string) =>
+      Number(parts.find((part) => part.type === type)?.value ?? 0);
+    const year = get('year');
+    const month = get('month');
+    const day = get('day');
+    return year && month && day ? { year, month, day } : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatDateInTimeZone(timestamp: number, timeZone: string) {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: timeZone || DEFAULT_TIMEZONE,
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date(timestamp));
+  } catch {
+    return null;
+  }
+}
+
+function formatStoredDate(settings: CommunityBirthdaySettings) {
+  if (!settings.month || !settings.day) return null;
+  return `${MONTHS[settings.month - 1]} ${settings.day}${
+    settings.year ? `, ${settings.year}` : ''
+  }`;
 }
 
 export default function CommunityBirthdaySection({
   value,
   channels,
   roles,
+  guildCreatedAt,
   saving,
   onSave,
 }: {
   value: CommunityBirthdaySettings | null;
   channels: GuildChannel[];
   roles: GuildRole[];
+  guildCreatedAt?: number | null;
   saving: boolean;
   onSave: (value: CommunityBirthdaySettings | null) => void | Promise<void>;
 }) {
@@ -113,15 +141,11 @@ export default function CommunityBirthdaySection({
   );
 
   const busy = saving || submitting;
-  const maxDay = daysInMonth(settings.month);
-  const dayOptions = useMemo(
-    () =>
-      Array.from({ length: maxDay }, (_, index) => ({
-        value: String(index + 1),
-        label: String(index + 1),
-      })),
-    [maxDay],
-  );
+  const detectedDate = guildCreatedAt
+    ? formatDateInTimeZone(guildCreatedAt, settings.timezone)
+    : null;
+  const creationLabel =
+    detectedDate ?? formatStoredDate(settings) ?? 'Unavailable';
 
   function patch(next: Partial<CommunityBirthdaySettings>) {
     setSettings((previous) => ({ ...previous, ...next }));
@@ -130,10 +154,14 @@ export default function CommunityBirthdaySection({
   async function handleSave() {
     if (busy) return;
 
+    const creation = guildCreatedAt
+      ? datePartsInTimeZone(guildCreatedAt, settings.timezone)
+      : null;
+
     if (settings.enabled) {
-      if (!settings.month || !settings.day) {
-        showErrorToast('Date required', {
-          description: 'Choose the month and day for the community birthday.',
+      if (!creation && (!settings.month || !settings.day)) {
+        showErrorToast('Creation date unavailable', {
+          description: "Could not read this server's creation date. Please try again.",
         });
         return;
       }
@@ -149,6 +177,7 @@ export default function CommunityBirthdaySection({
       setSubmitting(true);
       await onSave({
         ...settings,
+        ...(creation ?? {}),
         message: settings.message?.trim() || null,
         timezone: settings.timezone.trim() || DEFAULT_TIMEZONE,
       });
@@ -176,73 +205,14 @@ export default function CommunityBirthdaySection({
       </div>
 
       <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <SelectDropdown
-            label="Month"
-            value={settings.month ? String(settings.month) : ''}
-            onChange={(month) =>
-              patch({
-                month: month ? Number(month) : null,
-                day:
-                  settings.day && month
-                    ? Math.min(settings.day, daysInMonth(Number(month)))
-                    : settings.day,
-              })
-            }
-            options={MONTH_OPTIONS}
-            placeholder="Select month"
-            disabled={busy}
-          />
-
-          <SelectDropdown
-            label="Day"
-            value={settings.day ? String(settings.day) : ''}
-            onChange={(day) =>
-              patch({
-                day: day ? Number(day) : null,
-              })
-            }
-            options={dayOptions}
-            placeholder={settings.month ? 'Select day' : 'Choose month first'}
-            disabled={busy || !settings.month}
-          />
-
+        <div className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5 sm:flex sm:items-center sm:justify-between sm:gap-4">
           <div>
-            <div className="mb-1.5 flex items-center justify-between gap-2">
-              <label className="block text-xs font-medium text-white/50">
-                Year <span className="text-white/25">(optional)</span>
-              </label>
-              {settings.year != null && (
-                <button
-                  type="button"
-                  onClick={() => patch({ year: null })}
-                  disabled={busy}
-                  className="text-[10px] text-white/30 transition-colors hover:text-white/60 disabled:opacity-40"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            {settings.year != null ? (
-              <NumberInput
-                value={settings.year}
-                onChange={(year) => patch({ year })}
-                min={2000}
-                max={CURRENT_YEAR}
-                placeholder="e.g. 2021"
-                disabled={busy}
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => patch({ year: CURRENT_YEAR })}
-                disabled={busy}
-                className="flex min-h-[42px] w-full items-center justify-center rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-3 text-xs text-white/35 transition-colors hover:border-orange/30 hover:text-orange-warm/80 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                + Add birth year
-              </button>
-            )}
+            <p className="text-xs font-medium text-white/50">Server creation date</p>
+            <p className="mt-0.5 text-sm text-white/75">{creationLabel}</p>
           </div>
+          <p className="mt-1 max-w-xs text-[10px] leading-relaxed text-white/25 sm:mt-0 sm:text-right">
+            Detected automatically from this server&apos;s creation date.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
