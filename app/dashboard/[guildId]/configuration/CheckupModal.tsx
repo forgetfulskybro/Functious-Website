@@ -11,10 +11,10 @@ interface CheckupResult {
 }
 
 const CHECK_ORDER = [
-  { id: 'access', label: 'Bot access' },
-  { id: 'roles', label: 'Assignable roles' },
+  { id: 'access', label: 'Basic permissions' },
+  { id: 'roles', label: 'Role assignments' },
   { id: 'reactionRoles', label: 'Reaction roles' },
-  { id: 'channels', label: 'Configured channels' },
+  { id: 'channels', label: 'Channel access' },
   { id: 'forms', label: 'Forms' },
   { id: 'active', label: 'Active features' },
 ] as const;
@@ -148,7 +148,7 @@ export function CheckupModal({
               Health Checkup
             </h2>
             <p className="mt-0.5 text-xs text-white/30">
-              The same community audit as f!checkup for {guildName}.
+              A plain-language check of permissions, roles, channels, forms, and active features for {guildName}.
             </p>
           </div>
           <button
@@ -260,7 +260,7 @@ export function CheckupModal({
                               </span>
                             )}
                           </div>
-                          <p className="mt-1 text-xs leading-relaxed text-white/35">
+                          <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-white/35">
                             {result?.detail || 'This check did not return any details.'}
                           </p>
                         </div>

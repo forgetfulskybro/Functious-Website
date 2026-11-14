@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { showToast, showErrorToast } from '@/components/ui/Toast';
 import ItemActions from '@/components/ui/ItemActions';
 import ChannelBadge from '@/components/ui/ChannelBadge';
+import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 import NumberInput from '@/components/ui/NumberInput';
 import SelectDropdown from '@/components/ui/SelectDropdown';
 import { useChannelProfiles } from '@/hooks/useChannelProfiles';
+import type { ChannelProfile } from '@/lib/types';
 import { ReminderModal, Reminder } from './Modals';
 
 export interface ReactionReminder {
@@ -94,6 +96,41 @@ function targetLabel(item: ReactionReminder): string {
   const guild = item.guildName || 'Unknown server';
   const channel = item.channelName ? `#${item.channelName}` : item.channelId;
   return `${guild} · ${channel}`;
+}
+
+function ReminderTarget({
+  guildName,
+  channelId,
+  profile,
+}: {
+  guildName?: string | null;
+  channelId: string;
+  profile?: ChannelProfile | null;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 mt-1.5 min-w-0 text-[11px] text-white/35">
+      <svg
+        className="w-3 h-3 flex-shrink-0"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        aria-hidden="true"
+      >
+        <rect x="3" y="4" width="18" height="7" rx="1.5" />
+        <rect x="3" y="13" width="18" height="7" rx="1.5" />
+        <path d="M7 7.5h.01M7 16.5h.01" strokeLinecap="round" />
+      </svg>
+      <span className="truncate">{guildName || 'Unknown server'}</span>
+      <span className="text-white/15">·</span>
+      <ChannelBadge
+        channelId={channelId}
+        profile={profile}
+        showId={false}
+        inline
+      />
+    </div>
+  );
 }
 
 function SectionShell({
@@ -235,6 +272,7 @@ function RegularRemindersSection({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<'create' | Reminder | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Reminder | null>(null);
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState(0);
 
@@ -285,22 +323,28 @@ function RegularRemindersSection({ userId }: { userId: string }) {
 
   async function handleDelete(id: string) {
     setDeleting(id);
-    const res = await fetch(`/api/users/reminders/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-    if (res.ok) {
-      setReminders((prev) => {
-        const updated = prev.filter((r) => r.id !== id);
-        const newTotal = Math.ceil(updated.length / PAGE_SIZE);
-        if (page >= newTotal && page > 0) setPage((p) => p - 1);
-        return updated;
+    try {
+      const res = await fetch(`/api/users/reminders/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
       });
-      showToast('Reminder deleted');
-    } else {
+      if (res.ok) {
+        setReminders((prev) => {
+          const updated = prev.filter((r) => r.id !== id);
+          const newTotal = Math.ceil(updated.length / PAGE_SIZE);
+          if (page >= newTotal && page > 0) setPage((p) => p - 1);
+          return updated;
+        });
+        setDeleteTarget(null);
+        showToast('Reminder deleted');
+      } else {
+        showErrorToast('Failed to delete reminder');
+      }
+    } catch {
       showErrorToast('Failed to delete reminder');
+    } finally {
+      setDeleting(null);
     }
-    setDeleting(null);
   }
 
   const sorted = [...reminders].sort((a, b) => a.timestamp - b.timestamp);
@@ -414,21 +458,11 @@ function RegularRemindersSection({ userId }: { userId: string }) {
                           </div>
                           <p className="text-white/85 text-sm leading-snug break-words">{r.message}</p>
                           {isGuild && r.channelId && (
-                            <div className="flex items-center gap-1.5 mt-1.5 min-w-0 text-[11px] text-white/35">
-                              <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                                <rect x="3" y="4" width="18" height="7" rx="1.5" />
-                                <rect x="3" y="13" width="18" height="7" rx="1.5" />
-                                <path d="M7 7.5h.01M7 16.5h.01" strokeLinecap="round" />
-                              </svg>
-                              <span className="truncate">{channelProfiles[r.channelId]?.guildName ?? 'Unknown server'}</span>
-                              <span className="text-white/15">·</span>
-                              <ChannelBadge
-                                channelId={r.channelId}
-                                profile={channelProfiles[r.channelId]}
-                                showId={false}
-                                inline
-                              />
-                            </div>
+                            <ReminderTarget
+                              guildName={channelProfiles[r.channelId]?.guildName}
+                              channelId={r.channelId}
+                              profile={channelProfiles[r.channelId]}
+                            />
                           )}
                           <div className="flex items-center gap-2 mt-1.5">
                             <p className={['text-xs tabular-nums', isPast ? 'text-white/30' : 'text-orange-light/60'].join(' ')}>
@@ -453,7 +487,7 @@ function RegularRemindersSection({ userId }: { userId: string }) {
                                 icon: 'delete',
                                 danger: true,
                                 disabled: deleting === r.id,
-                                onSelect: () => handleDelete(r.id),
+                                onSelect: () => setDeleteTarget(r),
                               },
                             ]}
                           />
@@ -491,6 +525,26 @@ function RegularRemindersSection({ userId }: { userId: string }) {
           onSave={(msg, ts) => handleEdit(modal, msg, ts)}
           onClose={() => setModal(null)}
         />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          title="Delete reminder?"
+          description="This reminder will be permanently deleted."
+          confirmLabel="Delete reminder"
+          busy={deleting === deleteTarget.id}
+          onConfirm={() => handleDelete(deleteTarget.id)}
+          onClose={() => {
+            if (!deleting) setDeleteTarget(null);
+          }}
+        >
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3">
+            <p className="break-words text-sm text-white/80">{deleteTarget.message}</p>
+            <p className="mt-1 text-xs text-white/30">
+              {formatTimestamp(deleteTarget.timestamp)}
+            </p>
+          </div>
+        </ConfirmDeleteModal>
       )}
     </>
   );
@@ -643,8 +697,15 @@ function ReactionRemindersSection() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ReactionReminder | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ReactionReminder | null>(null);
   const [page, setPage] = useState(0);
   const [direction, setDirection] = useState(0);
+
+  const channelIds = items.map((item) => item.channelId);
+  const knownChannels = items
+    .filter((item) => item.channelName)
+    .map((item) => ({ id: item.channelId, name: item.channelName }));
+  const channelProfiles = useChannelProfiles(channelIds, knownChannels);
 
   useEffect(() => {
     fetch('/api/users/reaction-reminders', { credentials: 'include' })
@@ -679,22 +740,28 @@ function ReactionRemindersSection() {
 
   async function handleDelete(id: string) {
     setDeleting(id);
-    const res = await fetch(`/api/users/reaction-reminders/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-    if (res.ok) {
-      setItems((prev) => {
-        const updated = prev.filter((r) => r.id !== id);
-        const newTotal = Math.ceil(updated.length / PAGE_SIZE);
-        if (page >= newTotal && page > 0) setPage((p) => p - 1);
-        return updated;
+    try {
+      const res = await fetch(`/api/users/reaction-reminders/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
       });
-      showToast('Reaction reminder removed');
-    } else {
+      if (res.ok) {
+        setItems((prev) => {
+          const updated = prev.filter((r) => r.id !== id);
+          const newTotal = Math.ceil(updated.length / PAGE_SIZE);
+          if (page >= newTotal && page > 0) setPage((p) => p - 1);
+          return updated;
+        });
+        setDeleteTarget(null);
+        showToast('Reaction reminder removed');
+      } else {
+        showErrorToast('Failed to remove reminder');
+      }
+    } catch {
       showErrorToast('Failed to remove reminder');
+    } finally {
+      setDeleting(null);
     }
-    setDeleting(null);
   }
 
   const sorted = [...items].sort((a, b) => a.createdAt - b.createdAt);
@@ -779,10 +846,17 @@ function ReactionRemindersSection() {
                               <span className="text-white/35 italic">Uses the reacted message’s text</span>
                             )}
                           </p>
+                          <ReminderTarget
+                            guildName={item.guildName ?? channelProfiles[item.channelId]?.guildName}
+                            channelId={item.channelId}
+                            profile={channelProfiles[item.channelId]}
+                          />
                           <div className="flex items-center gap-2 mt-1.5">
-                            <p className="text-xs text-orange-light/60 truncate">{targetLabel(item)}</p>
+                            <p className="text-xs tabular-nums text-orange-light/60">
+                              {formatRelative(item.createdAt)}
+                            </p>
                             <span className="text-white/15 text-[10px]">·</span>
-                            <p className="text-[11px] text-white/25 shrink-0">{formatRelative(item.createdAt)}</p>
+                            <p className="text-[11px] text-white/25">{formatTimestamp(item.createdAt)}</p>
                           </div>
                         </div>
 
@@ -799,7 +873,7 @@ function ReactionRemindersSection() {
                               icon: 'delete',
                               danger: true,
                               disabled: deleting === item.id,
-                              onSelect: () => handleDelete(item.id),
+                              onSelect: () => setDeleteTarget(item),
                             },
                           ]}
                         />
@@ -835,6 +909,28 @@ function ReactionRemindersSection() {
           onSave={(durationSeconds, reminderMessage) => handleEdit(editing, durationSeconds, reminderMessage)}
           onClose={() => setEditing(null)}
         />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          title="Delete reaction reminder?"
+          description="This reaction reminder will be permanently removed."
+          confirmLabel="Delete reminder"
+          busy={deleting === deleteTarget.id}
+          onConfirm={() => handleDelete(deleteTarget.id)}
+          onClose={() => {
+            if (!deleting) setDeleteTarget(null);
+          }}
+        >
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3">
+            <p className="break-words text-sm text-white/80">
+              {deleteTarget.reminderMessage?.trim() ||
+                deleteTarget.sample?.trim() ||
+                'Uses the reacted message’s text'}
+            </p>
+            <p className="mt-1 text-xs text-white/30">{targetLabel(deleteTarget)}</p>
+          </div>
+        </ConfirmDeleteModal>
       )}
     </>
   );

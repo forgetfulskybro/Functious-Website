@@ -7,6 +7,7 @@ import type {
   GuildRole,
 } from '@/lib/types';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
+import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 import RolesDropdown from '@/components/ui/RolesDropdown';
 import TimezonePicker from '@/components/ui/TimezonePicker';
 import { Toggle } from '@/components/ui/Toggle';
@@ -112,6 +113,8 @@ export default function CommunityBirthdaySection({
     normalizeSettings(value),
   );
   const [submitting, setSubmitting] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     setSettings(normalizeSettings(value));
@@ -120,12 +123,13 @@ export default function CommunityBirthdaySection({
   const channelOptions = useMemo(
     () =>
       (channels as any[])
-        .filter((channel) => channel.type === 0)
         .map((channel) => ({
           id: String(channel.id),
           name: String(channel.name),
           type: Number(channel.type ?? 0),
           parentId: channel.parentId ? String(channel.parentId) : null,
+          botCanView: channel.botCanView ?? null,
+          botCanSend: channel.botCanSend ?? null,
         })),
     [channels],
   );
@@ -136,6 +140,7 @@ export default function CommunityBirthdaySection({
         id: String(role.id),
         name: String(role.name),
         color: Number(role.color ?? 0),
+        botCanAssign: role.botCanAssign ?? null,
       })),
     [roles],
   );
@@ -149,6 +154,17 @@ export default function CommunityBirthdaySection({
 
   function patch(next: Partial<CommunityBirthdaySettings>) {
     setSettings((previous) => ({ ...previous, ...next }));
+  }
+
+  async function handleClear() {
+    if (busy) return;
+    setClearing(true);
+    try {
+      await onSave(null);
+      setClearOpen(false);
+    } finally {
+      setClearing(false);
+    }
   }
 
   async function handleSave() {
@@ -289,7 +305,7 @@ export default function CommunityBirthdaySection({
             {value && (
               <button
                 type="button"
-                onClick={() => onSave(null)}
+                onClick={() => setClearOpen(true)}
                 disabled={busy}
                 className="rounded-lg bg-white/5 px-3 py-1.5 text-xs text-white/45 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
               >
@@ -307,6 +323,25 @@ export default function CommunityBirthdaySection({
           </div>
         </div>
       </div>
+
+      {clearOpen && (
+        <ConfirmDeleteModal
+          title="Clear community birthday?"
+          description="The community birthday schedule and announcement settings will be removed."
+          confirmLabel="Clear"
+          busyLabel="Clearing…"
+          busy={clearing}
+          onConfirm={handleClear}
+          onClose={() => {
+            if (!clearing) setClearOpen(false);
+          }}
+        >
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3">
+            <p className="text-sm font-medium text-white/80">Community birthday</p>
+            <p className="mt-1 text-xs text-white/30">{creationLabel}</p>
+          </div>
+        </ConfirmDeleteModal>
+      )}
     </section>
   );
 }

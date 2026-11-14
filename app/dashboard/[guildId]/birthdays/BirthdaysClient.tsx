@@ -14,6 +14,7 @@ import { Toggle } from '@/components/ui/Toggle';
 import ChannelDropdown from '@/components/ui/ChannelDropdown';
 import RolesDropdown from '@/components/ui/RolesDropdown';
 import UserBadge from '@/components/ui/UserBadge';
+import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import CommunityBirthdaySection from './CommunityBirthdaySection';
 import Image from 'next/image';
@@ -90,6 +91,8 @@ export default function BirthdaysClient({
   const [idError, setIdError] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [blacklisting, setBlacklisting] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<string | null>(null);
+  const [removingBlacklist, setRemovingBlacklist] = useState(false);
   const [search, setSearch] = useState('');
   const [listSearch, setListSearch] = useState('');
   const [msgWithAge, setMsgWithAge] = useState<string>(initialData.birthdayMessageWithAge ?? '');
@@ -249,6 +252,7 @@ export default function BirthdaysClient({
   }
 
   async function handleRemoveBlacklist(userId: string) {
+    setRemovingBlacklist(true);
     try {
       const res = await fetch(
         `/api/bot/guilds/${activeGuildId}/birthdays/blacklist?userId=${encodeURIComponent(userId)}`,
@@ -261,6 +265,7 @@ export default function BirthdaysClient({
       if (res.ok) {
         const data = await res.json();
         setBlacklist(data.birthdayBlacklist ?? blacklist.filter((id) => id !== userId));
+        setRemoveTarget(null);
         showToast('Removed from blacklist', {
           description: 'This user can opt back in on their profile.',
         });
@@ -270,6 +275,8 @@ export default function BirthdaysClient({
       }
     } catch {
       showErrorToast('Failed to remove', { description: 'Please try again.' });
+    } finally {
+      setRemovingBlacklist(false);
     }
   }
 
@@ -379,7 +386,7 @@ export default function BirthdaysClient({
                     <p className="text-white/30 text-xs mt-0.5">Role temporarily added on birthdays.</p>
                     <div className="mt-3 w-full">
                       <RolesDropdown
-                        roles={guildRoles.map((r: any) => ({ id: String(r.id), name: String(r.name), color: Number(r.color ?? 0) }))}
+                        roles={guildRoles.map((r: any) => ({ id: String(r.id), name: String(r.name), color: Number(r.color ?? 0), botCanAssign: r.botCanAssign ?? null }))}
                         value={data.birthdayRole ?? ''}
                         onChange={(id) => handleSave({ birthdayRole: id || null })}
                         placeholder="Select a role…"
@@ -710,8 +717,8 @@ export default function BirthdaysClient({
                       <UserBadge userId={userId} profile={profiles[userId]} className="flex-1 min-w-0" />
                       <button
                         type="button"
-                        onClick={() => handleRemoveBlacklist(userId)}
-                        disabled={blacklisting}
+                        onClick={() => setRemoveTarget(userId)}
+                        disabled={blacklisting || removingBlacklist}
                         title="Remove from blacklist"
                         className="p-1.5 rounded-md text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40 focus-visible:outline-none flex-shrink-0"
                       >
@@ -808,6 +815,24 @@ export default function BirthdaysClient({
             </div>
           </div>
         </div>
+      )}
+
+      {removeTarget && (
+        <ConfirmDeleteModal
+          title="Remove from blacklist?"
+          description="This user will be able to opt back in to birthday announcements in this community."
+          confirmLabel="Remove"
+          busyLabel="Removing…"
+          busy={removingBlacklist}
+          onConfirm={() => handleRemoveBlacklist(removeTarget)}
+          onClose={() => {
+            if (!removingBlacklist) setRemoveTarget(null);
+          }}
+        >
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3">
+            <UserBadge userId={removeTarget} profile={profiles[removeTarget]} />
+          </div>
+        </ConfirmDeleteModal>
       )}
     </div>
   );

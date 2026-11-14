@@ -222,7 +222,7 @@ function buildPreviewContext({
       type: 0,
       flags: 0,
       url: isTag
-        ? `https://fluxer.app/channels/${guild.id}/${channelId}/111222333444555666`
+        ? `https://fluxer.com/channels/${guild.id}/${channelId}/111222333444555666`
         : null,
     },
     guild: {

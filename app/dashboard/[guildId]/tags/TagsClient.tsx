@@ -4,9 +4,7 @@ import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/t
 import { showErrorToast, showToast } from '@/components/ui/Toast';
 import ItemActions from '@/components/ui/ItemActions';
 import { useState, useEffect, useCallback } from 'react';
-import { TagRowSkeleton, Skeleton } from '@/components/ui/Skeletons';
-import { SettingRow } from '@/components/ui/SettingRow';
-import { Toggle } from '@/components/ui/Toggle';
+import { TagRowSkeleton } from '@/components/ui/Skeletons';
 import { useGuildData } from '@/hooks/useGuildData';
 import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
@@ -36,6 +34,11 @@ function mapTags(raw: any[]): TagEntry[] {
     uses: t.uses || 0,
     trigger: t.trigger === true,
     anyTrigger: t.anyTrigger === true,
+    triggerBots: t.triggerBots !== false,
+    triggerContent:
+      t.triggerContent === 'messages' || t.triggerContent === 'embeds'
+        ? t.triggerContent
+        : 'both',
   }));
 }
 
@@ -88,20 +91,6 @@ export default function TagsClient({
     [tags, save]
   );
 
-  const handleBotTriggerToggle = useCallback(
-    async (value: boolean) => {
-      try {
-        await save({ tagTriggerBots: value } as any);
-        showToast('Settings saved', {
-          description: `Bot trigger words ${value ? 'enabled' : 'disabled'}.`,
-        });
-      } catch {
-        showErrorToast('Error', { description: 'Failed to update tag settings.' });
-      }
-    },
-    [save]
-  );
-
   useDashboardToasts(loading, error);
 
   const iconUrl = userGuild.icon
@@ -140,32 +129,13 @@ export default function TagsClient({
           </div>
         </div>
 
-        <div className="mb-5 rounded-xl bg-bg-card px-6 py-1">
-          {loading ? (
-            <div className="py-3.5">
-              <Skeleton className="h-5 w-full" />
-            </div>
-          ) : (
-            <SettingRow
-              label="Bot trigger words"
-              description="Let bot messages run tags that have a trigger word."
-            >
-              <Toggle
-                value={data.tagTriggerBots === true}
-                onChangeAction={handleBotTriggerToggle}
-                disabled={saving}
-              />
-            </SettingRow>
-          )}
-        </div>
-
         <section className="rounded-2xl bg-bg-card p-6">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-widest text-white/45">
                 Custom Tags
               </h2>
-              <p className="mt-0.5 text-[10px] text-white/20">Text, embed & Rune script · exact or anywhere triggers</p>
+              <p className="mt-0.5 text-[10px] text-white/20">Text, embed & Rune script · per-tag bot and content triggers</p>
             </div>
             {!loading && (
               <button
@@ -205,6 +175,20 @@ export default function TagsClient({
                       {(tag.trigger || tag.anyTrigger) && (
                         <span className="ml-1.5 rounded bg-orange/15 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-orange-warm">
                           {tag.anyTrigger ? 'anywhere trigger' : 'trigger word'}
+                        </span>
+                      )}
+                      {(tag.trigger || tag.anyTrigger) &&
+                        tag.triggerContent &&
+                        tag.triggerContent !== 'both' && (
+                          <span className="ml-1.5 rounded bg-white/5 px-1.5 py-0.5 align-middle text-[10px] font-medium text-white/40">
+                            {tag.triggerContent === 'messages'
+                              ? 'messages only'
+                              : 'embeds only'}
+                          </span>
+                        )}
+                      {(tag.trigger || tag.anyTrigger) && tag.triggerBots === false && (
+                        <span className="ml-1.5 rounded bg-white/5 px-1.5 py-0.5 align-middle text-[10px] font-medium text-white/40">
+                          bots off
                         </span>
                       )}
                     </p>

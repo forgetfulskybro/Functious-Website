@@ -109,7 +109,7 @@ function buildDemoContext(args: string[] = [], user = DEFAULT_GUIDE_USER) {
       webhook_id: null,
       type: 0,
       flags: 0,
-      url: 'https://fluxer.app/channels/555666777888999000/987654321098765432/111222333444555666',
+      url: 'https://fluxer.com/channels/555666777888999000/987654321098765432/111222333444555666',
     },
     guild: {
       id: '555666777888999000',

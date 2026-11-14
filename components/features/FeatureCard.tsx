@@ -23,7 +23,7 @@ export default function FeatureCard({ feature }: FeatureCardProps) {
         {shortDescription}
       </span>
 
-      <span className="mt-4 flex items-center justify-between gap-3">
+      <span className="mt-auto flex items-center justify-between gap-3 pt-4">
         {mainCommand ? (
           <span className="inline-flex w-fit items-center rounded-md bg-white/5 px-2 py-0.5 font-mono text-[11px] text-orange-light/80 transition-colors group-hover:bg-orange/10 group-hover:text-orange">
             f!{mainCommand}

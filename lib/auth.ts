@@ -6,8 +6,8 @@ const secret = new TextEncoder().encode(
   process.env.SESSION_SECRET
 );
 
-export const FLUXER_API = 'https://api.fluxer.app/v1';
-export const FLUXER_OAUTH_BASE = 'https://web.fluxer.app/oauth2/authorize';
+export const FLUXER_API = 'https://fluxer.com/api/v1';
+export const FLUXER_OAUTH_BASE = 'https://fluxer.com/oauth2/authorize';
 
 export async function createSession(session: Session): Promise<string> {
   const token = await new SignJWT({ session })

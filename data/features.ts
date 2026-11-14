@@ -286,7 +286,6 @@ export const FEATURES: FeatureData[] = [
     ],
     usageExamples: [
       'f!checkup',
-      'f!launchpad',
       'f!health',
     ],
     relatedCommands: ['checkup'],

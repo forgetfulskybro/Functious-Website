@@ -24,6 +24,7 @@ import { useGuildData } from '@/hooks/useGuildData';
 import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import UserBadge from '@/components/ui/UserBadge';
+import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 import { useState, useEffect, useRef } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toggle } from '@/components/ui/Toggle';
@@ -109,6 +110,7 @@ function StickyRolesPanel({
 }) {
   const [page, setPage] = useState(0);
   const [editEntry, setEditEntry] = useState<StickyEntry | null>(null);
+  const [deleteEntry, setDeleteEntry] = useState<StickyEntry | null>(null);
   const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
   const paginated = entries.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
   const profiles = useUserProfiles(entries.map((e) => e.user));
@@ -186,7 +188,7 @@ function StickyRolesPanel({
                           label: 'Delete saved roles',
                           icon: 'delete',
                           danger: true,
-                          onSelect: () => handleDelete(entry.user),
+                          onSelect: () => setDeleteEntry(entry),
                         },
                       ]}
                     />
@@ -265,6 +267,23 @@ function StickyRolesPanel({
           onClose={() => setEditEntry(null)}
         />
       )}
+
+      {deleteEntry && (
+        <ConfirmDeleteModal
+          title="Delete saved roles?"
+          description="The saved role snapshot for this member will be removed."
+          confirmLabel="Delete roles"
+          onConfirm={() => {
+            handleDelete(deleteEntry.user);
+            setDeleteEntry(null);
+          }}
+          onClose={() => setDeleteEntry(null)}
+        >
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3">
+            <UserBadge userId={deleteEntry.user} profile={profiles[deleteEntry.user]} inline />
+          </div>
+        </ConfirmDeleteModal>
+      )}
     </>
   );
 }
@@ -277,6 +296,10 @@ interface Props {
   initialData: GuildData;
   guildRoles?: { id: string; name: string; color?: number }[];
 }
+
+type RoleDeleteTarget =
+  | { kind: 'join'; index: number; name: string; detail: string }
+  | { kind: 'bypass'; index: number; name: string; detail: string };
 
 export default function RolesClient({
   user,
@@ -296,6 +319,7 @@ export default function RolesClient({
 
   const [bypassModal, setBypassModal] = useState<'create' | BypassEntry | null>(null);
   const [joinModal, setJoinModal] = useState<'create' | JoinRoleEntry | null>(null);
+  const [roleDelete, setRoleDelete] = useState<RoleDeleteTarget | null>(null);
 
   const hydratedForGuild = useRef<string | null>(null);
 
@@ -485,7 +509,15 @@ export default function RolesClient({
                             icon: 'delete',
                             danger: true,
                             onSelect: () =>
-                              persistJoinRoles((prev) => prev.filter((_, x) => x !== i)),
+                              setRoleDelete({
+                                kind: 'join',
+                                index: i,
+                                name: roleName(entry.role),
+                                detail:
+                                  entry.type === 'timed'
+                                    ? `Timed · assigned after ${formatDuration(entry.durationMs ?? 3_600_000)}`
+                                    : 'Automatically assigned',
+                              }),
                           },
                         ]}
                       />
@@ -570,13 +602,16 @@ export default function RolesClient({
                             label: 'Delete bypass role',
                             icon: 'delete',
                             danger: true,
-                            onSelect: () => {
-                              setBypass((prev) => {
-                                const next = prev.filter((_, x) => x !== i);
-                                handleSave({ bypassRoles: next as any });
-                                return next;
-                              });
-                            },
+                            onSelect: () =>
+                              setRoleDelete({
+                                kind: 'bypass',
+                                index: i,
+                                name: roleName(entry.role),
+                                detail:
+                                  entry.commands.length === 0 || entry.commands.includes('all')
+                                    ? 'Bypasses all restrictions'
+                                    : entry.commands.join(', '),
+                              }),
                           },
                         ]}
                       />
@@ -637,6 +672,36 @@ export default function RolesClient({
           }}
           onClose={() => setJoinModal(null)}
         />
+      )}
+
+      {roleDelete && (
+        <ConfirmDeleteModal
+          title={roleDelete.kind === 'join' ? 'Delete join role?' : 'Delete bypass role?'}
+          description={
+            roleDelete.kind === 'join'
+              ? 'This role will no longer be assigned automatically when members join.'
+              : 'This role will stop bypassing command permission restrictions.'
+          }
+          confirmLabel="Delete role"
+          onConfirm={() => {
+            if (roleDelete.kind === 'join') {
+              persistJoinRoles((prev) => prev.filter((_, index) => index !== roleDelete.index));
+            } else {
+              setBypass((prev) => {
+                const next = prev.filter((_, index) => index !== roleDelete.index);
+                handleSave({ bypassRoles: next as any });
+                return next;
+              });
+            }
+            setRoleDelete(null);
+          }}
+          onClose={() => setRoleDelete(null)}
+        >
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3">
+            <p className="text-sm font-medium text-white/80">{roleDelete.name}</p>
+            <p className="mt-1 text-xs text-white/30">{roleDelete.detail}</p>
+          </div>
+        </ConfirmDeleteModal>
       )}
     </div>
   );

@@ -344,7 +344,7 @@ export default function ConfigurationClient({
 
                   <SettingRow
                     label="Health Checkup"
-                    description="Run the same audit as f!checkup: bot access, roles, reaction roles, channels, forms and active features."
+                    description="Run the same audit as f!checkup: basic permissions, role assignments, reaction roles, channel access, forms and active features."
                   >
                     <button
                       type="button"

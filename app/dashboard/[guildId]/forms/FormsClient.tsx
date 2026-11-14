@@ -114,6 +114,8 @@ export default function FormsClient({
           name: String(channel.name),
           type: Number(channel.type ?? 0),
           parentId: channel.parentId ? String(channel.parentId) : null,
+          botCanView: channel.botCanView ?? null,
+          botCanSend: channel.botCanSend ?? null,
         })),
     [guildChannels],
   );
@@ -124,6 +126,7 @@ export default function FormsClient({
         id: String(role.id),
         name: String(role.name),
         color: Number(role.color ?? 0),
+        botCanAssign: role.botCanAssign ?? null,
       })),
     [guildRoles],
   );

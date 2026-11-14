@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import type { FluxerUser, DashboardGuild, BirthdayData, FluxerGuild } from '@/lib/types';
 import { Toggle } from '@/components/ui/Toggle';
+import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 import { showToast, showErrorToast } from '@/components/ui/Toast';
 import { BirthdayModal, BirthdayPreviewModal } from './Modals';
 
@@ -11,8 +12,6 @@ const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
-
-const MONTH_DAYS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -300,24 +299,13 @@ export default function BirthdaySettings({
                   >
                     Preview
                   </button>
-                  {confirmRemove ? (
-                    <button
-                      type="button"
-                      onClick={handleRemove}
-                      disabled={removing}
-                      className="px-3.5 py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 text-xs font-medium transition-colors disabled:opacity-50"
-                    >
-                      {removing ? 'Removing…' : 'Confirm'}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmRemove(true)}
-                      className="px-3.5 py-2 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/50 hover:text-red-400 text-xs font-medium transition-colors"
-                    >
-                      Remove
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setConfirmRemove(true)}
+                    className="px-3.5 py-2 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/50 hover:text-red-400 text-xs font-medium transition-colors"
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
             ) : (
@@ -518,6 +506,31 @@ export default function BirthdaySettings({
           guildName={previewGuild.name ?? 'community'}
           onClose={() => setPreviewGuildId(null)}
         />
+      )}
+
+      {confirmRemove && (
+        <ConfirmDeleteModal
+          title="Remove birthday?"
+          description="Your birthday and community announcement preferences will be cleared."
+          confirmLabel="Remove birthday"
+          busyLabel="Removing…"
+          busy={removing}
+          onConfirm={handleRemove}
+          onClose={() => {
+            if (!removing) setConfirmRemove(false);
+          }}
+        >
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3">
+            <p className="text-sm font-medium text-white/80">
+              {birthday?.month && birthday?.day
+                ? `${MONTHS[birthday.month - 1]} ${ordinal(birthday.day)}`
+                : 'Your birthday'}
+            </p>
+            <p className="mt-1 text-xs text-white/30">
+              Announcements will be disabled in every community.
+            </p>
+          </div>
+        </ConfirmDeleteModal>
       )}
     </>
   );

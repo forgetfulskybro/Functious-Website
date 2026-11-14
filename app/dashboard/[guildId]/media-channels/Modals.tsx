@@ -97,6 +97,8 @@ export function MediaChannelModal({
     name: c.name,
     type: c.type,
     parentId: (c as any).parent ?? null,
+    botCanView: c.botCanView ?? null,
+    botCanSend: c.botCanSend ?? null,
   }));
 
   const handleSubmit = async (e: React.FormEvent) => {

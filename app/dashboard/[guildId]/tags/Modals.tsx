@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import SelectDropdown from '@/components/ui/SelectDropdown';
+import { Toggle } from '@/components/ui/Toggle';
 import type { FluxerUser, FluxerGuild, UserProfile } from '@/lib/types';
 import { showErrorToast } from '@/components/ui/Toast';
 import UserBadge from '@/components/ui/UserBadge';
@@ -24,15 +25,28 @@ export interface TagEntry {
   uses?: number;
   trigger?: boolean;
   anyTrigger?: boolean;
+  triggerBots?: boolean;
+  triggerContent?: 'messages' | 'embeds' | 'both';
 }
 
 type TriggerMode = 'off' | 'trigger' | 'anywhere';
+type TriggerContent = 'messages' | 'embeds' | 'both';
 
 const TRIGGER_MODES: { value: TriggerMode; label: string }[] = [
   { value: 'off', label: 'Off' },
   { value: 'trigger', label: 'Trigger' },
   { value: 'anywhere', label: 'Anywhere' },
 ];
+
+const TRIGGER_CONTENT_OPTIONS: { value: TriggerContent; label: string }[] = [
+  { value: 'messages', label: 'Messages' },
+  { value: 'embeds', label: 'Embeds' },
+  { value: 'both', label: 'Both' },
+];
+
+function normalizeTriggerContent(value: unknown): TriggerContent {
+  return value === 'messages' || value === 'embeds' ? value : 'both';
+}
 
 export function TagModal({
   initial,
@@ -63,6 +77,10 @@ export function TagModal({
       : initial?.trigger === true
         ? 'trigger'
         : 'off'
+  );
+  const [triggerBots, setTriggerBots] = useState(initial?.triggerBots !== false);
+  const [triggerContent, setTriggerContent] = useState<TriggerContent>(() =>
+    normalizeTriggerContent(initial?.triggerContent)
   );
   const [content, setContent] = useState(() =>
     initial?.type === 'embed'
@@ -138,6 +156,8 @@ export function TagModal({
         uses: initial?.uses ?? 0,
         trigger: triggerMode === 'trigger',
         anyTrigger: triggerMode === 'anywhere',
+        triggerBots,
+        triggerContent,
       });
     } catch {
       showErrorToast('Error', { description: 'Failed to save tag.' });
@@ -215,11 +235,7 @@ export function TagModal({
               </p>
             </div>
 
-            <div
-              className={`grid items-start gap-4 ${
-                isScript ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
-              }`}
-            >
+            <div className={`grid items-start gap-4 ${isScript ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
               <SelectDropdown
                 label="Type"
                 value={type}
@@ -300,7 +316,7 @@ export function TagModal({
               )}
             </div>
 
-            <div className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5">
+            <div className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-3">
               <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-white/70">Trigger mode</p>
@@ -334,6 +350,54 @@ export function TagModal({
                   ))}
                 </div>
               </div>
+
+              {triggerEnabled && (
+                <div className="mt-3 flex items-center justify-between gap-4 border-t border-white/5 pt-3">
+                  <div>
+                    <p className="text-xs font-medium text-white/70">Bot triggering</p>
+                    <p className="mt-0.5 text-[10px] text-white/30">
+                      Allow bot messages to trigger this tag.
+                    </p>
+                  </div>
+                  <Toggle
+                    value={triggerBots}
+                    onChangeAction={setTriggerBots}
+                    disabled={busy}
+                  />
+                </div>
+              )}
+
+              {triggerEnabled && (
+                <div className="mt-3 flex flex-col gap-2.5 border-t border-white/5 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-white/70">Trigger content</p>
+                    <p className="mt-0.5 text-[10px] text-white/30">
+                      Choose what can trigger this tag automatically.
+                    </p>
+                  </div>
+                  <div
+                    className="grid grid-cols-3 gap-1 rounded-lg bg-black/20 p-1"
+                    role="group"
+                    aria-label="Trigger content"
+                  >
+                    {TRIGGER_CONTENT_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={triggerContent === option.value}
+                        onClick={() => setTriggerContent(option.value)}
+                        className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                          triggerContent === option.value
+                            ? 'bg-orange/20 text-orange-warm'
+                            : 'text-white/35 hover:bg-white/5 hover:text-white/70'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {!isScript ? (
@@ -486,6 +550,12 @@ export function TagViewModal({
       : tag.type === 'embed'
         ? '📄 Embed tag'
         : '📝 Text tag';
+  const triggerContentLabel =
+    tag.triggerContent === 'messages'
+      ? 'messages only'
+      : tag.triggerContent === 'embeds'
+        ? 'embeds only'
+        : 'messages & embeds';
 
   const isScript = tag.type === 'script';
   const source = content ?? '';
@@ -537,6 +607,8 @@ export function TagViewModal({
               {typeLabel}
               {(tag.trigger || tag.anyTrigger) &&
                 ` · 🔔 ${tag.anyTrigger ? 'anywhere trigger' : 'trigger word'}`}
+              {(tag.trigger || tag.anyTrigger) && ` · ${triggerContentLabel}`}
+              {tag.triggerBots === false && ' · 🤖 bot triggers off'}
               {(tag.uses ?? 0) > 0 &&
                 ` · ${tag.uses} use${tag.uses === 1 ? '' : 's'}`}
             </p>

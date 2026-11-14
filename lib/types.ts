@@ -111,6 +111,8 @@ export interface GuildChannel {
   name: string;
   type: number;
   parentId?: string | null;
+  botCanView?: boolean | null;
+  botCanSend?: boolean | null;
 }
 
 export interface GuildRole {
@@ -119,6 +121,7 @@ export interface GuildRole {
   color?: number | string | null;
   position?: number;
   permissions?: string;
+  botCanAssign?: boolean | null;
 }
 
 export interface GuildEmoji {
@@ -163,7 +166,6 @@ export interface GuildData {
   bypassRoles: string[];
   timedRoles: unknown[];
   tags: unknown[];
-  tagTriggerBots: boolean;
   scheduledMessages: unknown[];
   stickies: StickyEntry[];
   commandSettings: CommandSetting[];
@@ -354,6 +356,7 @@ export interface Roles {
   name: string;
   id: string;
   color: string | null;
+  botCanAssign?: boolean | null;
 }
 
 export interface Channels {
@@ -361,6 +364,8 @@ export interface Channels {
   id: string;
   type: number;
   parent: string | null;
+  botCanView?: boolean | null;
+  botCanSend?: boolean | null;
 }
 
 export interface BotStatus {

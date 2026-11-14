@@ -1,11 +1,19 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import AccessWarning from './AccessWarning';
 
 interface Role {
   id: string;
   name: string;
   color?: number;
+  botCanAssign?: boolean | null;
+}
+
+function roleAccessError(role: Role): string | null {
+  return role.botCanAssign === false
+    ? "This role is above the bot's highest role."
+    : null;
 }
 
 function roleColor(color?: number): string {
@@ -123,6 +131,7 @@ export default function RolesDropdown(props: Props) {
     if (!multiple) {
       const selected = roles.find((r) => r.id === singleValue);
       if (!selected) return <span className="text-white/30 text-sm">{placeholder}</span>;
+      const selectedError = roleAccessError(selected);
       return (
         <span className="flex items-center gap-2">
           <span
@@ -130,6 +139,7 @@ export default function RolesDropdown(props: Props) {
             style={{ backgroundColor: roleColor(selected.color) }}
           />
           <span className="text-white text-sm truncate">{selected.name}</span>
+          {selectedError && <AccessWarning message={selectedError} />}
         </span>
       );
     }
@@ -139,6 +149,7 @@ export default function RolesDropdown(props: Props) {
 
     if (multiValue.length === 1) {
       const r = roles.find((x) => x.id === multiValue[0]);
+      const selectedError = r ? roleAccessError(r) : null;
       return (
         <span className="flex items-center gap-2">
           <span
@@ -146,6 +157,7 @@ export default function RolesDropdown(props: Props) {
             style={{ backgroundColor: r ? roleColor(r.color) : 'rgba(255,255,255,0.4)' }}
           />
           <span className="text-white text-sm truncate">{r?.name ?? multiValue[0]}</span>
+          {selectedError && <AccessWarning message={selectedError} />}
         </span>
       );
     }
@@ -154,6 +166,7 @@ export default function RolesDropdown(props: Props) {
       <span className="flex items-center gap-1.5 flex-wrap">
         {multiValue.slice(0, 3).map((id) => {
           const r = roles.find((x) => x.id === id);
+          const selectedError = r ? roleAccessError(r) : null;
           return (
             <span
               key={id}
@@ -164,6 +177,7 @@ export default function RolesDropdown(props: Props) {
               }}
             >
               {r?.name ?? id}
+              {selectedError && <AccessWarning message={selectedError} />}
             </span>
           );
         })}
@@ -243,6 +257,7 @@ export default function RolesDropdown(props: Props) {
               filtered.map((role) => {
                 const selected = isSelected(role.id);
                 const color = roleColor(role.color);
+                const accessError = roleAccessError(role);
 
                 return (
                   <button
@@ -277,7 +292,10 @@ export default function RolesDropdown(props: Props) {
                       style={{ backgroundColor: color }}
                     />
 
-                    <span className="truncate font-medium">{role.name}</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {role.name}
+                    </span>
+                    {accessError && <AccessWarning message={accessError} />}
                   </button>
                 );
               })

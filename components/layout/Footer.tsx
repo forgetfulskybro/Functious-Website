@@ -40,9 +40,6 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3">
               {[
-                { label: 'Home',     href: '/' },
-                { label: 'Features', href: '/#features' },
-                { label: 'Commands', href: '/commands' },
                 { label: 'Translate', href: '/translate' },
                 { label: 'Guides',   href: '/guides' },
                 { label: 'FAQ',      href: '/faq' },

@@ -1,12 +1,25 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useMemo } from "react";
+import AccessWarning from "./AccessWarning";
 
 interface Channel {
   id: string;
   name: string;
   type: number;
   parentId: string | null;
+  botCanView?: boolean | null;
+  botCanSend?: boolean | null;
+}
+
+function channelAccessError(channel: Channel): string | null {
+  if (channel.botCanView === false) {
+    return "The bot cannot view this channel.";
+  }
+  if (channel.type !== 4 && channel.botCanSend === false) {
+    return "The bot cannot send messages in this channel.";
+  }
+  return null;
 }
 
 interface ChannelGroup {
@@ -161,6 +174,7 @@ export default function ChannelDropdown({
   }, [channels, types, excludeIds, value, search]);
 
   const selected = channels.find((c) => c.id === value);
+  const selectedError = selected ? channelAccessError(selected) : null;
 
   function channelIcon(type?: number) {
     if (type === 4) {
@@ -228,6 +242,7 @@ export default function ChannelDropdown({
             <span className="flex items-center gap-1.5 min-w-0">
               {channelIcon(selected.type)}
               <span className="truncate min-w-0">{selected.name}</span>
+              {selectedError && <AccessWarning message={selectedError} />}
             </span>
           ) : (
             placeholder
@@ -323,28 +338,32 @@ export default function ChannelDropdown({
                     {group.categoryName}
                   </p>
 
-                  {group.channels.map((channel) => (
-                    <button
-                      key={channel.id}
-                      type="button"
-                      onClick={() => {
-                        onChangeAction(channel.id);
-                        setOpen(false);
-                        setSearch("");
-                      }}
-                      className={[
-                        "w-full flex items-center gap-2 px-4 py-2 text-xs text-left transition-colors",
-                        channel.id === value
-                          ? "bg-orange/10 text-orange-warm"
-                          : "text-white/65 hover:bg-white/5 hover:text-white",
-                      ].join(" ")}
-                    >
-                      {channelIcon(channel.type)}
-                      <span className="truncate font-medium">
-                        {channel.name}
-                      </span>
-                    </button>
-                  ))}
+                  {group.channels.map((channel) => {
+                    const accessError = channelAccessError(channel);
+                    return (
+                      <button
+                        key={channel.id}
+                        type="button"
+                        onClick={() => {
+                          onChangeAction(channel.id);
+                          setOpen(false);
+                          setSearch("");
+                        }}
+                        className={[
+                          "w-full flex items-center gap-2 px-4 py-2 text-xs text-left transition-colors",
+                          channel.id === value
+                            ? "bg-orange/10 text-orange-warm"
+                            : "text-white/65 hover:bg-white/5 hover:text-white",
+                        ].join(" ")}
+                      >
+                        {channelIcon(channel.type)}
+                        <span className="min-w-0 flex-1 truncate font-medium">
+                          {channel.name}
+                        </span>
+                        {accessError && <AccessWarning message={accessError} />}
+                      </button>
+                    );
+                  })}
                 </div>
               ))
             )}

@@ -238,7 +238,7 @@ export default function ReactionRolesClient({
                         />{' '}
                         •{' '}
                         <a
-                          href={`https://fluxer.app/channels/${activeGuildId}/${item.chanId}/${item.msgId}`}
+                          href={`https://fluxer.com/channels/${activeGuildId}/${item.chanId}/${item.msgId}`}
                           target="_blank"
                           rel="noreferrer"
                           className="hover:text-orange-warm/80"

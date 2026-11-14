@@ -9,7 +9,8 @@ import type {
   GuildRole,
 } from '@/lib/types';
 import { Toggle } from '@/components/ui/Toggle';
-import { showErrorToast } from '@/components/ui/Toast';
+import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
+import { showErrorToast, showToast } from '@/components/ui/Toast';
 import MultiSelect from './MultiSelect';
 
 const MAX_COOLDOWN_SECONDS = 3600;
@@ -101,6 +102,8 @@ function PolicyCard({
   const [cooldown, setCooldown] = useState(
     normalizedCooldown == null ? '' : String(normalizedCooldown / 1000)
   );
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     setCooldown(
@@ -410,7 +413,7 @@ function PolicyCard({
                 <button
                   type="button"
                   disabled={saving}
-                  onClick={() => onReset().catch(() => {})}
+                  onClick={() => setConfirmReset(true)}
                   className="rounded-lg px-2.5 py-1.5 text-[11px] text-white/30 transition-colors hover:bg-white/5 hover:text-white/60 disabled:opacity-40"
                 >
                   Reset to defaults
@@ -419,6 +422,38 @@ function PolicyCard({
             )}
           </div>
         </div>
+      )}
+
+      {confirmReset && (
+        <ConfirmDeleteModal
+          title="Reset command policy?"
+          description="Custom settings for this command will be removed and the defaults restored."
+          confirmLabel="Reset to defaults"
+          busyLabel="Resetting…"
+          busy={resetting}
+          onConfirm={async () => {
+            setResetting(true);
+            try {
+              await onReset();
+              setConfirmReset(false);
+              showToast('Command policy reset');
+            } catch {
+              showErrorToast('Failed to reset command policy');
+            } finally {
+              setResetting(false);
+            }
+          }}
+          onClose={() => {
+            if (!resetting) setConfirmReset(false);
+          }}
+        >
+          <div className="rounded-xl bg-white/[0.03] px-4 py-3">
+            <p className="font-mono text-sm text-white/80">
+              {prefix}
+              {command.name}
+            </p>
+          </div>
+        </ConfirmDeleteModal>
       )}
     </li>
   );

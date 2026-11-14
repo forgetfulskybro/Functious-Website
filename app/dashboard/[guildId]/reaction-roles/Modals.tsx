@@ -106,7 +106,7 @@ export function ReactionRoleModal({
   const [content, setContent] = useState(initial?.content || '');
   const [contentLoading, setContentLoading] = useState(!!initial && !initialCustom);
   const [messageLink, setMessageLink] = useState(
-    initialCustom ? `https://fluxer.app/channels/${guildId}/${initial?.chanId}/${initial?.msgId}` : ''
+    initialCustom ? `https://fluxer.com/channels/${guildId}/${initial?.chanId}/${initial?.msgId}` : ''
   );
   const [mappings, setMappings] = useState<ReactionRoleMapping[]>(
     initial?.roles?.length
@@ -423,7 +423,7 @@ export function ReactionRoleModal({
                 value={messageLink}
                 onChange={(e) => setMessageLink(e.target.value)}
                 disabled={initialCustom}
-                placeholder="https://fluxer.app/channels/.../.../..."
+                placeholder="https://fluxer.com/channels/.../.../..."
                 className="w-full h-10 bg-white/5 rounded-lg px-3 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange disabled:opacity-60"
               />
               <p className="text-white/25 text-[10px] mt-1.5">
@@ -850,7 +850,7 @@ export function ViewModal({
           </div>
 
           <a
-            href={`https://web.fluxer.app/channels/${guildId}/${item.chanId}/${item.msgId}`}
+            href={`https://fluxer.com/channels/${guildId}/${item.chanId}/${item.msgId}`}
             target="_blank"
             rel="noreferrer"
             className="block text-center text-orange-warm/80 hover:text-orange-warm text-xs py-2"

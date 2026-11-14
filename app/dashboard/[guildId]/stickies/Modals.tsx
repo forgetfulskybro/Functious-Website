@@ -233,6 +233,8 @@ export function StickyModal({
                       name: channel.name ?? channel.id,
                       type: channel.type ?? 0,
                       parentId: (channel as any).parentId ?? (channel as any).parent ?? null,
+                      botCanView: (channel as any).botCanView ?? null,
+                      botCanSend: (channel as any).botCanSend ?? null,
                     }))}
                     value={channelId}
                     onChangeAction={setChannelId}
