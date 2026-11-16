@@ -133,6 +133,7 @@ type Category =
   | 'communities';
 
 type FilterCategory = 'all' | Category;
+type SortMode = 'default' | 'newest' | 'oldest' | 'name';
 type ChipTone = 'neutral' | 'orange' | 'red';
 
 type ChipSpec = {
@@ -160,8 +161,10 @@ interface ViewRecord {
   title: string;
   meta?: string;
   chips?: ChipSpec[];
+  facets?: string[];
   guildId?: string;
   searchText: string;
+  raw: unknown;
   deleteTarget?: DeleteTarget;
 }
 
@@ -175,6 +178,13 @@ interface GuildOption {
 const CONFIRM_PHRASE = 'DELETE EVERYTHING';
 const PAGE_SIZE = 15;
 const MAX_SELECTED_ITEMS = 100;
+
+const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
+  { value: 'default', label: 'Default order' },
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'name', label: 'Name A–Z' },
+];
 
 const CATEGORY_LABELS: Record<Category, string> = {
   account: 'Account',
@@ -245,6 +255,91 @@ function formatRecordDate(value?: number | null) {
   });
 }
 
+function searchableText(value: unknown, depth = 0): string {
+  if (value == null || depth > 10) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    return value.map((entry) => searchableText(entry, depth + 1)).join(' ');
+  }
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, entry]) => {
+        const text = searchableText(entry, depth + 1);
+        return text ? `${key} ${text}` : '';
+      })
+      .filter(Boolean)
+      .join(' ');
+  }
+  return '';
+}
+
+function normalizeTimestamp(value: number) {
+  return value < 1_000_000_000_000 ? value * 1000 : value;
+}
+
+function timestampValue(value: unknown): number | undefined {
+  if (value instanceof Date) {
+    const time = value.getTime();
+    return Number.isFinite(time) ? time : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return normalizeTimestamp(value);
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 0) return normalizeTimestamp(numeric);
+    const parsed = Date.parse(value);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+const TIMESTAMP_FIELDS = [
+  'updatedAt',
+  'createdAt',
+  'submittedAt',
+  'startAt',
+  'endsAt',
+  'endAt',
+  'endedAt',
+  'scheduledAt',
+  'scheduledFor',
+  'timestamp',
+  'time',
+];
+
+function recordTimestamp(raw: unknown): number | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const record = raw as Record<string, unknown>;
+  for (const field of TIMESTAMP_FIELDS) {
+    const value = timestampValue(record[field]);
+    if (value != null) return value;
+  }
+  return undefined;
+}
+
+function sortRecords(records: ViewRecord[], mode: SortMode) {
+  if (mode === 'default') return records;
+
+  const sorted = [...records];
+  if (mode === 'name') {
+    return sorted.sort(
+      (left, right) =>
+        left.title.localeCompare(right.title) || left.key.localeCompare(right.key),
+    );
+  }
+
+  return sorted.sort((left, right) => {
+    const leftTime = recordTimestamp(left.raw);
+    const rightTime = recordTimestamp(right.raw);
+    if (leftTime == null && rightTime == null) return 0;
+    if (leftTime == null) return 1;
+    if (rightTime == null) return -1;
+    return mode === 'newest' ? rightTime - leftTime : leftTime - rightTime;
+  });
+}
+
 function Chip({
   children,
   tone = 'neutral',
@@ -271,14 +366,16 @@ function RecordRow({
   record,
   selected,
   onToggle,
+  onOpen,
 }: {
   record: ViewRecord;
   selected: boolean;
   onToggle: () => void;
+  onOpen: () => void;
 }) {
   return (
     <div
-      className={`flex items-start gap-2.5 px-3.5 py-2.5 transition-colors ${
+      className={`group flex items-start gap-2.5 px-3.5 py-2.5 transition-colors hover:bg-white/[0.02] ${
         selected ? 'bg-red-500/[0.025]' : ''
       }`}
     >
@@ -294,38 +391,56 @@ function RecordRow({
         <span className="mt-1 h-3.5 w-3.5 shrink-0" />
       )}
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-2">
-          <span className="mt-0.5 shrink-0 rounded border border-white/5 bg-white/[0.03] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/25">
-            {CATEGORY_LABELS[record.category]}
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`View full raw data for ${record.title}`}
+        className="flex min-w-0 flex-1 items-start gap-2 rounded-md text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-orange"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="flex items-start gap-2">
+            <span className="mt-0.5 shrink-0 rounded border border-white/5 bg-white/[0.03] px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-white/25">
+              {CATEGORY_LABELS[record.category]}
+            </span>
+            <span
+              className="line-clamp-2 min-w-0 flex-1 break-words text-sm leading-snug text-white/75"
+              title={record.title}
+            >
+              {record.title}
+            </span>
           </span>
-          <p
-            className="line-clamp-2 min-w-0 flex-1 break-words text-sm leading-snug text-white/75"
-            title={record.title}
-          >
-            {record.title}
-          </p>
-        </div>
 
-        {record.chips && record.chips.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {record.chips.map((chip, index) => (
-              <Chip key={`${chip.label}-${index}`} tone={chip.tone}>
-                {chip.label}
-              </Chip>
-            ))}
-          </div>
-        )}
+          {record.chips && record.chips.length > 0 && (
+            <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {record.chips.map((chip, index) => (
+                <Chip key={`${chip.label}-${index}`} tone={chip.tone}>
+                  {chip.label}
+                </Chip>
+              ))}
+            </span>
+          )}
 
-        {record.meta && (
-          <p
-            className="line-clamp-2 mt-1 break-all text-[11px] leading-snug text-white/25"
-            title={record.meta}
-          >
-            {record.meta}
-          </p>
-        )}
-      </div>
+          {record.meta && (
+            <span
+              className="line-clamp-2 mt-1 block break-all text-[11px] leading-snug text-white/25"
+              title={record.meta}
+            >
+              {record.meta}
+            </span>
+          )}
+        </span>
+
+        <svg
+          className="mt-1 h-3.5 w-3.5 shrink-0 text-white/15 transition-colors group-hover:text-white/35"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path d="m9 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -339,9 +454,11 @@ function CountCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function RawJson({ value }: { value: unknown }) {
+function RawJson({ value, full = false }: { value: unknown; full?: boolean }) {
   return (
-    <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-white/[0.04] bg-black/20 p-3 text-[11px] leading-relaxed text-white/45">
+    <pre
+      className={`${full ? 'max-h-[52dvh]' : 'max-h-72'} overflow-auto whitespace-pre-wrap break-words rounded-lg border border-white/[0.04] bg-black/20 p-3 text-[11px] leading-relaxed text-white/45`}
+    >
       {JSON.stringify(value, null, 2)}
     </pre>
   );
@@ -395,6 +512,140 @@ function RawJsonDetails({
   );
 }
 
+function RecordDetailModal({
+  record,
+  onClose,
+}: {
+  record: ViewRecord;
+  onClose: () => void;
+}) {
+  const json = JSON.stringify(record.raw, null, 2) ?? '';
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  async function copyJson() {
+    try {
+      if (!navigator.clipboard) throw new Error('Clipboard is unavailable.');
+      await navigator.clipboard.writeText(json);
+      showToast('Raw entry copied');
+    } catch (err) {
+      showErrorToast('Could not copy raw data', {
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    }
+  }
+
+  function downloadEntry() {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const safeKey =
+      record.key.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '') || 'entry';
+    anchor.href = url;
+    anchor.download = `functious-${safeKey}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="record-detail-title"
+    >
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+
+      <div className="relative flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#1b1010] shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-orange-warm/70">
+              {CATEGORY_LABELS[record.category]} · Raw entry
+            </p>
+            <h2
+              id="record-detail-title"
+              className="mt-1 break-words text-lg font-bold text-white"
+            >
+              {record.title}
+            </h2>
+            {record.meta && (
+              <p className="mt-1 break-all text-[11px] text-white/30">{record.meta}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-white/30 transition-colors hover:bg-white/5 hover:text-white/70"
+            aria-label="Close raw data"
+          >
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              aria-hidden="true"
+            >
+              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          {record.chips && record.chips.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {record.chips.map((chip, index) => (
+                <Chip key={`${chip.label}-${index}`} tone={chip.tone}>
+                  {chip.label}
+                </Chip>
+              ))}
+            </div>
+          )}
+
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-[10px] uppercase tracking-wider text-white/30">Full raw data</p>
+            <p className="text-[10px] text-white/20">Exact API entry</p>
+          </div>
+          <RawJson value={record.raw} full />
+        </div>
+
+        <div className="flex flex-wrap gap-2 border-t border-white/[0.06] px-5 py-4">
+          <button
+            type="button"
+            onClick={copyJson}
+            className="rounded-lg border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-medium text-white/50 transition-colors hover:bg-white/[0.07] hover:text-white/75"
+          >
+            Copy JSON
+          </button>
+          <button
+            type="button"
+            onClick={downloadEntry}
+            className="rounded-lg border border-white/5 bg-white/[0.03] px-3 py-1.5 text-[10px] font-medium text-white/50 transition-colors hover:bg-white/[0.07] hover:text-white/75"
+          >
+            Download entry
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto rounded-lg bg-white/5 px-3 py-1.5 text-[10px] font-medium text-white/70 transition-colors hover:bg-white/10"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DataBrowser({
   records,
   guildOptions,
@@ -409,12 +660,15 @@ function DataBrowser({
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<FilterCategory>('all');
   const [guild, setGuild] = useState('all');
+  const [facet, setFacet] = useState('all');
+  const [sort, setSort] = useState<SortMode>('default');
   const [page, setPage] = useState(1);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [viewingRecord, setViewingRecord] = useState<ViewRecord | null>(null);
 
   useEffect(() => {
     setSelectedKeys(new Set());
-  }, [records, query, category, guild, selectionResetToken]);
+  }, [records, query, category, guild, facet, selectionResetToken]);
 
   const categoryCounts = useMemo(() => {
     const counts: Record<FilterCategory, number> = {
@@ -437,16 +691,27 @@ function DataBrowser({
     return counts;
   }, [records]);
 
+  const facetOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const record of records) {
+      for (const value of record.facets ?? []) values.add(value);
+    }
+    return [...values].sort((left, right) => left.localeCompare(right));
+  }, [records]);
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
 
-    return records.filter((record) => {
+    const matches = records.filter((record) => {
       if (category !== 'all' && record.category !== category) return false;
       if (guild !== 'all' && record.guildId !== guild) return false;
+      if (facet !== 'all' && !record.facets?.includes(facet)) return false;
       if (needle && !record.searchText.toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [records, query, category, guild]);
+
+    return sortRecords(matches, sort);
+  }, [records, query, category, guild, facet, sort]);
 
   const filteredDeletable = useMemo(
     () => filtered.filter((record): record is SelectedRecord => Boolean(record.deleteTarget)),
@@ -471,7 +736,12 @@ function DataBrowser({
   const allPageSelected =
     pageSelectable.length > 0 &&
     pageSelectable.every((record) => selectedKeys.has(record.key));
-  const hasFilters = query.trim() !== '' || category !== 'all' || guild !== 'all';
+  const hasFilters =
+    query.trim() !== '' ||
+    category !== 'all' ||
+    guild !== 'all' ||
+    facet !== 'all' ||
+    sort !== 'default';
 
   function toggleRecord(key: string) {
     if (!selectedKeys.has(key) && selectedKeys.size >= MAX_SELECTED_ITEMS) {
@@ -523,6 +793,8 @@ function DataBrowser({
     setQuery('');
     setCategory('all');
     setGuild('all');
+    setFacet('all');
+    setSort('default');
     setPage(1);
   }
 
@@ -551,7 +823,7 @@ function DataBrowser({
                 setQuery(event.target.value);
                 setPage(1);
               }}
-              placeholder="Search names, IDs, guilds, statuses…"
+              placeholder="Search all stored fields, tags, IDs…"
               aria-label="Search your data"
               autoComplete="off"
               spellCheck={false}
@@ -644,6 +916,36 @@ function DataBrowser({
               );
             })}
         </div>
+
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          {facetOptions.length > 0 && (
+            <div className="min-w-0 flex-1">
+              <CommunityFilterDropdown
+                value={facet}
+                onChange={(value) => {
+                  setFacet(value);
+                  setPage(1);
+                }}
+                options={[
+                  { value: 'all', label: 'All relationships & types' },
+                  ...facetOptions.map((value) => ({ value, label: value })),
+                ]}
+                placeholder="All relationships & types"
+              />
+            </div>
+          )}
+          <div className="w-full sm:ml-auto sm:w-48">
+            <CommunityFilterDropdown
+              value={sort}
+              onChange={(value) => {
+                setSort(value as SortMode);
+                setPage(1);
+              }}
+              options={SORT_OPTIONS}
+              placeholder="Default order"
+            />
+          </div>
+        </div>
       </div>
 
       {selectedRecords.length > 0 && (
@@ -724,6 +1026,7 @@ function DataBrowser({
                   record={record}
                   selected={selectedKeys.has(record.key)}
                   onToggle={() => toggleRecord(record.key)}
+                  onOpen={() => setViewingRecord(record)}
                 />
               ))}
             </div>
@@ -754,6 +1057,13 @@ function DataBrowser({
           </>
         )}
       </div>
+
+      {viewingRecord && (
+        <RecordDetailModal
+          record={viewingRecord}
+          onClose={() => setViewingRecord(null)}
+        />
+      )}
     </>
   );
 }
@@ -1116,6 +1426,7 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
         category: 'account',
         title: globalName || (username ? `@${username}` : 'Account record'),
         meta: joinMeta(accountId, timezone),
+        raw: account,
         searchText: [globalName, username, accountId, timezone, ...searchParts].join(' '),
       });
     }
@@ -1137,6 +1448,8 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
         guildId,
         deleteTarget: poll._id ? { type: 'poll', id: String(poll._id) } : undefined,
         chips,
+        facets: chips.map((chip) => chip.label),
+        raw: poll,
         searchText: [
           poll.desc,
           poll.question,
@@ -1172,6 +1485,8 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
           ? { type: 'giveaway', id: String(giveaway._id) }
           : undefined,
         chips,
+        facets: chips.map((chip) => chip.label),
+        raw: giveaway,
         searchText: [
           giveaway.prize,
           giveaway.serverId,
@@ -1203,6 +1518,8 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
           ? { type: 'event', id: String(event._id) }
           : undefined,
         chips,
+        facets: event.status ? [event.status] : [],
+        raw: event,
         searchText: [event.title, event.status, event.guildId, event.messageId, guildName, when]
           .filter(Boolean)
           .join(' '),
@@ -1227,6 +1544,9 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
         guildId: rsvp.guildId,
         deleteTarget: rsvp._id ? { type: 'rsvp', id: String(rsvp._id) } : undefined,
         chips,
+        facets: [rsvp.response, rsvp.waitlisted ? 'Waitlisted' : '']
+          .filter((value): value is string => Boolean(value)),
+        raw: rsvp,
         searchText: [
           event?.title,
           event?.status,
@@ -1255,6 +1575,8 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
         guildId: form.guildId,
         deleteTarget: form._id ? { type: 'form', id: String(form._id) } : undefined,
         chips,
+        facets: form.status ? [form.status] : [],
+        raw: form,
         searchText: [form.name, form.status, form.guildId, form._id, guildName]
           .filter(Boolean)
           .join(' '),
@@ -1283,6 +1605,12 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
           ? { type: 'submission', id: String(submission._id) }
           : undefined,
         chips,
+        facets: [
+          submission.status,
+          submission.relationship?.submitted ? 'Submitted' : '',
+          submission.relationship?.reviewed ? 'Reviewed' : '',
+        ].filter((value): value is string => Boolean(value)),
+        raw: submission,
         searchText: [
           submission.form?.name,
           submission.formId,
@@ -1314,6 +1642,8 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
           ? { type: 'translation', id: String(translation._id) }
           : undefined,
         chips,
+        facets: translation.status ? [translation.status] : [],
+        raw: translation,
         searchText: [
           translation.language,
           translation.key,
@@ -1333,13 +1663,8 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
         if (count > 0) referenceChips.push({ label: `${label} ${count}` });
       }
 
-      const chips = referenceChips.slice(0, 4);
-      if (referenceChips.length > 4) {
-        chips.push({ label: `+${referenceChips.length - 4} more` });
-      }
-      if (chips.length === 0) {
-        chips.push({ label: 'No references' });
-      }
+      const chips: ChipSpec[] =
+        referenceChips.length > 0 ? referenceChips : [{ label: 'No references' }];
 
       list.push({
         key: `community:${guild.id ?? index}`,
@@ -1349,6 +1674,10 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
         guildId: guild.id,
         deleteTarget: guild.id ? { type: 'guild', guildId: guild.id } : undefined,
         chips,
+        facets: GUILD_REFERENCE_FIELDS
+          .filter(([, key]) => asArray(guild[key]).length > 0)
+          .map(([label]) => label),
+        raw: guild,
         searchText: [
           guild.name,
           guild.id,
@@ -1361,7 +1690,12 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
       });
     });
 
-    return list;
+    return list.map((record) => ({
+      ...record,
+      searchText: [record.searchText, searchableText(record.raw)]
+        .filter(Boolean)
+        .join(' '),
+    }));
   }, [data, guildNames, user.id]);
 
   const guildOptions = useMemo<GuildOption[]>(() => {
@@ -1518,6 +1852,7 @@ export default function DataPrivacySection({ user }: { user: FluxerUser }) {
           </h2>
           <p className="mt-0.5 text-[11px] text-white/25">
             See everything stored against your user ID in the bot&apos;s database and queues, or permanently remove it.
+            Click any record to inspect its complete raw entry.
           </p>
         </div>
 
