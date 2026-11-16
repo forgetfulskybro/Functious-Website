@@ -163,7 +163,7 @@ export default function EventsOverview() {
       <GuideSection title="Dashboard">
         <p>
           The Events page in the dashboard can create, edit, and manage events alongside the
-          Discord commands. Open it from your community&apos;s dashboard sidebar under Events.
+          Fluxer commands. Open it from your community&apos;s dashboard sidebar under Events.
         </p>
       </GuideSection>
     </GuidePage>

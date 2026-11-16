@@ -8,6 +8,7 @@ import { showToast, showErrorToast } from '@/components/ui/Toast';
 import TimezonePicker from '@/components/ui/TimezonePicker';
 import RemindersSettings from './RemindersSettings';
 import BirthdaySettings from './BirthdaySettings';
+import DataPrivacySection from './DataPrivacySection';
 import Image from 'next/image';
 
 interface CommandStat {
@@ -221,7 +222,7 @@ export default function ProfilePage({
             Profile Settings
           </h1>
           <p className="text-white/35 text-sm mt-1.5">
-            Manage your preferences, reminders, and birthday announcements.
+            Manage your preferences, privacy, reminders, and birthday announcements.
           </p>
         </div>
 
@@ -321,7 +322,9 @@ export default function ProfilePage({
               </section>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <DataPrivacySection user={user as FluxerUser} />
+
+            <div className="mt-4">
               <CommandUsageSection commands={commands} total={commandsTotal} />
             </div>
           </>
