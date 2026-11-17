@@ -521,6 +521,7 @@ export function ReactionRoleModal({
                         roles={availableRoles}
                         value={m.role}
                         onChange={(id) => updateMapping(i, { role: id })}
+                        showAssignWarning
                       />
                     </div>
                     {mappings.length > 1 && (

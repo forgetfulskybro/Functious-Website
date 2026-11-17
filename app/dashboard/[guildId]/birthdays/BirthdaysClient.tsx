@@ -390,6 +390,7 @@ export default function BirthdaysClient({
                         value={data.birthdayRole ?? ''}
                         onChange={(id) => handleSave({ birthdayRole: id || null })}
                         placeholder="Select a role…"
+                        showAssignWarning
                       />
                     </div>
                   </div>

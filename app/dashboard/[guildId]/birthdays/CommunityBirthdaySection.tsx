@@ -255,6 +255,7 @@ export default function CommunityBirthdaySection({
               value={settings.roleId ?? ''}
               onChange={(roleId) => patch({ roleId: roleId || null })}
               placeholder="No role"
+              showAssignWarning
             />
           </div>
         </div>

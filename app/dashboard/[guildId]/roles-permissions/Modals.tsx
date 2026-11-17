@@ -131,7 +131,12 @@ export function JoinRoleModal({
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
             <label className="block text-white/50 text-xs font-medium mb-1.5">Role</label>
-            <RolesDropdown roles={roles} value={role} onChange={setRole} />
+            <RolesDropdown
+              roles={roles}
+              value={role}
+              onChange={setRole}
+              showAssignWarning
+            />
           </div>
 
           <div>
@@ -217,6 +222,7 @@ export function StickyEditModal({
               multiValue={selectedRoles}
               onMultiChange={setSelectedRoles}
               placeholder="Select roles…"
+              showAssignWarning
             />
           </div>
           <div className="flex gap-2 pt-1">

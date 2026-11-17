@@ -813,6 +813,7 @@ export function EventModal({
                     value={attendeeRoleId}
                     onChange={setAttendeeRoleId}
                     placeholder="No attendee role"
+                    showAssignWarning
                   />
                   <p className="mt-1 text-[10px] text-white/25">
                     Granted while someone is going. Functious requires Manage Roles.

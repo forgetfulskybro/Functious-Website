@@ -108,7 +108,6 @@ export default function FormsClient({
   const channelOptions = useMemo(
     () =>
       (guildChannels as any[])
-        .filter((channel) => channel.type === 0)
         .map((channel) => ({
           id: String(channel.id),
           name: String(channel.name),

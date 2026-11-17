@@ -10,8 +10,11 @@ interface Role {
   botCanAssign?: boolean | null;
 }
 
-function roleAccessError(role: Role): string | null {
-  return role.botCanAssign === false
+function roleAccessError(
+  role: Role,
+  showAssignWarning: boolean,
+): string | null {
+  return showAssignWarning && role.botCanAssign === false
     ? "This role is above the bot's highest role."
     : null;
 }
@@ -24,6 +27,7 @@ function roleColor(color?: number): string {
 interface RolesDropdownProps {
   roles: Role[];
   placeholder?: string;
+  showAssignWarning?: boolean;
   multiple?: false;
   value?: string;
   onChange?: (id: string) => void;
@@ -34,6 +38,7 @@ interface RolesDropdownProps {
 interface RolesDropdownMultiProps {
   roles: Role[];
   placeholder?: string;
+  showAssignWarning?: boolean;
   multiple: true;
   multiValue: string[];
   onMultiChange: (ids: string[]) => void;
@@ -44,7 +49,12 @@ interface RolesDropdownMultiProps {
 type Props = RolesDropdownProps | RolesDropdownMultiProps;
 
 export default function RolesDropdown(props: Props) {
-  const { roles, placeholder = 'Select a role…', multiple = false } = props;
+  const {
+    roles,
+    placeholder = 'Select a role…',
+    showAssignWarning = false,
+    multiple = false,
+  } = props;
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -131,7 +141,7 @@ export default function RolesDropdown(props: Props) {
     if (!multiple) {
       const selected = roles.find((r) => r.id === singleValue);
       if (!selected) return <span className="text-white/30 text-sm">{placeholder}</span>;
-      const selectedError = roleAccessError(selected);
+      const selectedError = roleAccessError(selected, showAssignWarning);
       return (
         <span className="flex items-center gap-2">
           <span
@@ -149,7 +159,7 @@ export default function RolesDropdown(props: Props) {
 
     if (multiValue.length === 1) {
       const r = roles.find((x) => x.id === multiValue[0]);
-      const selectedError = r ? roleAccessError(r) : null;
+      const selectedError = r ? roleAccessError(r, showAssignWarning) : null;
       return (
         <span className="flex items-center gap-2">
           <span
@@ -166,7 +176,7 @@ export default function RolesDropdown(props: Props) {
       <span className="flex items-center gap-1.5 flex-wrap">
         {multiValue.slice(0, 3).map((id) => {
           const r = roles.find((x) => x.id === id);
-          const selectedError = r ? roleAccessError(r) : null;
+          const selectedError = r ? roleAccessError(r, showAssignWarning) : null;
           return (
             <span
               key={id}
@@ -257,7 +267,7 @@ export default function RolesDropdown(props: Props) {
               filtered.map((role) => {
                 const selected = isSelected(role.id);
                 const color = roleColor(role.color);
-                const accessError = roleAccessError(role);
+                const accessError = roleAccessError(role, showAssignWarning);
 
                 return (
                   <button
