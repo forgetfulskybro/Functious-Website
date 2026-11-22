@@ -360,11 +360,15 @@ export default function TempChannelsClient({
                         setConfig(c => ({ ...c, channelName: e.target.value.slice(0, 26) }));
                         setDirty(true);
                       }}
-                      placeholder="Private Room"
+                      placeholder="{user}'s Room"
                       maxLength={26}
                       className="w-full bg-white/5 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:ring-1 focus:ring-orange"
                     />
-                    <p className="text-white/20 text-[10px] mt-1.5">Max 26 chars</p>
+                    <p className="text-white/20 text-[10px] mt-1.5">
+                      Max 26 chars · Variables:{' '}
+                      <code className="font-mono text-orange-warm">{'{user}'}</code> display name,{' '}
+                      <code className="font-mono text-orange-warm">{'{username}'}</code> username
+                    </p>
                   </div>
                   <div>
                     <label className="block text-white/50 text-xs font-medium mb-1.5">
