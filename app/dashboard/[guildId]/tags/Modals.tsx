@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import SelectDropdown from '@/components/ui/SelectDropdown';
 import { Toggle } from '@/components/ui/Toggle';
 import type { FluxerUser, FluxerGuild, UserProfile } from '@/lib/types';
@@ -26,6 +26,8 @@ export interface TagEntry {
   trigger?: boolean;
   anyTrigger?: boolean;
   triggerBots?: boolean;
+  triggerRegex?: string | null;
+  triggerRegexFlags?: string;
   triggerContent?: 'messages' | 'embeds' | 'both';
 }
 
@@ -43,6 +45,51 @@ const TRIGGER_CONTENT_OPTIONS: { value: TriggerContent; label: string }[] = [
   { value: 'embeds', label: 'Embeds' },
   { value: 'both', label: 'Both' },
 ];
+
+const DEFAULT_TRIGGER_REGEX_FLAGS = 'i';
+const MAX_TRIGGER_REGEX_LENGTH = 250;
+const TRIGGER_REGEX_FLAGS = /^[dgimsuvy]*$/;
+
+function usesUnicodePropertyEscape(pattern: string): boolean {
+  for (let index = 0; index < pattern.length; index += 1) {
+    if (pattern[index] !== '\\') continue;
+
+    let slashRun = 0;
+    while (pattern[index + slashRun] === '\\') slashRun += 1;
+
+    const next = index + slashRun;
+    if (
+      slashRun % 2 === 1 &&
+      (pattern[next] === 'p' || pattern[next] === 'P') &&
+      pattern[next + 1] === '{'
+    ) {
+      return true;
+    }
+
+    index += slashRun - 1;
+  }
+
+  return false;
+}
+
+function validateTriggerRegexInput(pattern: string, flags: string): string | null {
+  if (!TRIGGER_REGEX_FLAGS.test(flags)) {
+    return 'Flags must only contain d, g, i, m, s, u, v, or y.';
+  }
+  if (!pattern.trim()) return null;
+  if (pattern.length > MAX_TRIGGER_REGEX_LENGTH) {
+    return `Pattern must be ${MAX_TRIGGER_REGEX_LENGTH} characters or fewer.`;
+  }
+  if (usesUnicodePropertyEscape(pattern) && !/[uv]/.test(flags)) {
+    return 'Unicode property escapes like \\p{L} require the u or v flag.';
+  }
+  try {
+    new RegExp(pattern, flags);
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : 'Invalid regular expression.';
+  }
+}
 
 function normalizeTriggerContent(value: unknown): TriggerContent {
   return value === 'messages' || value === 'embeds' ? value : 'both';
@@ -79,6 +126,10 @@ export function TagModal({
         : 'off'
   );
   const [triggerBots, setTriggerBots] = useState(initial?.triggerBots !== false);
+  const [triggerRegex, setTriggerRegex] = useState(initial?.triggerRegex ?? '');
+  const [triggerRegexFlags, setTriggerRegexFlags] = useState(
+    initial?.triggerRegexFlags ?? DEFAULT_TRIGGER_REGEX_FLAGS
+  );
   const [triggerContent, setTriggerContent] = useState<TriggerContent>(() =>
     normalizeTriggerContent(initial?.triggerContent)
   );
@@ -99,6 +150,11 @@ export function TagModal({
   const tagNameHint = cleanName || 'my tag';
   const triggerEnabled = triggerMode !== 'off';
   const anywhereTrigger = triggerMode === 'anywhere';
+  const hasTriggerRegex = triggerRegex.trim().length > 0;
+  const triggerRegexError = useMemo(
+    () => validateTriggerRegexInput(triggerRegex, triggerRegexFlags),
+    [triggerRegex, triggerRegexFlags]
+  );
   const previewMessage = triggerEnabled
     ? anywhereTrigger
       ? `Hey ${tagNameHint}!`
@@ -118,6 +174,10 @@ export function TagModal({
     }
     if (existingNames.includes(finalName.toLowerCase())) {
       showErrorToast('Error', { description: 'A tag with that name already exists.' });
+      return;
+    }
+    if (triggerRegex.trim() && triggerRegexError) {
+      showErrorToast('Invalid regex', { description: triggerRegexError });
       return;
     }
     if (!content.trim()) {
@@ -157,6 +217,8 @@ export function TagModal({
         trigger: triggerMode === 'trigger',
         anyTrigger: triggerMode === 'anywhere',
         triggerBots,
+        triggerRegex: triggerRegex.trim() ? triggerRegex : null,
+        triggerRegexFlags,
         triggerContent,
       });
     } catch {
@@ -324,8 +386,8 @@ export function TagModal({
                     {triggerMode === 'off'
                       ? 'Only runs with the tag command.'
                       : triggerMode === 'trigger'
-                        ? `Runs when “${tagNameHint}” is sent on its own. Triggers receive no arguments.`
-                        : `Runs when “${tagNameHint}” appears anywhere in a message or embed. Triggers receive no arguments.`}
+                        ? `Runs when ${hasTriggerRegex ? 'your configured regex matches' : `“${tagNameHint}” matches`} the whole message. Triggers receive no arguments.`
+                        : `Runs when ${hasTriggerRegex ? 'your configured regex appears' : `“${tagNameHint}” appears`} anywhere in a message or embed. Triggers receive no arguments.`}
                   </p>
                 </div>
                 <div
@@ -350,6 +412,56 @@ export function TagModal({
                   ))}
                 </div>
               </div>
+
+              {triggerEnabled && (
+                <div className="mt-3 border-t border-white/5 pt-3">
+                  <div>
+                    <p className="text-xs font-medium text-white/70">Trigger regex</p>
+                    <p className="mt-0.5 text-[10px] text-white/30">
+                      Optional. Leave blank to use the tag name. The pattern is matched against message and embed text.
+                    </p>
+                  </div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_5.5rem]">
+                    <input
+                      type="text"
+                      value={triggerRegex}
+                      onChange={(event) => setTriggerRegex(event.target.value)}
+                      maxLength={MAX_TRIGGER_REGEX_LENGTH}
+                      disabled={busy}
+                      spellCheck={false}
+                      autoComplete="off"
+                      placeholder="e.g. price\\s*=\\s*\\d+"
+                      aria-label="Trigger regex pattern"
+                      aria-invalid={!!triggerRegexError}
+                      className={[
+                        'w-full rounded-lg bg-white/5 px-3 py-2.5 font-mono text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1',
+                        triggerRegexError ? 'ring-1 ring-red-400/50' : 'focus:ring-orange',
+                      ].join(' ')}
+                    />
+                    <input
+                      type="text"
+                      value={triggerRegexFlags}
+                      onChange={(event) => setTriggerRegexFlags(event.target.value)}
+                      maxLength={8}
+                      disabled={busy}
+                      spellCheck={false}
+                      autoComplete="off"
+                      placeholder="i"
+                      aria-label="Trigger regex flags"
+                      className="w-full rounded-lg bg-white/5 px-3 py-2.5 font-mono text-sm text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orange"
+                    />
+                  </div>
+                  {triggerRegexError ? (
+                    <p className="mt-1 text-[10px] text-red-400/80" role="alert">
+                      {triggerRegexError}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[10px] text-white/25">
+                      Flags: d g i m s u v y · default i
+                    </p>
+                  )}
+                </div>
+              )}
 
               {triggerEnabled && (
                 <div className="mt-3 flex items-center justify-between gap-4 border-t border-white/5 pt-3">
@@ -423,6 +535,8 @@ export function TagModal({
                 onChange={setContent}
                 tagName={cleanName}
                 triggerMode={triggerMode}
+                triggerRegex={triggerRegex}
+                triggerRegexFlags={triggerRegexFlags}
                 previewArgs={previewArgs}
                 interactive={interactive}
                 onInteractiveChange={setInteractive}
@@ -449,6 +563,7 @@ export function TagModal({
                 !sanitizeName(name) ||
                 !content.trim() ||
                 busy ||
+                !!triggerRegexError ||
                 (isScript && !interactive && previewInvalid)
               }
               className="flex-1 rounded-xl bg-orange py-3 font-semibold text-white transition-colors hover:bg-orange-bright disabled:opacity-50"
@@ -623,6 +738,16 @@ export function TagViewModal({
           </button>
         </div>
         <div className="max-h-[60vh] space-y-4 overflow-y-auto p-6">
+          {tag.triggerRegex && (
+            <div className="rounded-lg border border-white/5 bg-white/[0.03] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-widest text-white/30">
+                Trigger regex
+              </p>
+              <code className="mt-1 block break-all font-mono text-xs text-orange-warm">
+                /{tag.triggerRegex}/{tag.triggerRegexFlags ?? 'i'}
+              </code>
+            </div>
+          )}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="block text-xs font-medium text-white/50">

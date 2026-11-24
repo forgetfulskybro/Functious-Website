@@ -1065,6 +1065,8 @@ export function TagRuneEditor({
   onChange,
   tagName,
   triggerMode,
+  triggerRegex,
+  triggerRegexFlags,
   previewArgs,
   interactive,
   onInteractiveChange,
@@ -1077,6 +1079,8 @@ export function TagRuneEditor({
   onChange: (value: string) => void;
   tagName: string;
   triggerMode: RuneTriggerMode;
+  triggerRegex?: string | null;
+  triggerRegexFlags?: string;
   previewArgs: string[];
   interactive: boolean;
   onInteractiveChange: (value: boolean) => void;
@@ -1095,6 +1099,19 @@ export function TagRuneEditor({
   const tagNameHint = tagName.trim() || 'my tag';
   const triggerEnabled = triggerMode !== 'off';
   const anywhereTrigger = triggerMode === 'anywhere';
+  const triggerRegexPattern = triggerRegex?.trim() ?? '';
+  const hasTriggerRegex = triggerRegexPattern.length > 0;
+  const triggerRegexLabel = hasTriggerRegex
+    ? `/${triggerRegexPattern}/${triggerRegexFlags ?? 'i'}`
+    : null;
+  const triggerRegexMatcher = useMemo(() => {
+    if (!hasTriggerRegex) return null;
+    try {
+      return new RegExp(triggerRegexPattern, triggerRegexFlags ?? 'i');
+    } catch {
+      return null;
+    }
+  }, [hasTriggerRegex, triggerRegexPattern, triggerRegexFlags]);
   const previewMessage = triggerEnabled
     ? anywhereTrigger
       ? `Hey ${tagNameHint}!`
@@ -1153,15 +1170,17 @@ export function TagRuneEditor({
         {
           id: 'welcome',
           kind: 'system',
-          content: anywhereTrigger
-            ? `Interactive preview · try \`Hey ${tagNameHint}!\``
-            : triggerMode === 'trigger'
-              ? `Interactive preview · try \`${tagNameHint}\``
-              : `Interactive preview · try \`f!tag ${tagNameHint} hello\``,
+          content: triggerEnabled && triggerRegexLabel
+            ? `Interactive preview · try a message matching \`${triggerRegexLabel}\``
+            : anywhereTrigger
+              ? `Interactive preview · try \`Hey ${tagNameHint}!\``
+              : triggerMode === 'trigger'
+                ? `Interactive preview · try \`${tagNameHint}\``
+                : `Interactive preview · try \`f!tag ${tagNameHint} hello\``,
         },
       ]);
     }
-  }, [interactive, chatMessages.length, anywhereTrigger, triggerMode, tagNameHint]);
+  }, [interactive, chatMessages.length, anywhereTrigger, triggerMode, tagNameHint, triggerRegexLabel]);
 
   useEffect(() => {
     if (interactive) {
@@ -1189,6 +1208,20 @@ export function TagRuneEditor({
     }
 
     return false;
+  }
+
+  function matchesTrigger(value: string, anywhere: boolean) {
+    const text = value.trim();
+    if (hasTriggerRegex) {
+      if (!triggerRegexMatcher) return false;
+      triggerRegexMatcher.lastIndex = 0;
+      const match = triggerRegexMatcher.exec(text);
+      triggerRegexMatcher.lastIndex = 0;
+      return !!match && (anywhere || (match.index === 0 && match[0].length === text.length));
+    }
+    return anywhere
+      ? containsTagName(text, tagName)
+      : text.toLowerCase() === tagName.trim().toLowerCase();
   }
 
   function tokenizeArgs(text: string) {
@@ -1221,11 +1254,9 @@ export function TagRuneEditor({
     const isTriggerInvocation =
       !commandMatch &&
       !!nameLower &&
-      (triggerMode === 'trigger'
-        ? trimmed.toLowerCase() === nameLower
-        : triggerMode === 'anywhere'
-          ? containsTagName(trimmed, tagName)
-          : false);
+      (triggerMode === 'off'
+        ? false
+        : matchesTrigger(trimmed, triggerMode === 'anywhere'));
 
     if (!isCommandInvocation && !isTriggerInvocation) {
       setChatMessages((previous) => [...previous, userMessage]);
@@ -1285,6 +1316,11 @@ export function TagRuneEditor({
     ]);
   }
 
+  const chatInputRegexMatch =
+    triggerEnabled && hasTriggerRegex && chatInput.trim()
+      ? matchesTrigger(chatInput, anywhereTrigger)
+      : null;
+
   const previewLabel = interactive
     ? 'Interactive'
     : triggerMode === 'anywhere'
@@ -1310,7 +1346,7 @@ export function TagRuneEditor({
 
       <div className="flex min-w-0 flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-white/50">
+          <p className="text-xs font-medium tracking-wider text-white/50">
             {previewLabel}
           </p>
           <div className="flex items-center gap-2">
@@ -1373,17 +1409,35 @@ export function TagRuneEditor({
                     }}
                     disabled={disabled}
                     className="min-w-0 flex-1 bg-transparent text-sm text-white/90 placeholder-white/30 focus:outline-none disabled:opacity-50"
-                    placeholder="Message #testing-1"
+                    placeholder={
+                      triggerEnabled && hasTriggerRegex
+                        ? 'Message matching the trigger regex'
+                        : 'Message #testing-1'
+                    }
                     autoComplete="off"
                     spellCheck={false}
                   />
                 </div>
                 <p className="mt-1.5 px-1 text-[10px] text-white/20">
-                  {triggerMode === 'anywhere'
-                    ? `Type ${tagNameHint} anywhere in a message, or f!tag ${tagNameHint} [args…] · Enter to send`
-                    : triggerMode === 'trigger'
-                      ? `Send ${tagNameHint} or f!tag ${tagNameHint} [args…] · Enter to send`
-                      : `f!tag ${tagNameHint} [args…] · Enter to send`}
+                  {triggerEnabled && triggerRegexLabel
+                    ? `Send a message matching ${triggerRegexLabel}, or f!tag ${tagNameHint} [args…] · Enter to send`
+                    : triggerMode === 'anywhere'
+                      ? `Type ${tagNameHint} anywhere in a message, or f!tag ${tagNameHint} [args…] · Enter to send`
+                      : triggerMode === 'trigger'
+                        ? `Send ${tagNameHint} or f!tag ${tagNameHint} [args…] · Enter to send`
+                        : `f!tag ${tagNameHint} [args…] · Enter to send`}
+                  {triggerEnabled && hasTriggerRegex && chatInput.trim() ? (
+                    <span
+                      className={
+                        chatInputRegexMatch
+                          ? 'text-emerald-400/80'
+                          : 'text-red-400/70'
+                      }
+                    >
+                      {' · '}
+                      {chatInputRegexMatch ? 'matches regex' : 'does not match regex'}
+                    </span>
+                  ) : null}
                 </p>
               </div>
             ) : undefined

@@ -6,6 +6,8 @@ import UserBadge from '@/components/ui/UserBadge';
 import ChannelBadge from '@/components/ui/ChannelBadge';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import { useChannelProfiles, KnownChannel } from '@/hooks/useChannelProfiles';
+import PollPreview from './PollPreview';
+import { POLL_LAYOUTS, POLL_THEMES, getPollLayout, getPollTheme } from './pollAppearance';
 
 export interface PollEntry {
   id: string;
@@ -249,6 +251,261 @@ export function DeletePollModal({ poll, guildChannels = [], busy, onConfirm, onC
             onClick={async () => { setDeleting(true); try { await onConfirm(); } finally { setDeleting(false); } }}
             className="flex-1 py-3 bg-red-500/15 hover:bg-red-500/25 text-red-400 rounded-xl font-semibold disabled:opacity-50">
             {isBusy ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LayoutGlyph({ layout }: { layout: string }) {
+  if (layout === 'cards') {
+    return (
+      <div className="grid h-9 grid-cols-2 gap-1" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="rounded-sm bg-white/10 p-1">
+            <div className="h-1 w-2/3 rounded-full bg-orange/50" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (layout === 'minimal') {
+    return (
+      <div className="flex h-9 flex-col justify-center gap-1.5" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <div key={i}>
+            <div className="h-1 w-full rounded-full bg-white/10">
+              <div className="h-full w-2/3 rounded-full bg-orange/50" />
+            </div>
+            <div className="mt-1 h-0.5 w-1/2 rounded-full bg-white/5" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const compact = layout === 'compact';
+  return (
+    <div
+      className={`flex h-9 flex-col justify-center ${compact ? 'gap-1' : 'gap-1.5'}`}
+      aria-hidden="true"
+    >
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className={`overflow-hidden rounded-sm bg-white/10 ${compact ? 'h-1.5' : 'h-2'}`}
+        >
+          <div className="h-full w-2/3 rounded-sm bg-orange/50" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function PollAppearanceModal({
+  currentTheme,
+  currentLayout,
+  saving,
+  onSave,
+  onClose,
+}: {
+  currentTheme: string;
+  currentLayout: string;
+  saving?: boolean;
+  onSave: (theme: string, layout: string) => Promise<boolean>;
+  onClose: () => void;
+}) {
+  const [theme, setTheme] = useState(() => getPollTheme(currentTheme).value);
+  const [layout, setLayout] = useState(() => getPollLayout(currentLayout).value);
+  const [submitting, setSubmitting] = useState(false);
+  const busy = submitting || !!saving;
+  const themeOption = getPollTheme(theme);
+  const layoutOption = getPollLayout(layout);
+
+  async function handleSave() {
+    if (busy) return;
+    setSubmitting(true);
+    try {
+      const saved = await onSave(theme, layout);
+      if (saved) onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="poll-appearance-title"
+    >
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={busy ? undefined : onClose}
+      />
+
+      <div className="relative flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-[#160a0a] shadow-2xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-[#2A1313] px-6 pb-4 pt-5">
+          <div>
+            <h2 id="poll-appearance-title" className="text-lg font-bold text-white">
+              Poll Appearance
+            </h2>
+            <p className="mt-0.5 text-xs text-white/30">
+              Choose the theme and layout used for poll images.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="text-xl leading-none text-white/40 transition-colors hover:text-white disabled:opacity-40"
+            aria-label="Close poll appearance"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto p-6 md:grid-cols-2 lg:grid-cols-[2fr_3fr]">
+          <div className="order-3 md:order-none md:col-start-2 md:row-span-2 md:row-start-1">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
+                Preview
+              </p>
+              <p className="text-[10px] text-white/25">
+                {themeOption.label} · {layoutOption.label}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/5 bg-black/30 p-3">
+              <PollPreview theme={theme} layout={layout} />
+            </div>
+          </div>
+
+          <div className="order-1 md:order-none md:col-start-1 md:row-start-1">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/40">
+              Theme
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {POLL_THEMES.map((option) => {
+                const selected = option.value === theme;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setTheme(option.value)}
+                    disabled={busy}
+                    aria-pressed={selected}
+                    className={[
+                      'relative overflow-hidden rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                      selected
+                        ? 'border-orange ring-1 ring-orange/30'
+                        : 'border-white/10 hover:border-white/25',
+                    ].join(' ')}
+                    style={{ backgroundColor: option.palette.background }}
+                  >
+                    <span className="flex items-center gap-2 pr-5">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: option.palette.accent }}
+                      />
+                      <span
+                        className="text-xs font-semibold"
+                        style={{ color: option.palette.text }}
+                      >
+                        {option.label}
+                      </span>
+                    </span>
+                    <span
+                      className="mt-2.5 block h-1.5 overflow-hidden rounded-full"
+                      style={{ backgroundColor: option.palette.panel }}
+                    >
+                      <span
+                        className="block h-full w-2/3 rounded-full"
+                        style={{ backgroundColor: option.palette.accent }}
+                      />
+                    </span>
+                    {selected && (
+                      <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-orange text-white">
+                        <svg
+                          className="h-2.5 w-2.5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M20 6L9 17l-5-5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="order-2 md:order-none md:col-start-1 md:row-start-2">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-white/40">
+              Layout
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {POLL_LAYOUTS.map((option) => {
+                const selected = option.value === layout;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setLayout(option.value)}
+                    disabled={busy}
+                    aria-pressed={selected}
+                    className={[
+                      'rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+                      selected
+                        ? 'border-orange/60 bg-orange/10'
+                        : 'border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04]',
+                    ].join(' ')}
+                  >
+                    <LayoutGlyph layout={option.value} />
+                    <span
+                      className={[
+                        'mt-2 block text-xs font-medium',
+                        selected ? 'text-orange-warm' : 'text-white/60',
+                      ].join(' ')}
+                    >
+                      {option.label}
+                    </span>
+                    <span className="mt-0.5 block text-[10px] text-white/25">
+                      {option.description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 gap-3 border-t border-[#2A1313] px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 rounded-xl bg-white/5 py-2.5 font-medium text-white/70 transition-colors hover:bg-white/10 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={busy}
+            className="flex-1 rounded-xl bg-orange py-2.5 font-semibold text-white transition-colors hover:bg-orange-bright disabled:opacity-50"
+          >
+            {busy ? 'Saving…' : 'Save Appearance'}
           </button>
         </div>
       </div>

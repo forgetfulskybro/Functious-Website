@@ -158,6 +158,8 @@ export interface GuildData {
   language: string;
   dm: boolean;
   pollPerm?: boolean;
+  pollTheme?: string;
+  pollLayout?: string;
   timezoneConvert: boolean;
   stickyRolesEnabled: boolean;
   roles: string[];

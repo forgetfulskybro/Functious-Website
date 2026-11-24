@@ -35,6 +35,12 @@ function mapTags(raw: any[]): TagEntry[] {
     trigger: t.trigger === true,
     anyTrigger: t.anyTrigger === true,
     triggerBots: t.triggerBots !== false,
+    triggerRegex:
+      typeof t.triggerRegex === 'string' && t.triggerRegex.trim()
+        ? t.triggerRegex
+        : null,
+    triggerRegexFlags:
+      typeof t.triggerRegexFlags === 'string' ? t.triggerRegexFlags : 'i',
     triggerContent:
       t.triggerContent === 'messages' || t.triggerContent === 'embeds'
         ? t.triggerContent
@@ -175,6 +181,14 @@ export default function TagsClient({
                       {(tag.trigger || tag.anyTrigger) && (
                         <span className="ml-1.5 rounded bg-orange/15 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-orange-warm">
                           {tag.anyTrigger ? 'anywhere trigger' : 'trigger word'}
+                        </span>
+                      )}
+                      {(tag.trigger || tag.anyTrigger) && tag.triggerRegex && (
+                        <span
+                          className="ml-1.5 rounded bg-white/5 px-1.5 py-0.5 align-middle text-[10px] font-medium text-white/40"
+                          title={`/${tag.triggerRegex}/${tag.triggerRegexFlags ?? 'i'}`}
+                        >
+                          regex
                         </span>
                       )}
                       {(tag.trigger || tag.anyTrigger) &&

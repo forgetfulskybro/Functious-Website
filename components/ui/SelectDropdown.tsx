@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface Option {
@@ -14,6 +14,7 @@ interface SingleProps {
   label: string;
   placeholder?: string;
   disabled?: boolean;
+  searchable?: boolean;
 }
 
 interface MultiProps {
@@ -24,23 +25,33 @@ interface MultiProps {
   label: string;
   placeholder?: string;
   disabled?: boolean;
+  searchable?: boolean;
 }
 
 type SelectDropdownProps = SingleProps | MultiProps;
 
 export default function SelectDropdown(props: SelectDropdownProps) {
-  const { options, label, placeholder, multiple = false, disabled = false } = props;
+  const { options, label, placeholder, multiple = false, disabled = false, searchable } = props;
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+
+  function setPosition(rect: DOMRect) {
+    const width = Math.min(rect.width, Math.max(0, window.innerWidth - 16));
+    const left = Math.min(
+      Math.max(8, rect.left),
+      Math.max(8, window.innerWidth - width - 8),
+    );
+    setCoords({ top: rect.bottom + 4, left, width });
+  }
 
   function measure() {
     if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    setCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    setPosition(buttonRef.current.getBoundingClientRect());
   }
 
   function toggleOpen() {
@@ -51,7 +62,7 @@ export default function SelectDropdown(props: SelectDropdownProps) {
 
   useEffect(() => {
     function onOut(e: MouseEvent) {
-      const menu = document.getElementById("select-dropdown-portal");
+      const menu = document.getElementById(menuId);
       if (
         wrapperRef.current && !wrapperRef.current.contains(e.target as Node) &&
         (!menu || !menu.contains(e.target as Node))
@@ -62,13 +73,13 @@ export default function SelectDropdown(props: SelectDropdownProps) {
     }
     document.addEventListener("mousedown", onOut);
     return () => document.removeEventListener("mousedown", onOut);
-  }, []);
+  }, [menuId]);
 
   useEffect(() => {
     if (!open || !buttonRef.current) return;
     const update = () => {
-      const rect = buttonRef.current!.getBoundingClientRect();
-      setCoords({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+      if (!buttonRef.current) return;
+      setPosition(buttonRef.current.getBoundingClientRect());
     };
     measure();
     window.addEventListener("resize", update);
@@ -86,6 +97,7 @@ export default function SelectDropdown(props: SelectDropdownProps) {
     o.label.toLowerCase().includes(search.toLowerCase()) ||
     o.value.toLowerCase().includes(search.toLowerCase())
   );
+  const showSearch = searchable ?? (multiple || options.length > 6);
 
   function isSelected(v: string) {
     return multiple
@@ -134,7 +146,7 @@ export default function SelectDropdown(props: SelectDropdownProps) {
   const menu = open
     ? createPortal(
         <div
-          id="select-dropdown-portal"
+          id={menuId}
           style={{
             position: "fixed",
             top: coords.top,
@@ -144,7 +156,7 @@ export default function SelectDropdown(props: SelectDropdownProps) {
           }}
           className="rounded-xl bg-[#221616] shadow-2xl overflow-hidden"
         >
-          {(multiple || options.length > 6) && (
+          {showSearch && (
             <div className="px-3 pt-3 pb-2">
               <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2">
                 <svg

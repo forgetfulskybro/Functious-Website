@@ -1304,7 +1304,7 @@ export function FormSubmissionsModal({
                               {questions.get(answer.questionId) ?? answer.questionId}
                             </dt>
                             <dd className="whitespace-pre-wrap text-white/65">
-                              {answer.value || '—'}
+                              {answer.value || '-'}
                             </dd>
                           </div>
                         ))}

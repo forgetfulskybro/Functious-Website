@@ -92,6 +92,8 @@ export function emptyGuildData(guildId: string) {
     language: 'en_EN',
     dm: false,
     pollPerm: true,
+    pollTheme: 'ember',
+    pollLayout: 'bars',
     emojis: [],
     timezoneConvert: false,
     stickyRolesEnabled: false,

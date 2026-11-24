@@ -1,5 +1,5 @@
 'use client';
-import { PollEntry, totalVotes, CreatePollModal, PollResultsModal, DeletePollModal } from './Modals';
+import { PollEntry, totalVotes, CreatePollModal, PollResultsModal, DeletePollModal, PollAppearanceModal } from './Modals';
 import type { FluxerUser, FluxerGuild, GuildData, DashboardGuild } from '@/lib/types';
 import { useChannelProfiles } from '@/hooks/useChannelProfiles';
 import ChannelBadge from '@/components/ui/ChannelBadge';
@@ -12,7 +12,9 @@ import { useGuildData } from '@/hooks/useGuildData';
 import { useDashboardToasts } from '@/hooks/useDashboardToasts';
 import Sidebar from '@/components/layout/Sidebar';
 import { Toggle } from '@/components/ui/Toggle';
+import { getPollLayout, getPollTheme } from './pollAppearance';
 import Image from 'next/image';
+
 function mapPoll(p: any): PollEntry {
   const names: string[] = Array.isArray(p.options?.name)
     ? p.options.name
@@ -77,11 +79,20 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
   const [viewPoll, setViewPoll] = useState<PollEntry | null>(null);
   const [deleteItem, setDeleteItem] = useState<PollEntry | null>(null);
   const [pollPerm, setPollPerm] = useState<boolean>(() => !!(data as any).pollPerm);
+  const [pollTheme, setPollTheme] = useState<string>(() => String((data as any).pollTheme ?? 'ember'));
+  const [pollLayout, setPollLayout] = useState<string>(() => String((data as any).pollLayout ?? 'bars'));
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
 
   useEffect(() => {
     if (saving) return;
     if (typeof (data as any).pollPerm === 'boolean') {
       setPollPerm((data as any).pollPerm);
+    }
+    if (typeof (data as any).pollTheme === 'string') {
+      setPollTheme((data as any).pollTheme);
+    }
+    if (typeof (data as any).pollLayout === 'string') {
+      setPollLayout((data as any).pollLayout);
     }
   }, [data, saving]);
 
@@ -97,6 +108,22 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
     } catch {
       setPollPerm(!next);
       showErrorToast('Error', { description: 'Failed to update poll permission.' });
+    }
+  }
+
+  const themeOption = getPollTheme(pollTheme);
+  const layoutOption = getPollLayout(pollLayout);
+
+  async function savePollAppearance(theme: string, layout: string) {
+    try {
+      await save({ pollTheme: theme, pollLayout: layout });
+      showToast('Poll appearance updated', {
+        description: `New polls will use the ${getPollTheme(theme).label} theme and ${getPollLayout(layout).label} layout.`,
+      });
+      return true;
+    } catch {
+      showErrorToast('Error', { description: 'Failed to update poll appearance.' });
+      return false;
     }
   }
 
@@ -191,12 +218,27 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
               <Skeleton className="h-5 w-full" />
             </div>
           ) : (
-            <SettingRow
-              label="Allow members to create polls"
-              description="When enabled, anyone can run the poll command. When disabled, only users with Manage Guild can."
-            >
-              <Toggle value={pollPerm} onChangeAction={togglePollPerm} disabled={saving} />
-            </SettingRow>
+            <>
+              <SettingRow
+                label="Allow members to create polls"
+                description="When enabled, anyone can run the poll command. When disabled, only users with Manage Guild can."
+              >
+                <Toggle value={pollPerm} onChangeAction={togglePollPerm} disabled={saving} />
+              </SettingRow>
+              <SettingRow
+                label="Poll appearance"
+                description={`${themeOption.label} theme · ${layoutOption.label} layout. Customize how poll images look.`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setAppearanceOpen(true)}
+                  disabled={saving}
+                  className="rounded-lg bg-orange/15 px-4 py-1.5 text-sm font-medium text-orange-warm transition-colors hover:bg-orange/25 disabled:opacity-50"
+                >
+                  Configure
+                </button>
+              </SettingRow>
+            </>
           )}
         </div>
 
@@ -296,6 +338,16 @@ export default function PollsClient({ user, guilds, activeGuildId, userGuild, in
             if (ok) setDeleteItem(null);
           }}
           onClose={() => setDeleteItem(null)}
+        />
+      )}
+
+      {appearanceOpen && (
+        <PollAppearanceModal
+          currentTheme={pollTheme}
+          currentLayout={pollLayout}
+          saving={saving}
+          onSave={savePollAppearance}
+          onClose={() => setAppearanceOpen(false)}
         />
       )}
 
