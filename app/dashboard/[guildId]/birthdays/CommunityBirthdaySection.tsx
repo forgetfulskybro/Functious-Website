@@ -177,7 +177,7 @@ export default function CommunityBirthdaySection({
     if (settings.enabled) {
       if (!creation && (!settings.month || !settings.day)) {
         showErrorToast('Creation date unavailable', {
-          description: "Could not read this server's creation date. Please try again.",
+          description: "Could not read this community's creation date. Please try again.",
         });
         return;
       }
